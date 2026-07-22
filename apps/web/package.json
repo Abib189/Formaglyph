@@ -16,6 +16,7 @@
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/newsreader": "^5.3.0",
     "@formaglyph/schema": "workspace:*",
+    "@formaglyph/validators": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "2.110.7",
     "@vitejs/plugin-react": "5.0.4",

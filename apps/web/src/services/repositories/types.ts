@@ -1,4 +1,5 @@
 import type { CatalogIcon, DraftBrief, Proposal, WorkspaceIcon } from "../../domain/types";
+import type { SvgValidationResult } from "@formaglyph/validators";
 
 export type MembershipRole = "contributor" | "reviewer" | "admin";
 
@@ -21,6 +22,7 @@ export interface CandidateAssetInput {
 export interface SavedDraft {
   draftId: string;
   candidateId: string;
+  validation: SvgValidationResult;
 }
 
 export interface WorkspaceData {

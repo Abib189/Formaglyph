@@ -111,7 +111,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         proposal: { ...current.proposal, draftId: saved.draftId, candidateId: saved.candidateId },
         workspace: current.workspace.map((icon) => icon.id === current.draft.workspaceIconId ? { ...icon, updatedAt: new Date().toISOString() } : icon),
       }));
-      setNotice({ tone: "success", message: repository.mode === "local" ? "Draft saved locally." : "Draft and candidate saved securely." });
+      setNotice({
+        tone: saved.validation.status === "passed" ? "success" : "info",
+        message: saved.validation.status === "passed"
+          ? repository.mode === "local" ? "Draft saved locally. SVG validation passed." : "Draft saved securely. SVG validation passed."
+          : "Draft saved with validation issues. Resolve them before review.",
+      });
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not save draft." });
       throw error;

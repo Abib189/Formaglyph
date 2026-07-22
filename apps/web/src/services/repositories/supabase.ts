@@ -2,6 +2,8 @@ import { CloudArrowUp } from "@phosphor-icons/react";
 import type { CatalogIcon, DraftBrief, Proposal, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
+import { validateCandidateAsset } from "../candidateValidation";
+import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
 import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, SavedDraft, WorkspaceData } from "./types";
 
 type ProposalRow = Database["public"]["Tables"]["proposals"]["Row"];
@@ -159,18 +161,29 @@ export class SupabaseRepository implements FormaglyphRepository {
     const assetId = crypto.randomUUID();
     const validationId = crypto.randomUUID();
     const path = `${project.organizationId}/${project.id}/${draftId}/${assetId}/source.svg`;
-    const hash = await sha256(candidate.svg);
-    const { error: uploadError } = await client.storage.from("source-assets").upload(path, new Blob([candidate.svg], { type: "image/svg+xml" }), { contentType: "image/svg+xml", upsert: false });
+    const validation = validateCandidateAsset(candidate);
+    const normalizedSvg = validation.normalizedSvg;
+    if (!normalizedSvg) throw new Error("Safe normalized SVG output is required before upload.");
+    const normalizedBlob = new Blob([normalizedSvg], { type: "image/svg+xml" });
+    const hash = await sha256(normalizedSvg);
+    const { error: uploadError } = await client.storage.from("source-assets").upload(path, normalizedBlob, { contentType: "image/svg+xml", upsert: false });
     if (uploadError) throw uploadError;
-    const { error: assetError } = await client.from("asset_blobs").insert({ id: assetId, project_id: project.id, storage_bucket: "source-assets", storage_path: path, byte_size: new Blob([candidate.svg]).size, sha256: hash, sanitization_status: candidate.issue ? "failed" : "passed", created_by: authData.user.id });
+    const { error: assetError } = await client.from("asset_blobs").insert({ id: assetId, project_id: project.id, storage_bucket: "source-assets", storage_path: path, byte_size: normalizedBlob.size, sha256: hash, sanitization_status: "passed", created_by: authData.user.id });
     if (assetError) throw assetError;
-    const { error: validationError } = await client.from("validation_runs").insert({ id: validationId, project_id: project.id, target_type: "candidate", target_id: candidateId, validator_version: "formaglyph-client/0.1.0", status: candidate.issue ? "failed" : "passed", summary: { issue: candidate.issue } as Json, created_by: authData.user.id });
+    const issueCounts = validation.issues.reduce<Record<string, number>>((counts, issue) => ({ ...counts, [issue.severity]: (counts[issue.severity] ?? 0) + 1 }), {});
+    const summary = { safe: validation.safe, changes: validation.changes, measurements: validation.measurements, issueCounts } as unknown as Json;
+    const { error: validationError } = await client.from("validation_runs").insert({ id: validationId, project_id: project.id, target_type: "candidate", target_id: candidateId, validator_version: SVG_VALIDATOR_VERSION, status: validation.status, summary, created_by: authData.user.id });
     if (validationError) throw validationError;
-    const { error: candidateError } = await client.from("candidates").insert({ id: candidateId, draft_id: draftId, name: candidate.name, description: candidate.description, asset_id: assetId, validation_run_id: validationId, issue: candidate.issue, created_by: authData.user.id });
+    if (validation.issues.length) {
+      const { error: issuesError } = await client.from("validation_issues").insert(validation.issues.map((issue) => ({ validation_run_id: validationId, rule_id: issue.ruleId, severity: issue.severity, location: issue.location ?? null, message: issue.message, remediation: issue.remediation ?? null })));
+      if (issuesError) throw issuesError;
+    }
+    const blockingIssue = candidate.issue ?? validation.issues.find((issue) => issue.severity === "blocker" || issue.severity === "error")?.message ?? null;
+    const { error: candidateError } = await client.from("candidates").insert({ id: candidateId, draft_id: draftId, name: candidate.name, description: candidate.description, asset_id: assetId, validation_run_id: validationId, issue: blockingIssue, created_by: authData.user.id });
     if (candidateError) throw candidateError;
     const { error: selectionError } = await client.from("drafts").update({ selected_candidate_id: candidateId, updated_at: new Date().toISOString() }).eq("id", draftId);
     if (selectionError) throw selectionError;
-    return { draftId, candidateId };
+    return { draftId, candidateId, validation };
   }
 
   async submitProposal(draftId: string, candidateId: string, targetVersion: string) {
