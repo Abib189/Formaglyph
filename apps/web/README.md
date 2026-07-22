@@ -11,9 +11,10 @@ Production foundation for Formaglyph’s Explore → Create → Review workflow.
 - Candidate validation, review comments, approval, light/dark themes, and responsive layouts.
 - The original Formaglyph Core starter release with 12 concepts and 24 Regular/Solid SVG assets.
 - Public REST API v1 with search, metadata, manifests, OpenAPI, and immutable SVG endpoints.
+- Public stateless Streamable HTTP MCP with read-only tools, resources, and a selection prompt.
 - Strict TypeScript and automated tests for search, storage, and workflow rules.
 
-Explore always includes the source-controlled `@formaglyph/icons` core release and overlays approved Supabase project icons by stable ID and variant. `@phosphor-icons/react` remains an MIT-licensed interface and prototype-candidate dependency; its glyphs are not published as Formaglyph catalog assets. The remaining V1 family, generation workers, authenticated API scopes, and MCP server remain separate delivery milestones defined in the V1 PRD.
+Explore always includes the source-controlled `@formaglyph/icons` core release and overlays approved Supabase project icons by stable ID and variant. `@phosphor-icons/react` remains an MIT-licensed interface and prototype-candidate dependency; its glyphs are not published as Formaglyph catalog assets. The remaining V1 family, generation workers, authenticated API scopes, and private project MCP remain separate delivery milestones defined in the V1 PRD.
 
 ## Local development
 
@@ -47,3 +48,5 @@ src/
 ```
 
 The browser persistence service is an adapter boundary, not the final hosted datastore. A production backend can replace it without moving proposal policy into UI components. Canonical icon metadata, permissions, style rules, and proposal transitions come from the shared `@formaglyph/schema` workspace package.
+
+The production Node server exposes the public REST API at `/api/v1` and the public MCP transport at `/mcp`. Both serve only the source-controlled Core release; private Supabase project data stays behind RLS. See [`../../docs/mcp-cli.md`](../../docs/mcp-cli.md).

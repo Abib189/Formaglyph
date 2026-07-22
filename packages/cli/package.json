@@ -1,0 +1,57 @@
+{
+  "name": "@formaglyph/cli",
+  "version": "0.1.0",
+  "description": "Command-line and MCP access to the public Formaglyph icon catalog.",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abib189/Formaglyph.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://formaglyph-web-production.up.railway.app",
+  "bugs": "https://github.com/Abib189/Formaglyph/issues",
+  "keywords": ["icons", "svg", "cli", "mcp", "model-context-protocol"],
+  "bin": {
+    "formaglyph": "./dist/formaglyph.mjs",
+    "formaglyph-mcp": "./dist/formaglyph-mcp.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./http": {
+      "types": "./dist/types/http.d.ts",
+      "import": "./dist/http.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "smoke:http": "node scripts/smoke-http.mjs",
+    "smoke:stdio": "node scripts/smoke-stdio.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "pack:check": "pnpm build && pnpm pack --dry-run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "esbuild": "0.28.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

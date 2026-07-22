@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Check,
+  Copy,
   Database,
   FigmaLogo,
   GithubLogo,
@@ -16,6 +17,7 @@ import type { IntegrationName } from "../domain/types";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { useAppState } from "../state/AppState";
 import { repository } from "../services/repositories";
+import { copyText } from "../services/svg";
 
 function Toggle({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (value: boolean) => void; label: string; disabled?: boolean }) {
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} className={checked ? "settings-toggle active" : "settings-toggle"} onClick={() => onChange(!checked)}><span /></button>;
@@ -33,9 +35,19 @@ const integrationDetails: Record<IntegrationName, { label: string; description: 
 
 export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (value: boolean) => void }) {
   const { state, updateSetting } = useAppState();
-  const publicApiEndpoint = import.meta.env.DEV
-    ? "https://formaglyph-web-production.up.railway.app/api/v1"
-    : `${window.location.origin}/api/v1`;
+  const [mcpCopyState, setMcpCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const publicOrigin = import.meta.env.DEV ? "https://formaglyph-web-production.up.railway.app" : window.location.origin;
+  const publicApiEndpoint = `${publicOrigin}/api/v1`;
+  const publicMcpEndpoint = `${publicOrigin}/mcp`;
+  const copyMcpEndpoint = async () => {
+    try {
+      await copyText(publicMcpEndpoint);
+      setMcpCopyState("copied");
+    } catch {
+      setMcpCopyState("error");
+    }
+    window.setTimeout(() => setMcpCopyState("idle"), 1800);
+  };
 
   return (
     <main className="page-shell settings-page">
@@ -68,19 +80,19 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
             <PanelHeader number="03" title="Generation policy" meta="FUTURE MILESTONE" />
             <div className="adapter-options">
               <button disabled className={state.settings.generationAdapter === "local" ? "active" : ""}><HardDrives size={22} /><span><strong>Local SVG adapter</strong><small>Unavailable until the generation-adapter milestone.</small></span><i /></button>
-              <button disabled className={state.settings.generationAdapter === "hosted" ? "active" : ""}><Robot size={22} /><span><strong>Hosted generation</strong><small>Unavailable during the core workflow milestone.</small></span><i /></button>
+              <button disabled className={state.settings.generationAdapter === "hosted" ? "active" : ""}><Robot size={22} /><span><strong>Hosted generation</strong><small>Reserved for the generation-adapter milestone.</small></span><i /></button>
             </div>
-            <SettingRow icon={<ShieldCheck size={19} />} title="Enable hosted generation" description="Planned after SVG sanitization and the original icon library."><Toggle disabled checked={false} onChange={() => undefined} label="Enable hosted generation" /></SettingRow>
+            <SettingRow icon={<ShieldCheck size={19} />} title="Enable hosted generation" description="Next milestone: connect the default local/open adapter before enabling hosted generation."><Toggle disabled checked={false} onChange={() => undefined} label="Enable hosted generation" /></SettingRow>
             <SettingRow icon={<Check size={19} />} title="Automatic validation" description="Run geometry, naming, provenance, and licence checks after generation."><Toggle checked={state.settings.automaticValidation} onChange={(value) => updateSetting("automaticValidation", value)} label="Enable automatic validation" /></SettingRow>
             <SettingRow icon={<Database size={19} />} title="Retain generation prompts" description="Available after the generation-adapter milestone."><Toggle disabled checked={false} onChange={() => undefined} label="Retain generation prompts" /></SettingRow>
           </Panel>
 
           <Panel className="settings-panel">
             <div id="agents" className="settings-anchor" />
-            <PanelHeader number="04" title="Agents and API" meta="PUBLIC READ LIVE" accent />
+            <PanelHeader number="04" title="Agents and API" meta="MCP + API LIVE" accent />
             <div className="connection-field"><label>Public REST endpoint</label><div><code>{publicApiEndpoint}</code><button onClick={() => window.open(publicApiEndpoint, "_blank", "noopener,noreferrer")}>Open</button></div><p>Read-only Formaglyph Core search, manifests, metadata, OpenAPI, and immutable SVG delivery. No key required.</p></div>
-            <SettingRow icon={<PlugsConnected size={19} />} title="MCP server" description="Unavailable until the MCP and CLI milestone."><Toggle disabled checked={false} onChange={() => undefined} label="Enable MCP server" /></SettingRow>
-            <div className="connection-field"><label>MCP endpoint</label><div><code>Not provisioned</code><button disabled aria-label="MCP endpoint unavailable">Unavailable</button></div><p>No MCP endpoint is running in Milestone 1.</p></div>
+            <SettingRow icon={<PlugsConnected size={19} />} title="Public MCP server" description="Live read-only tools, resources, and prompts for agent clients."><Toggle disabled checked onChange={() => undefined} label="Public MCP server enabled" /></SettingRow>
+            <div className="connection-field"><label>Streamable HTTP MCP endpoint</label><div><code>{publicMcpEndpoint}</code><button onClick={() => void copyMcpEndpoint()}>{mcpCopyState === "copied" ? <><Check size={13} />Copied</> : <><Copy size={13} />{mcpCopyState === "error" ? "Copy failed" : "Copy"}</>}</button></div><p>Connect an MCP client directly. Search, inspect, and retrieve public Core SVGs without a key; project data is never exposed.</p></div>
             <SettingRow icon={<Key size={19} />} title="API permission" description="Public Core reads require no key; private project scopes remain unavailable."><select disabled value="public"><option value="public">Public read</option></select></SettingRow>
             <div className="api-key-block"><div><strong>Private API keys</strong><p>Key issuance, rotation, quotas, and write scopes arrive with authenticated API access.</p></div><button className="secondary-action" disabled>Not yet available</button></div>
           </Panel>
@@ -100,7 +112,7 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
             <PanelHeader number="06" title="Data and privacy" meta="DEVICE ONLY" />
             <SettingRow icon={<HardDrives size={19} />} title="Local backups" description="Keep a recoverable browser copy of drafts, reviews, and settings."><Toggle checked={state.settings.localBackups} onChange={(value) => updateSetting("localBackups", value)} label="Enable local backups" /></SettingRow>
             <SettingRow icon={<Database size={19} />} title="Anonymous diagnostics" description="Share non-content performance and error signals when a backend is connected."><Toggle checked={state.settings.anonymousDiagnostics} onChange={(value) => updateSetting("anonymousDiagnostics", value)} label="Share anonymous diagnostics" /></SettingRow>
-            <div className="privacy-note"><ShieldCheck size={21} /><div><strong>Private by default</strong><p>{repository.mode === "supabase" ? "Private project data is protected by membership-scoped RLS. Hosted generation, telemetry, MCP, and model requests are inactive." : "This demo stores data in local browser storage. Hosted sync, telemetry, and model requests are not active."}</p></div></div>
+            <div className="privacy-note"><ShieldCheck size={21} /><div><strong>Private by default</strong><p>{repository.mode === "supabase" ? "Private project data is protected by membership-scoped RLS. The public MCP server can read only the published Core catalog." : "This demo stores data in local browser storage. Public MCP access reads the published Core catalog, never browser drafts."}</p></div></div>
           </Panel>
         </div>
       </div>

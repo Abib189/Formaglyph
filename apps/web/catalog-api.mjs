@@ -140,7 +140,7 @@ export async function createCatalogApi({ catalogRoot }) {
         version: API_VERSION,
         access: "public-read-only",
         catalogue: { name: manifest.name, version: manifest.version, concepts: manifest.conceptCount, assets: manifest.assetCount, licence: manifest.licence },
-        links: { icons: new URL("/api/v1/icons", origin), manifest: new URL("/api/v1/manifest", origin), openapi: new URL("/api/v1/openapi.json", origin) },
+        links: { icons: new URL("/api/v1/icons", origin), manifest: new URL("/api/v1/manifest", origin), openapi: new URL("/api/v1/openapi.json", origin), mcp: new URL("/mcp", origin) },
       }, JSON_CACHE);
       return true;
     }

@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { createGzip } from "node:zlib";
 import { createCatalogApi } from "./catalog-api.mjs";
 
+const mcpModule = process.env.FORMAGLYPH_MCP_MODULE ?? new URL("../../packages/cli/dist/http.mjs", import.meta.url).href;
+const { handleFormaglyphMcpHttp } = await import(mcpModule);
+
 const root = resolve(fileURLToPath(new URL("./dist", import.meta.url)));
 const configuredPort = Number.parseInt(process.env.PORT ?? "3000", 10);
 const port = Number.isFinite(configuredPort) ? configuredPort : 3000;
@@ -69,6 +72,10 @@ const server = createServer(async (request, response) => {
 
   if (url.pathname === "/health") {
     sendJson(response, 200, { status: "ok" });
+    return;
+  }
+  if (url.pathname === "/mcp") {
+    await handleFormaglyphMcpHttp(request, response);
     return;
   }
   if (await handleCatalogApi(request, response, url)) return;

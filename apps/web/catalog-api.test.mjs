@@ -51,6 +51,7 @@ describe("Formaglyph public API v1", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe("*");
     expect(response.headers.get("x-formaglyph-api-version")).toBe("1");
     expect(body.catalogue).toMatchObject({ concepts: 12, assets: 24, licence: "MIT" });
+    expect(body.links.mcp.toString()).toBe("https://api.formaglyph.test/mcp");
   });
 
   it("ranks intent search and paginates with opaque cursors", async () => {
