@@ -6,6 +6,7 @@
 **/coverage/
 **/.npm-cache/
 output/
+packages/icons/release/
 .DS_Store
 .env
 .env.*

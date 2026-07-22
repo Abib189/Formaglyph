@@ -1,10 +1,50 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "name": "Formaglyph Core",
+  "version": "0.1.0",
   "grid": 24,
+  "licence": "MIT",
+  "conceptCount": 12,
+  "assetCount": 24,
   "assets": [
     {
       "stableId": "ico_fg_001_check_circle",
       "name": "check-circle",
+      "label": "Check circle",
+      "category": "Status",
+      "description": "Confirms that an action or process completed successfully.",
+      "tags": [
+        "success",
+        "complete",
+        "confirm",
+        "payment",
+        "done"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "success",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "complete",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "confirmed",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/check-circle/regular.svg",
@@ -14,6 +54,41 @@
     {
       "stableId": "ico_fg_001_check_circle",
       "name": "check-circle",
+      "label": "Check circle",
+      "category": "Status",
+      "description": "Confirms that an action or process completed successfully.",
+      "tags": [
+        "success",
+        "complete",
+        "confirm",
+        "payment",
+        "done"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "success",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "complete",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "confirmed",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/check-circle/solid.svg",
@@ -23,6 +98,41 @@
     {
       "stableId": "ico_fg_002_card_check",
       "name": "card-check",
+      "label": "Card check",
+      "category": "Payments",
+      "description": "Represents a card payment that has been accepted.",
+      "tags": [
+        "payment",
+        "card",
+        "checkout",
+        "success",
+        "transaction"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "payment successful",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "approved card",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "checkout complete",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/card-check/regular.svg",
@@ -32,6 +142,41 @@
     {
       "stableId": "ico_fg_002_card_check",
       "name": "card-check",
+      "label": "Card check",
+      "category": "Payments",
+      "description": "Represents a card payment that has been accepted.",
+      "tags": [
+        "payment",
+        "card",
+        "checkout",
+        "success",
+        "transaction"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "payment successful",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "approved card",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "checkout complete",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/card-check/solid.svg",
@@ -41,6 +186,41 @@
     {
       "stableId": "ico_fg_003_receipt_search",
       "name": "receipt-search",
+      "label": "Receipt search",
+      "category": "Payments",
+      "description": "Finds a receipt, invoice, or transaction record.",
+      "tags": [
+        "receipt",
+        "search",
+        "invoice",
+        "transaction",
+        "find"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "find receipt",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "invoice search",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "transaction lookup",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/receipt-search/regular.svg",
@@ -50,6 +230,41 @@
     {
       "stableId": "ico_fg_003_receipt_search",
       "name": "receipt-search",
+      "label": "Receipt search",
+      "category": "Payments",
+      "description": "Finds a receipt, invoice, or transaction record.",
+      "tags": [
+        "receipt",
+        "search",
+        "invoice",
+        "transaction",
+        "find"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "find receipt",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "invoice search",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "transaction lookup",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/receipt-search/solid.svg",
@@ -59,6 +274,41 @@
     {
       "stableId": "ico_fg_004_cloud_upload",
       "name": "cloud-upload",
+      "label": "Cloud upload",
+      "category": "Files",
+      "description": "Uploads a file or dataset to cloud storage.",
+      "tags": [
+        "cloud",
+        "upload",
+        "file",
+        "storage",
+        "transfer"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "upload cloud",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "send file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "cloud transfer",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/cloud-upload/regular.svg",
@@ -68,6 +318,41 @@
     {
       "stableId": "ico_fg_004_cloud_upload",
       "name": "cloud-upload",
+      "label": "Cloud upload",
+      "category": "Files",
+      "description": "Uploads a file or dataset to cloud storage.",
+      "tags": [
+        "cloud",
+        "upload",
+        "file",
+        "storage",
+        "transfer"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "upload cloud",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "send file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "cloud transfer",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/cloud-upload/solid.svg",
@@ -77,6 +362,41 @@
     {
       "stableId": "ico_fg_005_cloud_sync",
       "name": "cloud-sync",
+      "label": "Cloud sync",
+      "category": "Files",
+      "description": "Synchronises local data with a remote source.",
+      "tags": [
+        "cloud",
+        "sync",
+        "refresh",
+        "backup",
+        "storage"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "sync cloud",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "cloud refresh",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "backup sync",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/cloud-sync/regular.svg",
@@ -86,6 +406,41 @@
     {
       "stableId": "ico_fg_005_cloud_sync",
       "name": "cloud-sync",
+      "label": "Cloud sync",
+      "category": "Files",
+      "description": "Synchronises local data with a remote source.",
+      "tags": [
+        "cloud",
+        "sync",
+        "refresh",
+        "backup",
+        "storage"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "sync cloud",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "cloud refresh",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "backup sync",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/cloud-sync/solid.svg",
@@ -95,6 +450,41 @@
     {
       "stableId": "ico_fg_006_download_tray",
       "name": "download-tray",
+      "label": "Download tray",
+      "category": "Files",
+      "description": "Downloads an asset into a local destination.",
+      "tags": [
+        "download",
+        "file",
+        "save",
+        "tray",
+        "transfer"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "save file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "download complete",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "receive file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/download-tray/regular.svg",
@@ -104,6 +494,41 @@
     {
       "stableId": "ico_fg_006_download_tray",
       "name": "download-tray",
+      "label": "Download tray",
+      "category": "Files",
+      "description": "Downloads an asset into a local destination.",
+      "tags": [
+        "download",
+        "file",
+        "save",
+        "tray",
+        "transfer"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "save file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "download complete",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "receive file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/download-tray/solid.svg",
@@ -113,6 +538,41 @@
     {
       "stableId": "ico_fg_007_file_lock",
       "name": "file-lock",
+      "label": "File lock",
+      "category": "Security",
+      "description": "Marks a document as protected or access restricted.",
+      "tags": [
+        "file",
+        "document",
+        "lock",
+        "secure",
+        "private"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "secure file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "locked document",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "private file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/file-lock/regular.svg",
@@ -122,6 +582,41 @@
     {
       "stableId": "ico_fg_007_file_lock",
       "name": "file-lock",
+      "label": "File lock",
+      "category": "Security",
+      "description": "Marks a document as protected or access restricted.",
+      "tags": [
+        "file",
+        "document",
+        "lock",
+        "secure",
+        "private"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "secure file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "locked document",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "private file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/file-lock/solid.svg",
@@ -131,6 +626,41 @@
     {
       "stableId": "ico_fg_008_folder_spark",
       "name": "folder-spark",
+      "label": "Folder spark",
+      "category": "Files",
+      "description": "Highlights a new, featured, or enhanced collection.",
+      "tags": [
+        "folder",
+        "new",
+        "featured",
+        "spark",
+        "collection"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "new folder",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "featured folder",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "smart folder",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/folder-spark/regular.svg",
@@ -140,6 +670,41 @@
     {
       "stableId": "ico_fg_008_folder_spark",
       "name": "folder-spark",
+      "label": "Folder spark",
+      "category": "Files",
+      "description": "Highlights a new, featured, or enhanced collection.",
+      "tags": [
+        "folder",
+        "new",
+        "featured",
+        "spark",
+        "collection"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "new folder",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "featured folder",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "smart folder",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/folder-spark/solid.svg",
@@ -149,6 +714,41 @@
     {
       "stableId": "ico_fg_009_user_shield",
       "name": "user-shield",
+      "label": "User shield",
+      "category": "Security",
+      "description": "Represents a protected account or verified identity.",
+      "tags": [
+        "user",
+        "account",
+        "shield",
+        "identity",
+        "secure"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "secure account",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "protected user",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "verified identity",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/user-shield/regular.svg",
@@ -158,6 +758,41 @@
     {
       "stableId": "ico_fg_009_user_shield",
       "name": "user-shield",
+      "label": "User shield",
+      "category": "Security",
+      "description": "Represents a protected account or verified identity.",
+      "tags": [
+        "user",
+        "account",
+        "shield",
+        "identity",
+        "secure"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "secure account",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "protected user",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "verified identity",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/user-shield/solid.svg",
@@ -167,6 +802,41 @@
     {
       "stableId": "ico_fg_010_message_sent",
       "name": "message-sent",
+      "label": "Message sent",
+      "category": "Communication",
+      "description": "Confirms that a message was sent to its destination.",
+      "tags": [
+        "message",
+        "send",
+        "sent",
+        "communication",
+        "success"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "send message",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "message delivered",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "paper plane",
+          "reviewed": true
+        }
+      ],
+      "directionality": "ltr-specific",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/message-sent/regular.svg",
@@ -176,6 +846,41 @@
     {
       "stableId": "ico_fg_010_message_sent",
       "name": "message-sent",
+      "label": "Message sent",
+      "category": "Communication",
+      "description": "Confirms that a message was sent to its destination.",
+      "tags": [
+        "message",
+        "send",
+        "sent",
+        "communication",
+        "success"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "send message",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "message delivered",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "paper plane",
+          "reviewed": true
+        }
+      ],
+      "directionality": "ltr-specific",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/message-sent/solid.svg",
@@ -185,6 +890,41 @@
     {
       "stableId": "ico_fg_011_warning_diamond",
       "name": "warning-diamond",
+      "label": "Warning diamond",
+      "category": "Feedback",
+      "description": "Signals a condition that needs attention before proceeding.",
+      "tags": [
+        "warning",
+        "alert",
+        "attention",
+        "error",
+        "caution"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "caution",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "attention required",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "risk alert",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/warning-diamond/regular.svg",
@@ -194,6 +934,41 @@
     {
       "stableId": "ico_fg_011_warning_diamond",
       "name": "warning-diamond",
+      "label": "Warning diamond",
+      "category": "Feedback",
+      "description": "Signals a condition that needs attention before proceeding.",
+      "tags": [
+        "warning",
+        "alert",
+        "attention",
+        "error",
+        "caution"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "caution",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "attention required",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "risk alert",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/warning-diamond/solid.svg",
@@ -203,6 +978,41 @@
     {
       "stableId": "ico_fg_012_archive_box",
       "name": "archive-box",
+      "label": "Archive box",
+      "category": "Files",
+      "description": "Stores an item in a retained archive.",
+      "tags": [
+        "archive",
+        "box",
+        "store",
+        "retain",
+        "package"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "archive item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "storage box",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "retain file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "regular",
       "version": "0.1.0",
       "path": "assets/archive-box/regular.svg",
@@ -212,6 +1022,41 @@
     {
       "stableId": "ico_fg_012_archive_box",
       "name": "archive-box",
+      "label": "Archive box",
+      "category": "Files",
+      "description": "Stores an item in a retained archive.",
+      "tags": [
+        "archive",
+        "box",
+        "store",
+        "retain",
+        "package"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "archive item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "storage box",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "retain file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "starter-0.1",
+        "disclosed": true
+      },
       "variant": "solid",
       "version": "0.1.0",
       "path": "assets/archive-box/solid.svg",

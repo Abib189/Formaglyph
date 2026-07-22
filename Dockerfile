@@ -32,8 +32,11 @@ FROM node:24.15.0-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV FORMAGLYPH_CATALOG_ROOT=/app/catalog
 
 COPY --from=build --chown=node:node /app/apps/web/dist ./dist
+COPY --from=build --chown=node:node /app/packages/icons/assets ./catalog
+COPY --chown=node:node apps/web/catalog-api.mjs ./catalog-api.mjs
 COPY --chown=node:node apps/web/server.mjs ./server.mjs
 
 USER node

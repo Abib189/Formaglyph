@@ -20,13 +20,15 @@ This is an early production foundation, not yet the complete hosted platform or 
 - Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
 - An original Formaglyph Core starter release: 12 concepts, 24 validated Regular/Solid SVG assets, and a content-hashed build manifest.
 - Ranked core-catalog search with reviewed aliases, intent phrases, typo tolerance, category and weight filters, and true sibling-variant comparison.
+- A versioned, read-only public REST API for search, metadata, OpenAPI discovery, manifests, and immutable SVG delivery.
+- A self-contained npm-ready `@formaglyph/icons` release artifact with typed catalog and per-asset exports.
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
 - Invite-only magic-link authentication, route guards, session restoration, and transactional onboarding.
 - PostgreSQL tables, explicit Data API grants, RLS, private/public Storage policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
 
-Generation workers, vector semantic search, public REST API, CLI, MCP server, framework packages, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). Their Settings controls are deliberately unavailable in Milestone 1.
+Generation workers, vector semantic search, authenticated/private API scopes, CLI, MCP server, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). Their Settings controls remain deliberately unavailable.
 
 ## Repository layout
 
@@ -93,6 +95,16 @@ The Dockerfile declares all three as build arguments because Vite embeds publish
 
 The current production preview is [formaglyph-web-production.up.railway.app](https://formaglyph-web-production.up.railway.app/explore). In the hosted Supabase Auth URL configuration, set the site URL to `https://formaglyph-web-production.up.railway.app` and allow the exact redirect URL `https://formaglyph-web-production.up.railway.app/auth/callback` before testing magic-link sign-in.
 
+## Use the public catalog API
+
+The versioned public API is available at [`/api/v1`](https://formaglyph-web-production.up.railway.app/api/v1). It exposes only the source-controlled, MIT-licensed Formaglyph Core release and accepts only `GET`, `HEAD`, and CORS preflight requests. Private project data and privileged Supabase access are not proxied through this API.
+
+```bash
+curl "https://formaglyph-web-production.up.railway.app/api/v1/icons?q=payment%20successful&variant=regular"
+```
+
+See [Public API v1](./docs/api-v1.md) for endpoints and caching behavior.
+
 ## Security model
 
 - Every exposed table has RLS and explicit grants.
@@ -111,6 +123,8 @@ Catalog, style, permission, and proposal contracts live in `@formaglyph/schema`.
 SVG safety and structural checks live in `@formaglyph/validators`. The package parses input as XML and rebuilds a new SVG from an explicit allow-list; scripts, event handlers, external resources, foreign markup, malformed XML, invalid viewBoxes, and unsafe attribute values never reach normalized output. Candidate persistence uploads only that normalized output and PostgreSQL prevents failed validation runs from entering review.
 
 Original geometry and release metadata live in `@formaglyph/icons`. `pnpm --filter @formaglyph/icons assets` deterministically rebuilds the committed SVG tree and SHA-256 manifest; tests require every stable concept to have both Regular and Solid variants and pass the publication validator.
+
+`pnpm --filter @formaglyph/icons pack:check` builds and inspects the npm-ready package without publishing it. Actual registry publication requires a separately approved release action and registry credentials.
 
 ## Licensing and trademark
 
