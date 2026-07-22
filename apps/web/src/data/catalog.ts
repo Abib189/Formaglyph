@@ -1,40 +1,11 @@
-import {
-  CheckCircle,
-  CloudArrowUp,
-  CloudCheck,
-  CreditCard,
-  CurrencyCircleDollar,
-  DownloadSimple,
-  FolderSimple,
-  LockKey,
-  MagnifyingGlass,
-  PaperPlaneTilt,
-  Receipt,
-  SealCheck,
-  ShieldCheck,
-  UploadSimple,
-} from "@phosphor-icons/react";
+import { CloudArrowUp, CloudCheck, CurrencyCircleDollar, DownloadSimple, FolderSimple, LockKey, MagnifyingGlass, UploadSimple } from "@phosphor-icons/react";
+import { formaglyphAssets } from "@formaglyph/icons";
 import type { Candidate, CatalogIcon, PersistedAppState } from "../domain/types";
 
-const seedAliases = (...values: string[]) => values.map((value) => ({ locale: "en", value, reviewed: true }));
-const seedProvenance = {
-  kind: "third-party",
-  source: "@phosphor-icons/react",
-  disclosed: true,
-} as const;
-
-export const iconResults: CatalogIcon[] = [
-  { id: "circle-check", stableId: "ico_demo_001", name: "circle-check", label: "Circle check", category: "Status", description: "Indicates a completed or successful state.", Icon: CheckCircle, tags: ["payment", "successful", "complete", "confirm", "done"], aliases: seedAliases("success", "complete"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "circle-check-filled", stableId: "ico_demo_002", name: "circle-check-filled", label: "Circle check filled", category: "Status", description: "A higher-emphasis successful or completed state.", Icon: CheckCircle, tags: ["payment", "successful", "complete", "confirm", "solid"], aliases: seedAliases("success-filled"), version: "1.0.0", variant: "solid", previewWeight: "fill", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "receipt-check", stableId: "ico_demo_003", name: "receipt-check", label: "Receipt check", category: "Payments", description: "Confirms that a receipt or transaction is valid.", Icon: Receipt, tags: ["payment", "receipt", "successful", "transaction"], aliases: seedAliases("transaction-complete"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "card-check", stableId: "ico_demo_004", name: "card-check", label: "Card check", category: "Payments", description: "Represents a successful card payment.", Icon: CreditCard, tags: ["payment", "card", "successful", "checkout"], aliases: seedAliases("payment-card-success"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "shield-check", stableId: "ico_demo_005", name: "shield-check", label: "Shield check", category: "Security", description: "Communicates protection, verification, or trust.", Icon: ShieldCheck, tags: ["secure", "successful", "verified", "protected"], aliases: seedAliases("verified-shield"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "seal-check", stableId: "ico_demo_006", name: "seal-check", label: "Seal check", category: "Feedback", description: "Marks an approved or verified outcome.", Icon: SealCheck, tags: ["approved", "successful", "verified", "badge"], aliases: seedAliases("approved-badge"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "paper-plane-check", stableId: "ico_demo_007", name: "paper-plane-check", label: "Sent successfully", category: "Communication", description: "Represents a message or action sent successfully.", Icon: PaperPlaneTilt, tags: ["send", "successful", "message", "paper plane"], aliases: seedAliases("message-sent"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "ltr-specific", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "cloud-upload", stableId: "ico_demo_008", name: "cloud-upload", label: "Cloud upload", category: "Files", description: "Uploads a file or dataset to cloud storage.", Icon: CloudArrowUp, tags: ["cloud", "upload", "file", "storage"], aliases: seedAliases("upload-cloud", "cloud-arrow-up"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "currency-check", stableId: "ico_demo_009", name: "currency-circle-check", label: "Payment complete", category: "Payments", description: "Represents money received or payment completed.", Icon: CurrencyCircleDollar, tags: ["payment", "successful", "money", "currency"], aliases: seedAliases("paid"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-  { id: "download-complete", stableId: "ico_demo_010", name: "download-complete", label: "Download complete", category: "Files", description: "Indicates that a file download has completed.", Icon: DownloadSimple, tags: ["download", "complete", "file", "successful"], aliases: seedAliases("downloaded"), version: "1.0.0", variant: "regular", previewWeight: "regular", directionality: "neutral", licence: "MIT", status: "seed", provenance: seedProvenance },
-];
+export const iconResults: CatalogIcon[] = formaglyphAssets.map((asset) => ({
+  ...asset,
+  previewWeight: asset.variant === "solid" ? "fill" : "regular",
+}));
 
 export const candidates: Candidate[] = [
   { id: "candidate-01", name: "Balanced", description: "Rounded cloud, centred arrow, and consistent live-area padding.", Icon: CloudArrowUp, issue: null },

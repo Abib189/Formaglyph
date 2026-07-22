@@ -13,18 +13,20 @@ AI-generated candidates are always drafts. Publishing, deprecating, syncing, and
 
 ## Current status
 
-This is an early production foundation, not yet the complete hosted platform or the original Formaglyph icon family. It includes:
+This is an early production foundation, not yet the complete hosted platform or the full 100-concept Formaglyph V1 family. It includes:
 
 - A strict TypeScript React application with responsive light and dark modes.
 - Search, filtering, SVG copy/export, proposal validation, review comments, and approval flows.
 - Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
+- An original Formaglyph Core starter release: 12 concepts, 24 validated Regular/Solid SVG assets, and a content-hashed build manifest.
+- Ranked core-catalog search with reviewed aliases, intent phrases, typo tolerance, category and weight filters, and true sibling-variant comparison.
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
 - Invite-only magic-link authentication, route guards, session restoration, and transactional onboarding.
 - PostgreSQL tables, explicit Data API grants, RLS, private/public Storage policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
 
-Generation workers, semantic search, public REST API, CLI, MCP server, framework packages, and the original reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). Their Settings controls are deliberately unavailable in Milestone 1.
+Generation workers, vector semantic search, public REST API, CLI, MCP server, framework packages, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). Their Settings controls are deliberately unavailable in Milestone 1.
 
 ## Repository layout
 
@@ -33,6 +35,7 @@ apps/web/               Production frontend foundation and design QA
 docs/                   Product requirements and architecture direction
 packages/schema/        Canonical contracts shared across every product surface
 packages/validators/    Reusable SVG sanitizer and deterministic validation rules
+packages/icons/         Original geometry, generated SVG assets, hashes, and metadata
 supabase/               Local config, migration, seed data, and database tests
 ```
 
@@ -99,13 +102,15 @@ The current production preview is [formaglyph-web-production.up.railway.app](htt
 - Published Storage objects use immutable ID/version paths and cannot be updated or deleted through the Data API.
 - Public anonymous reads are limited to published icons in public projects and the matching public assets.
 
-## Seed catalog notice
+## Catalog assets
 
-The current interface uses `@phosphor-icons/react` as clearly identified development seed data. Those glyphs are not the original Formaglyph icon library and will be replaced by reviewed Formaglyph assets as the library is produced.
+Explore ships the source-controlled Formaglyph Core starter release from `@formaglyph/icons`. The hosted repository overlays approved project icons by stable ID and variant, while the built-in core remains available if the team catalog is offline. Phosphor remains a development-only UI dependency for interface controls and prototype Create/Review candidates; its glyphs are not published as Formaglyph catalog assets.
 
 Catalog, style, permission, and proposal contracts live in `@formaglyph/schema`. New APIs, MCP tools, CLI commands, and framework packages should consume those contracts rather than defining parallel models.
 
 SVG safety and structural checks live in `@formaglyph/validators`. The package parses input as XML and rebuilds a new SVG from an explicit allow-list; scripts, event handlers, external resources, foreign markup, malformed XML, invalid viewBoxes, and unsafe attribute values never reach normalized output. Candidate persistence uploads only that normalized output and PostgreSQL prevents failed validation runs from entering review.
+
+Original geometry and release metadata live in `@formaglyph/icons`. `pnpm --filter @formaglyph/icons assets` deterministically rebuilds the committed SVG tree and SHA-256 manifest; tests require every stable concept to have both Regular and Solid variants and pass the publication validator.
 
 ## Licensing and trademark
 

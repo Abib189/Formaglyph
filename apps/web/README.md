@@ -9,11 +9,10 @@ Production foundation for Formaglyph’s Explore → Create → Review workflow.
 - Versioned local persistence for draft and proposal state.
 - Guarded proposal transitions: draft, in review, changes requested, and approved.
 - Candidate validation, review comments, approval, light/dark themes, and responsive layouts.
+- The original Formaglyph Core starter release with 12 concepts and 24 Regular/Solid SVG assets.
 - Strict TypeScript and automated tests for search, storage, and workflow rules.
 
-The current catalog is clearly identified seed data for product development. Formaglyph’s original reviewed icon family, hosted authentication, PostgreSQL catalog, object storage, generation workers, REST API, and MCP server remain separate delivery milestones defined in the V1 PRD.
-
-The visible development seed glyphs are provided through the MIT-licensed `@phosphor-icons/react` dependency. They are not the original Formaglyph icon family.
+Explore always includes the source-controlled `@formaglyph/icons` core release and overlays approved Supabase project icons by stable ID and variant. `@phosphor-icons/react` remains an MIT-licensed interface and prototype-candidate dependency; its glyphs are not published as Formaglyph catalog assets. The remaining V1 family, generation workers, REST API, and MCP server remain separate delivery milestones defined in the V1 PRD.
 
 ## Local development
 
@@ -39,7 +38,7 @@ The visual comparison record is in [design-qa.md](./design-qa.md).
 ```text
 src/
   components/   Shared shell and icon-preview primitives
-  data/         Typed seed catalog and initial workflow state
+  data/         Original catalog adapter and initial workflow state
   domain/       Canonical application types
   pages/        Explore, Create, and Review routes
   services/     Search, persistence, SVG, and workflow rules

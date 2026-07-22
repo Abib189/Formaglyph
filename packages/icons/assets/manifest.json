@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "grid": 24,
+  "assets": [
+    {
+      "stableId": "ico_fg_001_check_circle",
+      "name": "check-circle",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/check-circle/regular.svg",
+      "bytes": 272,
+      "sha256": "51fed93f1796d15bf8f569e5d85ebd602d84af50213c8835980eb07e32c58658"
+    },
+    {
+      "stableId": "ico_fg_001_check_circle",
+      "name": "check-circle",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/check-circle/solid.svg",
+      "bytes": 273,
+      "sha256": "88fef2b70814f4cbe77adf447d2b3c3788a5d7e2757e74b2f360ed75e28dc432"
+    },
+    {
+      "stableId": "ico_fg_002_card_check",
+      "name": "card-check",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/card-check/regular.svg",
+      "bytes": 311,
+      "sha256": "b8cc36ff858ef712fc82df38ec31404d537525f39a6ad2e4c5361a469b5565e2"
+    },
+    {
+      "stableId": "ico_fg_002_card_check",
+      "name": "card-check",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/card-check/solid.svg",
+      "bytes": 351,
+      "sha256": "0ab44687d2bbb57585c628d69bc12eecb49813f664b8266dce85d0411105a936"
+    },
+    {
+      "stableId": "ico_fg_003_receipt_search",
+      "name": "receipt-search",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/receipt-search/regular.svg",
+      "bytes": 337,
+      "sha256": "ffbe2e9379ceed23b16383368ad113e79e967ec3debf9d04ceedacc7ef3bb307"
+    },
+    {
+      "stableId": "ico_fg_003_receipt_search",
+      "name": "receipt-search",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/receipt-search/solid.svg",
+      "bytes": 398,
+      "sha256": "a76b5aa35d62aa0975abd808db1cc0ac23b0a76aa68f9f43120cf5f37043eb9e"
+    },
+    {
+      "stableId": "ico_fg_004_cloud_upload",
+      "name": "cloud-upload",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/cloud-upload/regular.svg",
+      "bytes": 331,
+      "sha256": "c14fb126e9f3ad93b3f5c82dd6ffcca674168b52fdd3b77acb73210b64433b75"
+    },
+    {
+      "stableId": "ico_fg_004_cloud_upload",
+      "name": "cloud-upload",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/cloud-upload/solid.svg",
+      "bytes": 306,
+      "sha256": "571b07c6d2365a4723f3f073cb3582167da1bd970023b8b1c63817e16bbc8ff0"
+    },
+    {
+      "stableId": "ico_fg_005_cloud_sync",
+      "name": "cloud-sync",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/cloud-sync/regular.svg",
+      "bytes": 391,
+      "sha256": "c93db2733d3ab6754797cc4d7f97a8c463a0908f34a323373b3c12a4bd08bc57"
+    },
+    {
+      "stableId": "ico_fg_005_cloud_sync",
+      "name": "cloud-sync",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/cloud-sync/solid.svg",
+      "bytes": 378,
+      "sha256": "a66e3cec8a46b0086c5923b9b27e6aa8a9cdfa8ef506546caa8cfd227c8a7efc"
+    },
+    {
+      "stableId": "ico_fg_006_download_tray",
+      "name": "download-tray",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/download-tray/regular.svg",
+      "bytes": 307,
+      "sha256": "e5eb57b841def7f28ed1325d7400366c23511232a76c600ff482c39d0c88748e"
+    },
+    {
+      "stableId": "ico_fg_006_download_tray",
+      "name": "download-tray",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/download-tray/solid.svg",
+      "bytes": 295,
+      "sha256": "23dc8f14172e874a2cddd311532f3e758c34861a97597187497ba0dc61e12e49"
+    },
+    {
+      "stableId": "ico_fg_007_file_lock",
+      "name": "file-lock",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/file-lock/regular.svg",
+      "bytes": 345,
+      "sha256": "7c04062310c637b88b5b29a8f929fcd669f7e3a266aef0ba4924a414ed8b3abf"
+    },
+    {
+      "stableId": "ico_fg_007_file_lock",
+      "name": "file-lock",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/file-lock/solid.svg",
+      "bytes": 336,
+      "sha256": "a071efe1089514421d091d0b66b90216923d275c0b3f9d11a7260dd084a630dc"
+    },
+    {
+      "stableId": "ico_fg_008_folder_spark",
+      "name": "folder-spark",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/folder-spark/regular.svg",
+      "bytes": 465,
+      "sha256": "51a309025a986d7481eb5a1eb2e6b4b967b6e48beb75aa80f4dd50d5d3e580f2"
+    },
+    {
+      "stableId": "ico_fg_008_folder_spark",
+      "name": "folder-spark",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/folder-spark/solid.svg",
+      "bytes": 409,
+      "sha256": "9f4e3c5d643975b2399c92abc6ac8f46e5ef7f33034b9198b21384378d3357c9"
+    },
+    {
+      "stableId": "ico_fg_009_user_shield",
+      "name": "user-shield",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/user-shield/regular.svg",
+      "bytes": 375,
+      "sha256": "bb3fe79ca4c2f4d5eb179a763b1645127c900d684afbdd06f70173c2c0fcffe4"
+    },
+    {
+      "stableId": "ico_fg_009_user_shield",
+      "name": "user-shield",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/user-shield/solid.svg",
+      "bytes": 418,
+      "sha256": "1dd2bd7daf28fa3146dfa32424503e8b0fa4b748f6a4ad08828d7f54b6d1fc05"
+    },
+    {
+      "stableId": "ico_fg_010_message_sent",
+      "name": "message-sent",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/message-sent/regular.svg",
+      "bytes": 262,
+      "sha256": "5b992034a2d9dbc2f4b7c1574e9bee0d9f7b9bcaab97de37135a6a7badc8956d"
+    },
+    {
+      "stableId": "ico_fg_010_message_sent",
+      "name": "message-sent",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/message-sent/solid.svg",
+      "bytes": 240,
+      "sha256": "3d912cc2d585c6d95ee3dc37372bc3c49b7956190728254d24e1c2b622c79fba"
+    },
+    {
+      "stableId": "ico_fg_011_warning_diamond",
+      "name": "warning-diamond",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/warning-diamond/regular.svg",
+      "bytes": 323,
+      "sha256": "dc61101357614eb019271db933f67af7b9f28ee38f8fcc7c121c4afca6721c62"
+    },
+    {
+      "stableId": "ico_fg_011_warning_diamond",
+      "name": "warning-diamond",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/warning-diamond/solid.svg",
+      "bytes": 344,
+      "sha256": "249f48e534fa648b12b40dfae765ab70bca4e5ece6b5c093978bb89393b24891"
+    },
+    {
+      "stableId": "ico_fg_012_archive_box",
+      "name": "archive-box",
+      "variant": "regular",
+      "version": "0.1.0",
+      "path": "assets/archive-box/regular.svg",
+      "bytes": 328,
+      "sha256": "b0d5dd436310fc536beafb93c402ac57679b7e7706d37ad9f3b8b41923e23b60"
+    },
+    {
+      "stableId": "ico_fg_012_archive_box",
+      "name": "archive-box",
+      "variant": "solid",
+      "version": "0.1.0",
+      "path": "assets/archive-box/solid.svg",
+      "bytes": 348,
+      "sha256": "f5ed49c2a0f95117d8a7d6ab76f71de441d6d706741887ae25c24a800560ae0f"
+    }
+  ]
+}

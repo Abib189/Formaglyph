@@ -4,8 +4,8 @@ import { scoreIcon, searchIcons } from "./search";
 
 describe("catalog search", () => {
   it("ranks an exact canonical name above tag-only matches", () => {
-    const exact = iconResults.find((icon) => icon.id === "cloud-upload")!;
-    const unrelated = iconResults.find((icon) => icon.id === "circle-check")!;
+    const exact = iconResults.find((icon) => icon.name === "cloud-upload")!;
+    const unrelated = iconResults.find((icon) => icon.name === "check-circle")!;
     expect(scoreIcon("cloud-upload", exact)).toBeGreaterThan(scoreIcon("cloud-upload", unrelated));
   });
 
@@ -17,5 +17,12 @@ describe("catalog search", () => {
 
   it("returns no results for an unknown intent", () => {
     expect(searchIcons(iconResults, "xylophone-orbit")).toEqual([]);
+  });
+
+  it("tolerates a single-character typo without outranking exact aliases", () => {
+    const typoMatches = searchIcons(iconResults, "reciept");
+    expect(typoMatches[0]?.name).toBe("receipt-search");
+    const exactMatches = searchIcons(iconResults, "payment successful");
+    expect(exactMatches[0]?.name).toBe("card-check");
   });
 });
