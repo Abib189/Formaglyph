@@ -33,6 +33,9 @@ const integrationDetails: Record<IntegrationName, { label: string; description: 
 
 export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (value: boolean) => void }) {
   const { state, updateSetting } = useAppState();
+  const publicApiEndpoint = import.meta.env.DEV
+    ? "https://formaglyph-web-production.up.railway.app/api/v1"
+    : `${window.location.origin}/api/v1`;
 
   return (
     <main className="page-shell settings-page">
@@ -74,11 +77,12 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="agents" className="settings-anchor" />
-            <PanelHeader number="04" title="Agents and API" meta="FUTURE MILESTONE" />
+            <PanelHeader number="04" title="Agents and API" meta="PUBLIC READ LIVE" accent />
+            <div className="connection-field"><label>Public REST endpoint</label><div><code>{publicApiEndpoint}</code><button onClick={() => window.open(publicApiEndpoint, "_blank", "noopener,noreferrer")}>Open</button></div><p>Read-only Formaglyph Core search, manifests, metadata, OpenAPI, and immutable SVG delivery. No key required.</p></div>
             <SettingRow icon={<PlugsConnected size={19} />} title="MCP server" description="Unavailable until the MCP and CLI milestone."><Toggle disabled checked={false} onChange={() => undefined} label="Enable MCP server" /></SettingRow>
             <div className="connection-field"><label>MCP endpoint</label><div><code>Not provisioned</code><button disabled aria-label="MCP endpoint unavailable">Unavailable</button></div><p>No MCP endpoint is running in Milestone 1.</p></div>
-            <SettingRow icon={<Key size={19} />} title="API permission" description="REST API keys are not issued in this milestone."><select disabled value="read"><option value="read">Unavailable</option></select></SettingRow>
-            <div className="api-key-block"><div><strong>API keys</strong><p>Key issuance begins with the REST API milestone.</p></div><button className="secondary-action" disabled>Unavailable in Milestone 1</button></div>
+            <SettingRow icon={<Key size={19} />} title="API permission" description="Public Core reads require no key; private project scopes remain unavailable."><select disabled value="public"><option value="public">Public read</option></select></SettingRow>
+            <div className="api-key-block"><div><strong>Private API keys</strong><p>Key issuance, rotation, quotas, and write scopes arrive with authenticated API access.</p></div><button className="secondary-action" disabled>Not yet available</button></div>
           </Panel>
 
           <Panel className="settings-panel settings-unavailable">

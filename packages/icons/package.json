@@ -16,9 +16,11 @@
   ],
   "scripts": {
     "assets": "node scripts/build-assets.mjs",
+    "release": "node scripts/build-package.mjs",
+    "pack:check": "pnpm assets && pnpm release && pnpm --dir release pack --dry-run",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "build": "pnpm assets && tsc --noEmit",
+    "test": "pnpm assets && pnpm release && vitest run",
+    "build": "pnpm assets && pnpm release && tsc --noEmit",
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {

@@ -12,10 +12,18 @@ const manifest = [];
 for (const asset of formaglyphAssets) {
   const outputPath = resolve(packageRoot, asset.assetPath);
   await mkdir(dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, `${asset.svg}\n`, "utf8");
+  await writeFile(outputPath, asset.svg, "utf8");
   manifest.push({
     stableId: asset.stableId,
     name: asset.name,
+    label: asset.label,
+    category: asset.category,
+    description: asset.description,
+    tags: asset.tags,
+    aliases: asset.aliases,
+    directionality: asset.directionality,
+    licence: asset.licence,
+    provenance: asset.provenance,
     variant: asset.variant,
     version: asset.version,
     path: asset.assetPath,
@@ -24,5 +32,15 @@ for (const asset of formaglyphAssets) {
   });
 }
 
-await writeFile(resolve(assetsRoot, "manifest.json"), `${JSON.stringify({ schemaVersion: 1, grid: 24, assets: manifest }, null, 2)}\n`, "utf8");
+const concepts = new Set(manifest.map((asset) => asset.stableId)).size;
+await writeFile(resolve(assetsRoot, "manifest.json"), `${JSON.stringify({
+  schemaVersion: 2,
+  name: "Formaglyph Core",
+  version: "0.1.0",
+  grid: 24,
+  licence: "MIT",
+  conceptCount: concepts,
+  assetCount: manifest.length,
+  assets: manifest,
+}, null, 2)}\n`, "utf8");
 console.log(`Built ${manifest.length} Formaglyph SVG assets.`);

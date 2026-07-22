@@ -10,9 +10,10 @@ Production foundation for Formaglyph’s Explore → Create → Review workflow.
 - Guarded proposal transitions: draft, in review, changes requested, and approved.
 - Candidate validation, review comments, approval, light/dark themes, and responsive layouts.
 - The original Formaglyph Core starter release with 12 concepts and 24 Regular/Solid SVG assets.
+- Public REST API v1 with search, metadata, manifests, OpenAPI, and immutable SVG endpoints.
 - Strict TypeScript and automated tests for search, storage, and workflow rules.
 
-Explore always includes the source-controlled `@formaglyph/icons` core release and overlays approved Supabase project icons by stable ID and variant. `@phosphor-icons/react` remains an MIT-licensed interface and prototype-candidate dependency; its glyphs are not published as Formaglyph catalog assets. The remaining V1 family, generation workers, REST API, and MCP server remain separate delivery milestones defined in the V1 PRD.
+Explore always includes the source-controlled `@formaglyph/icons` core release and overlays approved Supabase project icons by stable ID and variant. `@phosphor-icons/react` remains an MIT-licensed interface and prototype-candidate dependency; its glyphs are not published as Formaglyph catalog assets. The remaining V1 family, generation workers, authenticated API scopes, and MCP server remain separate delivery milestones defined in the V1 PRD.
 
 ## Local development
 
