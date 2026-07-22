@@ -1,0 +1,17 @@
+.git
+.github
+.codex
+.agents
+.tools
+.playwright-cli
+.pnpm-store
+**/node_modules
+**/dist
+**/coverage
+**/.env*
+apps/web/qa
+formaglyph-prototype
+supabase/.branches
+supabase/.temp
+*.log
+.DS_Store

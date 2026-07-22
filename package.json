@@ -1,0 +1,24 @@
+{
+  "name": "formaglyph",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @formaglyph/web dev",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "check": "pnpm typecheck && pnpm test && pnpm build",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "db:reset": "supabase db reset --local",
+    "test:db": "supabase test db --local supabase/tests",
+    "types:db": "supabase gen types --local --lang typescript --schema public > apps/web/src/services/database.types.ts"
+  },
+  "devDependencies": {
+    "supabase": "2.109.1"
+  }
+}
