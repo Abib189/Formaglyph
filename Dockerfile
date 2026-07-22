@@ -5,11 +5,13 @@ RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/package.json
+COPY packages/icons/package.json packages/icons/package.json
 COPY packages/schema/package.json packages/schema/package.json
 COPY packages/validators/package.json packages/validators/package.json
 RUN pnpm install --frozen-lockfile
 
 COPY apps/web apps/web
+COPY packages/icons packages/icons
 COPY packages/schema packages/schema
 COPY packages/validators packages/validators
 

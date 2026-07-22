@@ -1,0 +1,32 @@
+{
+  "name": "@formaglyph/icons",
+  "version": "0.1.0",
+  "description": "Original Formaglyph icon geometry, metadata, and deterministic SVG assets.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "assets",
+    "src"
+  ],
+  "scripts": {
+    "assets": "node scripts/build-assets.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "pnpm assets && tsc --noEmit",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@formaglyph/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@formaglyph/validators": "workspace:*",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

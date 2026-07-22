@@ -12,9 +12,10 @@ export type ApiScope = "read" | "read_write";
 export type IntegrationName = "github" | "figma" | "penpot";
 
 export interface CatalogIcon extends IconRecord {
-  Icon: Icon;
+  Icon?: Icon;
   previewWeight: PreviewWeight;
   assetUrl?: string;
+  svg?: string;
   contentHash?: string;
 }
 

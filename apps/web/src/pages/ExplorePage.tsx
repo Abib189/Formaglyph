@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Check, Copy, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { CloudArrowUp } from "@phosphor-icons/react";
 import { iconResults, workspaceIconLibrary } from "../data/catalog";
-import { ConstructionIcon, WeightIcon } from "../components/IconPreview";
+import { ConstructionIcon, SvgIcon, WeightIcon } from "../components/IconPreview";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { searchIcons } from "../services/search";
 import { copyText, renderIconSvg } from "../services/svg";
@@ -13,7 +13,9 @@ import type { CatalogIcon } from "../domain/types";
 
 function CatalogGlyph({ icon, size = 25, weight = icon.previewWeight }: { icon: CatalogIcon; size?: number; weight?: "regular" | "fill" }) {
   const [assetFailed, setAssetFailed] = useState(false);
-  return icon.assetUrl && !assetFailed ? <img className="catalog-asset" src={icon.assetUrl} width={size} height={size} alt="" onError={() => setAssetFailed(true)} /> : <WeightIcon Icon={icon.Icon} size={size} weight={weight} />;
+  if (icon.svg) return <SvgIcon svg={icon.svg} size={size} />;
+  if (icon.assetUrl && !assetFailed) return <img className="catalog-asset" src={icon.assetUrl} width={size} height={size} alt="" onError={() => setAssetFailed(true)} />;
+  return icon.Icon ? <WeightIcon Icon={icon.Icon} size={size} weight={weight} /> : null;
 }
 
 export function ExplorePage() {
@@ -22,9 +24,9 @@ export function ExplorePage() {
   const [query, setQuery] = useState(searchParams.get("q") ?? "payment successful");
   const [category, setCategory] = useState(searchParams.get("category") ?? "all");
   const [variantFilter, setVariantFilter] = useState((searchParams.get("weight") ?? "all") as "all" | "regular" | "solid");
-  const [selectedId, setSelectedId] = useState("circle-check");
+  const [selectedId, setSelectedId] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const [repositoryCatalog, setRepositoryCatalog] = useState<CatalogIcon[]>(repository.mode === "local" ? iconResults : []);
+  const [repositoryCatalog, setRepositoryCatalog] = useState<CatalogIcon[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(repository.mode === "supabase");
 
@@ -52,7 +54,12 @@ export function ExplorePage() {
     status: "published" as const,
     provenance: { kind: "generated" as const, source: "Formaglyph Workspace", adapter: "local-svg", disclosed: true },
   })), [state.workspace]);
-  const catalog = useMemo(() => repository.mode === "local" ? [...repositoryCatalog, ...publishedWorkspaceIcons] : repositoryCatalog, [publishedWorkspaceIcons, repositoryCatalog]);
+  const catalog = useMemo(() => {
+    const merged = new Map(iconResults.map((icon) => [`${icon.stableId}:${icon.variant}`, icon]));
+    const projectIcons = repository.mode === "local" ? [...repositoryCatalog, ...publishedWorkspaceIcons] : repositoryCatalog;
+    for (const icon of projectIcons) merged.set(`${icon.stableId}:${icon.variant}`, icon);
+    return [...merged.values()];
+  }, [publishedWorkspaceIcons, repositoryCatalog]);
   const categories = useMemo(() => ["all", ...new Set(catalog.map((icon) => icon.category))], [catalog]);
   const filtered = useMemo(() => searchIcons(catalog, query, { category, variant: variantFilter }), [catalog, query, category, variantFilter]);
 
@@ -76,7 +83,8 @@ export function ExplorePage() {
 
   const handleCopy = async () => {
     try {
-      const svg = selected.assetUrl ? await fetch(selected.assetUrl).then((response) => { if (!response.ok) throw new Error("Asset unavailable"); return response.text(); }) : renderIconSvg(selected.Icon, selected.previewWeight);
+      const svg = selected.svg ?? (selected.assetUrl ? await fetch(selected.assetUrl).then((response) => { if (!response.ok) throw new Error("Asset unavailable"); return response.text(); }) : selected.Icon ? renderIconSvg(selected.Icon, selected.previewWeight) : null);
+      if (!svg) throw new Error("Asset unavailable");
       await copyText(svg);
       setCopyState("copied");
     } catch {
@@ -95,16 +103,17 @@ export function ExplorePage() {
 
       <div className="explore-grid">
         <Panel className="result-panel">
-          <PanelHeader number="02" title={`Results (${filtered.length})`} meta={query ? "RANKED" : "ALL ICONS"} accent={Boolean(query)} />
+          <PanelHeader number="02" title={`Results (${filtered.length})`} meta={catalogLoading ? "SYNCING" : catalogError ? "CORE ONLY" : query ? "RANKED" : "ALL ICONS"} accent={Boolean(query || catalogError)} />
           <div className="result-filters">
             <label><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item === "all" ? "All categories" : item}</option>)}</select></label>
             <label><span>Weight</span><select value={variantFilter} onChange={(event) => setVariantFilter(event.target.value as "all" | "regular" | "solid")}><option value="all">All weights</option><option value="regular">Regular</option><option value="solid">Solid</option></select></label>
           </div>
           <div className="result-columns" aria-hidden="true"><span>Icon</span><span>Name</span></div>
           <div className="result-list">
-            {catalogLoading ? <div className="workspace-empty"><strong>Loading published icons…</strong><p>Restoring the immutable catalog from PostgreSQL.</p></div> : catalogError ? <div className="workspace-empty"><strong>Catalog unavailable</strong><p>{catalogError}</p></div> : filtered.length ? filtered.map((icon, index) => (
+            {catalogError && <div className="catalog-notice" role="status">Team catalog unavailable. Showing the bundled Formaglyph Core release.</div>}
+            {filtered.length ? filtered.map((icon, index) => (
               <button key={icon.id} className={selected.id === icon.id ? "result-row selected" : "result-row"} onClick={() => setSelectedId(icon.id)} aria-pressed={selected.id === icon.id}>
-                <span className="result-number">{String(index + 1).padStart(2, "0")}</span><CatalogGlyph icon={icon} /><span>{icon.name}<small>{icon.matchScore} relevance</small></span><ArrowRight size={16} />
+                <span className="result-number">{String(index + 1).padStart(2, "0")}</span><CatalogGlyph icon={icon} /><span>{icon.name}<small>{icon.variant} · {icon.matchScore} relevance</small></span><ArrowRight size={16} />
               </button>
             )) : (
               <div className="empty-state"><MagnifyingGlass size={28} /><strong>No exact icon found</strong><p>Try a broader intent or create a constrained draft.</p><a href="/projects/core/create">Create a draft <ArrowRight size={15} /></a></div>
@@ -114,8 +123,8 @@ export function ExplorePage() {
 
         <Panel className="preview-panel">
           <PanelHeader number="03" title={`Preview: ${selected.name}`} meta="COMPARE" accent />
-          <div className="pair-preview"><div><span>Regular</span><CatalogGlyph icon={selected} size={104} weight="regular" /></div><div><span>Solid</span><CatalogGlyph icon={selected} size={104} weight="fill" /></div></div>
-          <div className="construction-preview"><div><ConstructionIcon Icon={selected.Icon} /></div><div><ConstructionIcon Icon={selected.Icon} weight="fill" /></div></div>
+          <div className="pair-preview"><div><span>Regular</span><CatalogGlyph icon={catalog.find((icon) => icon.stableId === selected.stableId && icon.variant === "regular") ?? selected} size={104} weight="regular" /></div><div><span>Solid</span><CatalogGlyph icon={catalog.find((icon) => icon.stableId === selected.stableId && icon.variant === "solid") ?? selected} size={104} weight="fill" /></div></div>
+          <div className="construction-preview"><div><ConstructionIcon Icon={selected.Icon} svg={(catalog.find((icon) => icon.stableId === selected.stableId && icon.variant === "regular") ?? selected).svg} assetUrl={(catalog.find((icon) => icon.stableId === selected.stableId && icon.variant === "regular") ?? selected).assetUrl} /></div><div><ConstructionIcon Icon={selected.Icon} svg={(catalog.find((icon) => icon.stableId === selected.stableId && icon.variant === "solid") ?? selected).svg} assetUrl={(catalog.find((icon) => icon.stableId === selected.stableId && icon.variant === "solid") ?? selected).assetUrl} weight="fill" /></div></div>
           <p className="preview-note">View on a 24px construction field. Both styles preserve the same semantic silhouette.</p>
         </Panel>
 

@@ -5,6 +5,7 @@
 **/dist/
 **/coverage/
 **/.npm-cache/
+output/
 .DS_Store
 .env
 .env.*

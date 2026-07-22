@@ -7,7 +7,7 @@ describe("local repository contract", () => {
   it("returns the development catalog without network access", async () => {
     const icons = await repository.listPublishedIcons();
     expect(icons.length).toBeGreaterThan(0);
-    expect(icons.every((icon) => icon.provenance.kind === "third-party")).toBe(true);
+    expect(icons.every((icon) => icon.provenance.kind === "original" && Boolean(icon.svg))).toBe(true);
   });
 
   it("loads the default project and its durable workspace records", async () => {
