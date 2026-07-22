@@ -18,6 +18,7 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes("/node_modules/@supabase/") || id.includes("/node_modules/@realtime/")) return "supabase";
           if (id.includes("/node_modules/react-router") || id.includes("/node_modules/@remix-run/")) return "router";
+          if (id.includes("/node_modules/@xmldom/") || id.includes("/packages/validators/")) return "validators";
         },
       },
     },

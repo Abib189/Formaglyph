@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(25);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
@@ -54,14 +54,31 @@ select set_config('request.jwt.claim.role', 'authenticated', true);
 select extensions.is((select count(*)::integer from public.projects), 2, 'contributor sees only projects in their organization');
 select extensions.lives_ok($$update public.drafts set description = 'Contributor edit' where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'$$, 'contributor can update their own draft');
 select extensions.is((select description from public.drafts where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'), 'Contributor edit', 'draft update persists through RLS');
+select extensions.lives_ok(
+  $$insert into public.validation_issues (validation_run_id, rule_id, severity, message) values ('89898989-8989-4989-8989-898989898989', 'svg.style.viewbox-mismatch', 'warning', 'Development fixture uses the Phosphor coordinate system.')$$,
+  'contributors can append immutable issues to their own validation run'
+);
 reset role;
 
 update public.candidates
-set asset_id = '66666666-6666-4666-8666-666666666666', validation_run_id = '88888888-8888-4888-8888-888888888888'
+set asset_id = '66666666-6666-4666-8666-666666666666'
 where id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+insert into public.asset_blobs (id, project_id, storage_bucket, storage_path, byte_size, sha256, sanitization_status, created_by) values
+  ('15151515-1515-4515-8515-151515151515', '22222222-2222-4222-8222-222222222222', 'source-assets', '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/dddddddd-dddd-4ddd-8ddd-dddddddddddd/15151515-1515-4515-8515-151515151515/source.svg', 128, repeat('d', 64), 'passed', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+insert into public.validation_runs (id, project_id, target_type, target_id, validator_version, status, created_by) values
+  ('16161616-1616-4616-8616-161616161616', '22222222-2222-4222-8222-222222222222', 'candidate', '17171717-1717-4717-8717-171717171717', 'formaglyph-svg/0.1.0', 'failed', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+insert into public.candidates (id, draft_id, name, description, asset_id, validation_run_id, created_by) values
+  ('17171717-1717-4717-8717-171717171717', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'Failed validation', 'Safe markup with a failing style check.', '15151515-1515-4515-8515-151515151515', '16161616-1616-4616-8616-161616161616', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+select extensions.throws_ok(
+  $$select public.submit_proposal('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '17171717-1717-4717-8717-171717171717', '1.0.0')$$,
+  '22023',
+  'sanitized candidate with passing validation required',
+  'a failed validation run cannot be submitted for review'
+);
 select extensions.is(
   (select status from public.submit_proposal('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '1.0.0')),
   'in_review',

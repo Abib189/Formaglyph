@@ -1,6 +1,7 @@
 import { iconResults, initialAppState } from "../../data/catalog";
 import type { Proposal } from "../../domain/types";
 import { loadAppState } from "../storage";
+import { validateCandidateAsset } from "../candidateValidation";
 import type { CandidateAssetInput, FormaglyphRepository, ProjectAccess, SavedDraft, WorkspaceData } from "./types";
 
 const localProject: ProjectAccess = { id: "local-core", organizationId: "local-org", slug: "core", name: "Formaglyph Core", role: "admin" };
@@ -14,7 +15,7 @@ export class LocalRepository implements FormaglyphRepository {
     return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal };
   }
   async saveDraft(_projectSlug: string, draft: { workspaceIconId: string }, candidate: CandidateAssetInput): Promise<SavedDraft> {
-    return { draftId: draft.workspaceIconId || "local-draft", candidateId: candidate.id };
+    return { draftId: draft.workspaceIconId || "local-draft", candidateId: candidate.id, validation: validateCandidateAsset(candidate) };
   }
   async submitProposal(_draftId: string, _candidateId: string, _targetVersion: string): Promise<Proposal> {
     return (typeof window === "undefined" ? initialAppState : loadAppState()).proposal;

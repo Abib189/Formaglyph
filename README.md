@@ -17,6 +17,7 @@ This is an early production foundation, not yet the complete hosted platform or 
 
 - A strict TypeScript React application with responsive light and dark modes.
 - Search, filtering, SVG copy/export, proposal validation, review comments, and approval flows.
+- Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
 - Invite-only magic-link authentication, route guards, session restoration, and transactional onboarding.
 - PostgreSQL tables, explicit Data API grants, RLS, private/public Storage policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
@@ -31,6 +32,7 @@ Generation workers, semantic search, public REST API, CLI, MCP server, framework
 apps/web/               Production frontend foundation and design QA
 docs/                   Product requirements and architecture direction
 packages/schema/        Canonical contracts shared across every product surface
+packages/validators/    Reusable SVG sanitizer and deterministic validation rules
 supabase/               Local config, migration, seed data, and database tests
 ```
 
@@ -102,6 +104,8 @@ The current production preview is [formaglyph-web-production.up.railway.app](htt
 The current interface uses `@phosphor-icons/react` as clearly identified development seed data. Those glyphs are not the original Formaglyph icon library and will be replaced by reviewed Formaglyph assets as the library is produced.
 
 Catalog, style, permission, and proposal contracts live in `@formaglyph/schema`. New APIs, MCP tools, CLI commands, and framework packages should consume those contracts rather than defining parallel models.
+
+SVG safety and structural checks live in `@formaglyph/validators`. The package parses input as XML and rebuilds a new SVG from an explicit allow-list; scripts, event handlers, external resources, foreign markup, malformed XML, invalid viewBoxes, and unsafe attribute values never reach normalized output. Candidate persistence uploads only that normalized output and PostgreSQL prevents failed validation runs from entering review.
 
 ## Licensing and trademark
 

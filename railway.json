@@ -6,6 +6,7 @@
     "watchPatterns": [
       "/apps/web/**",
       "/packages/schema/**",
+      "/packages/validators/**",
       "/package.json",
       "/pnpm-lock.yaml",
       "/pnpm-workspace.yaml",
