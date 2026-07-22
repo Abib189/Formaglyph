@@ -33,9 +33,9 @@ class ResponseRecorder {
   }
 }
 
-async function request(path, { method = "GET", headers = {} } = {}) {
+async function request(path, { method = "GET", headers = {}, baseUrl = origin } = {}) {
   const response = new ResponseRecorder();
-  await handleApi({ method, headers }, response, new URL(path, origin));
+  await handleApi({ method, headers }, response, new URL(path, baseUrl));
   return response;
 }
 
@@ -68,6 +68,14 @@ describe("Formaglyph public API v1", () => {
     expect(response.status).toBe(200);
     expect(body.variants.map((variant) => variant.variant)).toEqual(["regular", "solid"]);
     expect(body.variants.every((variant) => variant.assetUrl.includes(`/ico_fg_004_cloud_upload/0.1.0/`))).toBe(true);
+  });
+
+  it("uses the public HTTPS protocol supplied by a trusted deployment proxy", async () => {
+    const response = await request("/api/v1/icons?q=payment&limit=1", {
+      baseUrl: "http://api.formaglyph.test",
+      headers: { "x-forwarded-proto": "https" },
+    });
+    expect(response.json().data[0].assetUrl).toMatch(/^https:\/\/api\.formaglyph\.test\//);
   });
 
   it("serves immutable SVG with content ETags and conditional requests", async () => {

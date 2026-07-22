@@ -78,6 +78,17 @@ function assetPath(asset) {
   return `/api/v1/icons/${asset.stableId}/${asset.version}/${asset.variant}.svg`;
 }
 
+function publicOrigin(request, url) {
+  const forwarded = Array.isArray(request.headers["x-forwarded-proto"])
+    ? request.headers["x-forwarded-proto"][0]
+    : request.headers["x-forwarded-proto"];
+  const protocol = typeof forwarded === "string" ? forwarded.split(",", 1)[0].trim().toLowerCase() : "";
+  if (protocol !== "http" && protocol !== "https") return url.origin;
+  const origin = new URL(url.origin);
+  origin.protocol = `${protocol}:`;
+  return origin.origin;
+}
+
 function serializeAsset(asset, origin) {
   const { path: _path, ...metadata } = asset;
   return { ...metadata, assetUrl: new URL(assetPath(asset), origin).toString() };
@@ -122,7 +133,7 @@ export async function createCatalogApi({ catalogRoot }) {
       return true;
     }
 
-    const origin = url.origin;
+    const origin = publicOrigin(request, url);
     if (url.pathname === "/api/v1" || url.pathname === "/api/v1/") {
       sendJson(request, response, 200, {
         name: "Formaglyph Public API",
