@@ -11,7 +11,6 @@ Thanks for helping build Formaglyph. The project is early, so proposals that pre
 5. Run the frontend verification suite.
 
 ```bash
-cd formaglyph-prototype
 pnpm install
 pnpm check
 ```

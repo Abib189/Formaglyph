@@ -1,13 +1,17 @@
 .tools/
+.playwright-cli/
 .pnpm-store/
 **/node_modules/
 **/dist/
 **/coverage/
+**/.npm-cache/
 .DS_Store
 .env
 .env.*
 !.env.example
+supabase/.temp/
+supabase/.branches/
 
 # Keep the final production QA record, not intermediate design captures.
-formaglyph-prototype/qa/*
-!formaglyph-prototype/qa/production-*.png
+apps/web/qa/*
+!apps/web/qa/production-*.png
