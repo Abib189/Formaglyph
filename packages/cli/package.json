@@ -1,7 +1,7 @@
 {
   "name": "@formaglyph/cli",
   "version": "0.1.0",
-  "description": "Command-line and MCP access to the public Formaglyph icon catalog.",
+  "description": "Command-line catalog access and scoped MCP draft handoff for Formaglyph.",
   "type": "module",
   "license": "MIT",
   "publishConfig": {

@@ -1,11 +1,19 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod/v4";
 import { FormaglyphCatalogClient, type IconVariant } from "./catalog.js";
+import { FormaglyphDraftClient } from "./drafts.js";
 
 const readOnlyAnnotations = {
   readOnlyHint: true,
   destructiveHint: false,
   idempotentHint: true,
+  openWorldHint: true,
+};
+
+const draftAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
   openWorldHint: true,
 };
 
@@ -23,8 +31,8 @@ function toolError(error: unknown) {
   };
 }
 
-export function createFormaglyphMcpServer(client = new FormaglyphCatalogClient()) {
-  const server = new McpServer({ name: "formaglyph", version: "0.1.0" });
+export function createFormaglyphMcpServer(client = new FormaglyphCatalogClient(), drafts = new FormaglyphDraftClient(client.apiUrl)) {
+  const server = new McpServer({ name: "formaglyph", version: "0.2.0" });
 
   server.registerTool("search_icons", {
     title: "Search Formaglyph icons",
@@ -94,6 +102,24 @@ export function createFormaglyphMcpServer(client = new FormaglyphCatalogClient()
     }
   });
 
+  server.registerTool("propose_icon_draft", {
+    title: "Propose a Formaglyph icon draft",
+    description: "Create a text-only draft in the token's project after public search finds no suitable icon. This does not upload SVG, submit for review, approve, or publish. Return the handoff URL so a human can finish the icon.",
+    inputSchema: {
+      name: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80).describe("Lowercase kebab-case canonical name."),
+      description: z.string().min(3).max(500).describe("Concrete semantic brief for the missing icon."),
+      keywords: z.array(z.string().min(1).max(40)).max(12).default([]).describe("Search aliases and semantic terms."),
+    },
+    outputSchema: { result: z.unknown() },
+    annotations: draftAnnotations,
+  }, async (input) => {
+    try {
+      return jsonResult(await drafts.createDraft(input));
+    } catch (error) {
+      return toolError(error);
+    }
+  });
+
   server.registerResource("formaglyph-manifest", "formaglyph://catalog/manifest", {
     title: "Formaglyph Core release manifest",
     description: "The complete public release manifest with provenance, licence, hashes, and immutable asset URLs.",
@@ -110,7 +136,7 @@ export function createFormaglyphMcpServer(client = new FormaglyphCatalogClient()
     contents: [{
       uri: uri.href,
       mimeType: "text/markdown",
-      text: "# Formaglyph agent guide\n\n1. Call `search_icons` with the user's intent.\n2. Compare semantic fit, category, directionality, and variant.\n3. Call `get_icon` to inspect provenance and licence.\n4. Call `get_icon_svg` only after selecting the stable ID.\n\nAll exposed assets are original Formaglyph geometry and MIT licensed. MCP access is public and read-only.",
+      text: "# Formaglyph agent guide\n\n1. Call `search_icons` with the user's intent.\n2. Compare semantic fit, category, directionality, and variant.\n3. Call `get_icon` to inspect provenance and licence.\n4. Call `get_icon_svg` only after selecting the stable ID.\n5. If no suitable icon exists and the user wants a new concept, call `propose_icon_draft` with a scoped project token.\n6. Return the handoff URL. A human must create or import geometry, submit, review, approve, and publish.\n\nPublic catalog access is keyless and read-only. Project tokens can create text-only drafts and cannot publish.",
     }],
   }));
 

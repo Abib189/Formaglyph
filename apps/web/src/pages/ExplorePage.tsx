@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, Copy, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { ArrowRight, Check, Copy, FigmaLogo, MagnifyingGlass, SlidersHorizontal, X } from "@phosphor-icons/react";
 import { CloudArrowUp } from "@phosphor-icons/react";
 import { iconResults, workspaceIconLibrary } from "../data/catalog";
 import { ConstructionIcon, SvgIcon, WeightIcon } from "../components/IconPreview";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { searchIcons } from "../services/search";
-import { copyText, renderIconSvg } from "../services/svg";
+import { copyDesignSvg, copyText, renderIconSvg } from "../services/svg";
 import { useAppState } from "../state/AppState";
 import { repository } from "../services/repositories";
 import { useSearchParams } from "react-router-dom";
@@ -26,6 +26,7 @@ export function ExplorePage() {
   const [variantFilter, setVariantFilter] = useState((searchParams.get("weight") ?? "all") as "all" | "regular" | "solid");
   const [selectedId, setSelectedId] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [designCopyState, setDesignCopyState] = useState<"idle" | "figma" | "penpot" | "error">("idle");
   const [repositoryCatalog, setRepositoryCatalog] = useState<CatalogIcon[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(repository.mode === "supabase");
@@ -81,16 +82,39 @@ export function ExplorePage() {
     return <main className="page-shell explore-page"><PageIntro number="01" title="Search the icon system.">Search by intent. Compare styles. Copy production-ready SVG with consistent sizing, alignment, and semantics.</PageIntro><Panel className="workspace-list-panel"><PanelHeader number="02" title="Published catalog" meta={catalogError ? "OFFLINE" : "LOADING"} accent={Boolean(catalogError)} /><div className="workspace-empty"><MagnifyingGlass size={30} /><strong>{catalogError ? "Catalog unavailable" : "Loading published icons…"}</strong><p>{catalogError ?? "Restoring immutable icon versions from PostgreSQL."}</p></div></Panel></main>;
   }
 
+  const selectedSvg = async () => {
+    const svg = selected.svg ?? (selected.assetUrl ? await fetch(selected.assetUrl).then((response) => { if (!response.ok) throw new Error("Asset unavailable"); return response.text(); }) : selected.Icon ? renderIconSvg(selected.Icon, selected.previewWeight) : null);
+    if (!svg) throw new Error("Asset unavailable");
+    return svg;
+  };
+
   const handleCopy = async () => {
     try {
-      const svg = selected.svg ?? (selected.assetUrl ? await fetch(selected.assetUrl).then((response) => { if (!response.ok) throw new Error("Asset unavailable"); return response.text(); }) : selected.Icon ? renderIconSvg(selected.Icon, selected.previewWeight) : null);
-      if (!svg) throw new Error("Asset unavailable");
+      const svg = await selectedSvg();
       await copyText(svg);
       setCopyState("copied");
     } catch {
       setCopyState("error");
     }
     window.setTimeout(() => setCopyState("idle"), 1800);
+  };
+
+  const handleDesignCopy = async (target: "figma" | "penpot") => {
+    try {
+      await copyDesignSvg(await selectedSvg(), {
+        stableId: selected.stableId,
+        name: selected.name,
+        label: selected.label,
+        version: selected.version,
+        variant: selected.variant,
+        licence: selected.licence,
+        contentHash: selected.contentHash,
+      }, target);
+      setDesignCopyState(target);
+    } catch {
+      setDesignCopyState("error");
+    }
+    window.setTimeout(() => setDesignCopyState("idle"), 1800);
   };
 
   return (
@@ -133,7 +157,15 @@ export function ExplorePage() {
           <dl className="metadata-list">
             <div><dt>Stable ID</dt><dd>{selected.stableId}</dd></div><div><dt>Name</dt><dd>{selected.name}</dd></div><div><dt>Version</dt><dd>{selected.version}</dd></div><div><dt>Category</dt><dd>{selected.category}</dd></div><div><dt>Direction</dt><dd>{selected.directionality}</dd></div><div><dt>Grid</dt><dd>24 × 24</dd></div><div><dt>Licence</dt><dd>{selected.licence}</dd></div><div><dt>Validation</dt><dd><span className="status-dot" /> Valid</dd></div>
           </dl>
-          <div className="inspector-copy"><p>{selected.description} Pairs with the matching error or inactive state.</p><button className="primary-action" onClick={handleCopy}>{copyState === "copied" ? <Check size={20} /> : <Copy size={20} />}{copyState === "copied" ? "SVG copied" : copyState === "error" ? "Copy failed" : "Copy SVG"}</button><p className="microcopy" aria-live="polite">Inline-ready SVG with stable metadata.</p></div>
+          <div className="inspector-copy">
+            <p>{selected.description} Pairs with the matching error or inactive state.</p>
+            <button className="primary-action" onClick={handleCopy}>{copyState === "copied" ? <Check size={20} /> : <Copy size={20} />}{copyState === "copied" ? "SVG copied" : copyState === "error" ? "Copy failed" : "Copy SVG"}</button>
+            <div className="design-handoff-actions" aria-label="Design tool handoff">
+              <button className="secondary-action" onClick={() => void handleDesignCopy("figma")}>{designCopyState === "figma" ? <Check size={17} /> : <FigmaLogo size={17} />}{designCopyState === "figma" ? "Copied" : "For Figma"}</button>
+              <button className="secondary-action" onClick={() => void handleDesignCopy("penpot")}>{designCopyState === "penpot" ? <Check size={17} /> : <SlidersHorizontal size={17} />}{designCopyState === "penpot" ? "Copied" : "For Penpot"}</button>
+            </div>
+            <p className="microcopy" aria-live="polite">{designCopyState === "error" ? "Design copy failed. Copy the SVG directly instead." : "Design copies include stable ID, version, variant, licence, and content hash metadata."}</p>
+          </div>
         </Panel>
       </div>
     </main>

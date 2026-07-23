@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(43);
+select plan(56);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
@@ -230,6 +230,107 @@ select extensions.throws_ok(
   'audit events are immutable'
 );
 select extensions.ok((select count(*) >= 4 from public.audit_events), 'workflow writes audit events transactionally');
+
+select extensions.has_table('private', 'project_access_tokens', 'project access tokens are kept outside the Data API schema');
+select extensions.ok(
+  not has_function_privilege('anon', 'public.issue_project_token(uuid,text,integer)', 'execute'),
+  'anonymous callers cannot issue project tokens'
+);
+select extensions.ok(
+  has_function_privilege('anon', 'public.create_agent_draft(text,text,text,text[])', 'execute'),
+  'anonymous MCP transport can exchange a scoped project token for a draft handoff'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
+create temp table issued_agent_token on commit drop as
+  select * from public.issue_project_token(
+    '22222222-2222-4222-8222-222222222222',
+    'pgTAP handoff',
+    30
+  );
+select extensions.matches((select token from issued_agent_token), '^fgp_[a-f0-9]{48}$', 'admins receive a high-entropy token once');
+reset role;
+select extensions.is(
+  (select char_length(token_hash) from private.project_access_tokens where id = (select id from issued_agent_token)),
+  64,
+  'only a SHA-256 token hash is stored'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
+select extensions.is(
+  (select count(*)::integer from public.list_project_tokens('22222222-2222-4222-8222-222222222222')),
+  1,
+  'admins can list safe token summaries'
+);
+reset role;
+select set_config('test.agent_token', (select token from issued_agent_token), true);
+select set_config('test.agent_token_id', (select id::text from issued_agent_token), true);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+select extensions.throws_ok(
+  $$select public.issue_project_token('22222222-2222-4222-8222-222222222222', 'Contributor token', 30)$$,
+  '42501',
+  'admin permission required',
+  'contributors cannot issue agent credentials'
+);
+reset role;
+
+set local role anon;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', 'anon', true);
+select extensions.throws_ok(
+  $$select public.create_agent_draft('fgp_invalid', 'payment-retry', 'Retry a recoverable payment.', array['payment'])$$,
+  '28000',
+  'invalid or expired project token',
+  'invalid project tokens cannot create drafts'
+);
+create temp table agent_draft_handoff on commit drop as
+  select * from public.create_agent_draft(
+    current_setting('test.agent_token'),
+    'payment-retry',
+    'Retry a recoverable payment after a processor failure.',
+    array['payment', 'retry']
+  );
+select extensions.is((select status from agent_draft_handoff), 'draft', 'a valid token creates only a draft');
+reset role;
+select extensions.is(
+  (select selected_candidate_id from public.drafts where id = (select draft_id from agent_draft_handoff)),
+  null,
+  'agent handoff cannot attach or select an SVG candidate'
+);
+
+select extensions.is(
+  (select source from public.audit_events where target_id = (select draft_id from agent_draft_handoff)),
+  'mcp',
+  'agent draft creation writes an MCP audit event'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
+select extensions.ok(
+  (select revoked_at is not null from public.revoke_project_token(current_setting('test.agent_token_id')::uuid)),
+  'admins can revoke a project token'
+);
+reset role;
+
+set local role anon;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', 'anon', true);
+select extensions.throws_ok(
+  format(
+    'select public.create_agent_draft(%L, %L, %L, array[%L])',
+    current_setting('test.agent_token'),
+    'payment-retry-later',
+    'Retry another recoverable payment.',
+    'payment'
+  ),
+  '28000',
+  'invalid or expired project token',
+  'revoked project tokens stop working immediately'
+);
+reset role;
 
 select * from extensions.finish();
 rollback;

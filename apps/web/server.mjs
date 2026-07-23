@@ -15,7 +15,13 @@ const port = Number.isFinite(configuredPort) ? configuredPort : 3000;
 const host = "0.0.0.0";
 const canonicalHost = process.env.FORMAGLYPH_CANONICAL_HOST ?? "formaglyph.com";
 const catalogRoot = process.env.FORMAGLYPH_CATALOG_ROOT ?? resolve(fileURLToPath(new URL("../../packages/icons/assets", import.meta.url)));
-const handleCatalogApi = await createCatalogApi({ catalogRoot });
+const handleCatalogApi = await createCatalogApi({
+  catalogRoot,
+  agentDraft: {
+    supabaseUrl: process.env.VITE_SUPABASE_URL,
+    publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  },
+});
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],

@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FormaglyphCatalogClient } from "./catalog.js";
+import type { FormaglyphDraftClient } from "./drafts.js";
 import { createFormaglyphMcpServer } from "./mcp.js";
 
 const asset = {
@@ -27,7 +28,16 @@ beforeEach(async () => {
     listCategories: vi.fn(async () => ["Files", "Payments"]),
     getManifest: vi.fn(async () => ({ name: "Formaglyph Core", version: "0.1.0", assets: [asset] })),
   } as unknown as FormaglyphCatalogClient;
-  server = createFormaglyphMcpServer(catalog);
+  const drafts = {
+    createDraft: vi.fn(async () => ({
+      draftId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      name: "payment-retry",
+      projectSlug: "core",
+      status: "draft",
+      handoffUrl: "https://formaglyph.test/projects/core/create?draft=dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    })),
+  } as unknown as FormaglyphDraftClient;
+  server = createFormaglyphMcpServer(catalog, drafts);
   client = new Client({ name: "formaglyph-test", version: "1.0.0" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
@@ -40,12 +50,31 @@ afterEach(async () => {
 });
 
 describe("Formaglyph MCP server", () => {
-  it("advertises read-only tools, resources, and a selection prompt", async () => {
+  it("advertises public reads plus one non-destructive draft handoff", async () => {
     const [tools, resources, prompts] = await Promise.all([client.listTools(), client.listResources(), client.listPrompts()]);
-    expect(tools.tools.map((tool) => tool.name)).toEqual(["search_icons", "get_icon", "get_icon_svg", "list_categories"]);
-    expect(tools.tools.every((tool) => tool.annotations?.readOnlyHint === true && tool.annotations?.destructiveHint === false)).toBe(true);
+    expect(tools.tools.map((tool) => tool.name)).toEqual(["search_icons", "get_icon", "get_icon_svg", "list_categories", "propose_icon_draft"]);
+    expect(tools.tools.filter((tool) => tool.name !== "propose_icon_draft").every((tool) => tool.annotations?.readOnlyHint === true && tool.annotations?.destructiveHint === false)).toBe(true);
+    expect(tools.tools.find((tool) => tool.name === "propose_icon_draft")?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: false });
     expect(resources.resources.map((resource) => resource.uri)).toEqual(["formaglyph://catalog/manifest", "formaglyph://catalog/agent-guide"]);
     expect(prompts.prompts.map((prompt) => prompt.name)).toContain("choose_formaglyph_icon");
+  });
+
+  it("creates a text-only draft and returns the human handoff URL", async () => {
+    const result = await client.callTool({
+      name: "propose_icon_draft",
+      arguments: {
+        name: "payment-retry",
+        description: "Retry a card payment after a recoverable failure.",
+        keywords: ["payment", "retry"],
+      },
+    });
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      result: {
+        status: "draft",
+        handoffUrl: expect.stringContaining("/projects/core/create?draft="),
+      },
+    });
   });
 
   it("returns structured search data and embedded SVG resources", async () => {

@@ -2,12 +2,13 @@
 
 Formaglyph is an open-source, AI-native system for finding, creating, validating, reviewing, and shipping coherent icon families.
 
-The current repository contains the production core workflow through review and governance:
+The current repository contains the production core workflow through agent handoff and governance:
 
 1. **Explore** — search and compare catalog icons by intent.
 2. **Create** — generate or import candidates, validate them, and submit a proposal.
 3. **Review** — inspect validation and provenance, add or resolve notes, and record approval, change, or rejection decisions.
 4. **Govern** — allow an administrator to publish or deprecate an immutable, content-hashed version with a release and audit record.
+5. **Handoff** — let a scoped agent search the public catalog or create a text-only project draft for human completion.
 
 AI-generated candidates are always drafts. Publishing, deprecating, syncing, and overwriting remain human-approved operations.
 
@@ -20,10 +21,12 @@ This is an early production foundation, not yet the complete hosted platform or 
 - Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
 - An original Formaglyph Core starter release: 12 concepts, 24 validated Regular/Solid SVG assets, and a content-hashed build manifest.
 - Ranked core-catalog search with reviewed aliases, intent phrases, typo tolerance, category and weight filters, and true sibling-variant comparison.
-- A versioned, read-only public REST API for search, metadata, OpenAPI discovery, manifests, and immutable SVG delivery.
+- A versioned public REST API for catalog reads plus one scoped, text-only project draft endpoint.
 - A self-contained npm-ready `@formaglyph/icons` release artifact with typed catalog and per-asset exports.
 - An npm-ready `@formaglyph/cli` with human and JSON output, guarded SVG export, local stdio MCP, and a hosted Streamable HTTP MCP server.
-- Four read-only MCP tools, catalog resources, and an icon-selection prompt for AI agents.
+- Four read-only MCP tools, one non-destructive draft handoff tool, catalog resources, and an icon-selection prompt for AI agents.
+- Admin-issued, SHA-256-hashed project tokens with a 30-day default lifetime, immediate revocation, `drafts:write` scope, and transactional audit records.
+- Figma and Penpot clipboard handoff with stable ID, version, variant, licence, and content-hash metadata embedded in the copied SVG.
 - A browser-local, deterministic geometry adapter that creates three sanitized Regular/Solid candidate pairs without sending prompts to a model provider.
 - Safe SVG import, generation job cancellation and retry, prompt-hash provenance, optional prompt retention, and audited Supabase job transitions.
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
@@ -33,7 +36,7 @@ This is an early production foundation, not yet the complete hosted platform or 
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
 
-GPU-backed OmniSVG and StarVector workers, hosted generation, vector semantic search, authenticated/private API scopes, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). The local creation adapter, public CLI, and public MCP access are live; private project agent access and write tools remain deliberately unavailable.
+GPU-backed OmniSVG and StarVector workers, hosted generation, vector semantic search, full private read APIs, OAuth-based MCP authorization, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). The local creation adapter, public CLI, public MCP reads, and scoped project draft handoff are live.
 
 ## Repository layout
 
@@ -103,7 +106,7 @@ The production app is [formaglyph.com](https://formaglyph.com/explore). The Rail
 
 ## Use the public catalog API
 
-The versioned public API is available at [`/api/v1`](https://formaglyph.com/api/v1). It exposes only the source-controlled, MIT-licensed Formaglyph Core release and accepts only `GET`, `HEAD`, and CORS preflight requests. Private project data and privileged Supabase access are not proxied through this API.
+The versioned API is available at [`/api/v1`](https://formaglyph.com/api/v1). Public catalog routes expose only the source-controlled, MIT-licensed Formaglyph Core release. `/agent/drafts` accepts a scoped project token and creates only a text brief with a human handoff URL.
 
 ```bash
 curl "https://formaglyph.com/api/v1/icons?q=payment%20successful&variant=regular"
@@ -113,7 +116,7 @@ See [Public API v1](./docs/api-v1.md) for endpoints and caching behavior.
 
 ## Use the CLI and MCP server
 
-The npm-ready CLI can search, inspect, and export public Core icons. The production MCP endpoint is `https://formaglyph.com/mcp` and exposes read-only tools, resources, and an icon-selection prompt without a key.
+The npm-ready CLI can search, inspect, and export public Core icons. The production MCP endpoint is `https://formaglyph.com/mcp`. Public reads need no key; `propose_icon_draft` requires a project token issued in Settings.
 
 ```bash
 pnpm --filter @formaglyph/cli build
@@ -128,6 +131,7 @@ See [Formaglyph CLI and MCP](./docs/mcp-cli.md) for remote agent configuration, 
 - Authorization comes from immutable membership rows, never editable user metadata.
 - Contributors own drafts; reviewers and administrators may review only proposals authored by somebody else; only administrators publish or deprecate.
 - Submit, review, comment resolution, publish, deprecate, generation, and onboarding operations write their audit event in the same database transaction.
+- Project-token secrets are shown once, stored only as SHA-256 hashes, expire within 90 days, and can create text-only drafts only.
 - Published Storage objects use immutable ID/version paths and cannot be updated or deleted through the Data API.
 - Public anonymous reads are limited to published icons in public projects and the matching public assets.
 

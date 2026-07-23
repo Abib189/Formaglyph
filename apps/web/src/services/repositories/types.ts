@@ -38,10 +38,25 @@ export interface WorkspaceData {
   releaseEntries: ReleaseEntry[];
 }
 
+export interface ProjectTokenSummary {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  scopes: string[];
+  expiresAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface IssuedProjectToken extends ProjectTokenSummary {
+  token: string;
+}
+
 export interface FormaglyphRepository {
   readonly mode: "local" | "supabase";
   listPublishedIcons(): Promise<CatalogIcon[]>;
-  loadWorkspace(projectSlug: string): Promise<WorkspaceData | null>;
+  loadWorkspace(projectSlug: string, draftId?: string | null): Promise<WorkspaceData | null>;
   saveDraft(projectSlug: string, draft: DraftBrief, candidate: CandidateAssetInput): Promise<SavedDraft>;
   submitProposal(draftId: string, candidateId: string, targetVersion: string): Promise<Proposal>;
   reviewProposal(proposalId: string, decision: "approve" | "request_changes" | "reject", body?: string): Promise<Proposal>;
@@ -53,5 +68,8 @@ export interface FormaglyphRepository {
   completeGenerationJob(jobId: string, result: { candidateCount: number; passedCount: number }): Promise<GenerationJob>;
   failGenerationJob(jobId: string, errorCode: string, errorMessage: string): Promise<GenerationJob>;
   cancelGenerationJob(jobId: string): Promise<GenerationJob>;
+  listProjectTokens(projectSlug: string): Promise<ProjectTokenSummary[]>;
+  issueProjectToken(projectSlug: string, name: string, expiresInDays?: number): Promise<IssuedProjectToken>;
+  revokeProjectToken(tokenId: string): Promise<ProjectTokenSummary>;
   bootstrapWorkspace(input: { organizationName: string; organizationSlug: string; projectName: string; projectSlug: string }): Promise<ProjectAccess>;
 }

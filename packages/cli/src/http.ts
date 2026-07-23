@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { FormaglyphCatalogClient, DEFAULT_API_URL } from "./catalog.js";
+import { FormaglyphDraftClient } from "./drafts.js";
 import { createFormaglyphMcpServer } from "./mcp.js";
 
 export const FORMAGLYPH_MCP_PATH = "/mcp";
@@ -73,7 +74,7 @@ export async function handleFormaglyphMcpHttp(request: IncomingMessage, response
   if (request.method === "OPTIONS") {
     response.writeHead(204, {
       "access-control-allow-methods": "POST, OPTIONS",
-      "access-control-allow-headers": "content-type, mcp-protocol-version, mcp-session-id",
+      "access-control-allow-headers": "authorization, content-type, mcp-protocol-version, mcp-session-id",
       "access-control-max-age": "86400",
       allow: "POST, OPTIONS",
     });
@@ -87,7 +88,13 @@ export async function handleFormaglyphMcpHttp(request: IncomingMessage, response
     return;
   }
 
-  const server = createFormaglyphMcpServer(new FormaglyphCatalogClient(options.apiUrl ?? process.env.FORMAGLYPH_API_URL ?? DEFAULT_API_URL));
+  const apiUrl = options.apiUrl ?? process.env.FORMAGLYPH_API_URL ?? DEFAULT_API_URL;
+  const authorization = firstHeader(request.headers.authorization);
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const server = createFormaglyphMcpServer(
+    new FormaglyphCatalogClient(apiUrl),
+    new FormaglyphDraftClient(apiUrl, token),
+  );
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
 
   try {

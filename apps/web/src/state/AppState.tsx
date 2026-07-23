@@ -67,6 +67,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const { user } = useAuthState();
   const location = useLocation();
   const projectSlug = location.pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? "core";
+  const requestedDraftId = new URLSearchParams(location.search).get("draft");
 
   useEffect(() => {
     if (repository.mode === "local") saveAppState(state);
@@ -77,7 +78,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let active = true;
     setBackendLoading(true);
     setBackendError(null);
-    void repository.loadWorkspace(projectSlug).then((workspace) => {
+    void repository.loadWorkspace(projectSlug, requestedDraftId).then((workspace) => {
       if (!active) return;
       if (!workspace) throw new Error("Project not found or you do not have access.");
       setRole(workspace.project.role);
@@ -93,7 +94,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (active) setBackendError(error instanceof Error ? error.message : "Could not load this workspace.");
     }).finally(() => { if (active) setBackendLoading(false); });
     return () => { active = false; };
-  }, [location.pathname, projectSlug, user]);
+  }, [location.pathname, projectSlug, requestedDraftId, user]);
 
   useEffect(() => {
     if (!notice) return;
@@ -103,7 +104,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const refreshWorkspace = useCallback(async () => {
     if (repository.mode !== "supabase") return null;
-    const workspace = await repository.loadWorkspace(projectSlug);
+    const workspace = await repository.loadWorkspace(projectSlug, requestedDraftId);
     if (!workspace) throw new Error("Project not found or you do not have access.");
     setRole(workspace.project.role);
     setState((current) => ({
@@ -115,7 +116,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       releaseEntries: workspace.releaseEntries,
     }));
     return workspace;
-  }, [projectSlug]);
+  }, [projectSlug, requestedDraftId]);
 
   const updateDraft = useCallback<AppStateValue["updateDraft"]>((field, value) => {
     setState((current) => ({

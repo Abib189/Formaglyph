@@ -975,6 +975,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_agent_draft: {
+        Args: {
+          p_description?: string
+          p_keywords?: string[]
+          p_name: string
+          p_token: string
+        }
+        Returns: {
+          create_path: string
+          draft_id: string
+          draft_name: string
+          project_slug: string
+          status: string
+        }[]
+      }
       deprecate_icon: {
         Args: { p_icon_id: string; p_reason: string }
         Returns: {
@@ -1032,6 +1047,37 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      issue_project_token: {
+        Args: {
+          p_expires_in_days?: number
+          p_name: string
+          p_project_id: string
+        }
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_used_at: string
+          name: string
+          revoked_at: string
+          scopes: string[]
+          token: string
+          token_prefix: string
+        }[]
+      }
+      list_project_tokens: {
+        Args: { p_project_id: string }
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_used_at: string
+          name: string
+          revoked_at: string
+          scopes: string[]
+          token_prefix: string
+        }[]
       }
       publish_proposal: {
         Args: { p_proposal_id: string }
@@ -1098,6 +1144,19 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      revoke_project_token: {
+        Args: { p_token_id: string }
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_used_at: string
+          name: string
+          revoked_at: string
+          scopes: string[]
+          token_prefix: string
+        }[]
       }
       start_generation_job: {
         Args: {

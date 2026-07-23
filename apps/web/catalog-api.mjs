@@ -74,6 +74,21 @@ function sendError(request, response, status, code, message) {
   sendJson(request, response, status, { error: { code, message } });
 }
 
+async function readJsonBody(request, maxBytes = 32_768) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > maxBytes) throw new Error("request_too_large");
+    chunks.push(chunk);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new Error("invalid_json");
+  }
+}
+
 function assetPath(asset) {
   return `/api/v1/icons/${asset.stableId}/${asset.version}/${asset.variant}.svg`;
 }
@@ -97,8 +112,13 @@ function serializeAsset(asset, origin) {
 function openApi(origin) {
   return {
     openapi: "3.1.0",
-    info: { title: "Formaglyph Public API", version: "1.0.0", description: "Read-only access to the MIT-licensed Formaglyph Core catalog." },
+    info: { title: "Formaglyph API", version: "1.1.0", description: "Public access to the MIT-licensed Formaglyph Core catalog plus scoped project draft handoff." },
     servers: [{ url: new URL("/api/v1", origin).toString().replace(/\/$/, "") }],
+    components: {
+      securitySchemes: {
+        projectToken: { type: "http", scheme: "bearer", bearerFormat: "Formaglyph project token" },
+      },
+    },
     paths: {
       "/icons": {
         get: {
@@ -110,11 +130,37 @@ function openApi(origin) {
       "/icons/{stableId}": { get: { summary: "Get one icon concept and its variants", parameters: [{ name: "stableId", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "Icon concept" }, "404": { description: "Unknown stable ID" } } } },
       "/icons/{stableId}/{version}/{variant}.svg": { get: { summary: "Get an immutable SVG asset", parameters: ["stableId", "version", "variant"].map((name) => ({ name, in: "path", required: true, schema: { type: "string" } })), responses: { "200": { description: "SVG asset" }, "404": { description: "Unknown asset" } } } },
       "/manifest": { get: { summary: "Get the complete release manifest", responses: { "200": { description: "Content-hashed release manifest" } } } },
+      "/agent/drafts": {
+        post: {
+          summary: "Create a text-only project draft handoff",
+          security: [{ projectToken: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "description"],
+                  properties: {
+                    name: { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+                    description: { type: "string", minLength: 3, maxLength: 500 },
+                    keywords: { type: "array", maxItems: 12, items: { type: "string", minLength: 1, maxLength: 40 } },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "201": { description: "Draft created with a human handoff URL" },
+            "401": { description: "Missing, invalid, expired, or revoked project token" },
+          },
+        },
+      },
     },
   };
 }
 
-export async function createCatalogApi({ catalogRoot }) {
+export async function createCatalogApi({ catalogRoot, agentDraft }) {
   const canonicalRoot = resolve(catalogRoot);
   const rawManifest = await readFile(resolve(canonicalRoot, "manifest.json"), "utf8");
   const manifest = JSON.parse(rawManifest);
@@ -122,6 +168,96 @@ export async function createCatalogApi({ catalogRoot }) {
 
   return async function handleCatalogApi(request, response, url) {
     if (!url.pathname.startsWith("/api/v1")) return false;
+
+    if (url.pathname === "/api/v1/agent/drafts") {
+      if (request.method === "OPTIONS") {
+        response.writeHead(204, {
+          ...apiHeaders("public, max-age=86400"),
+          allow: "POST, OPTIONS",
+          "access-control-allow-methods": "POST, OPTIONS",
+          "access-control-allow-headers": "authorization, content-type",
+        });
+        response.end();
+        return true;
+      }
+      if (request.method !== "POST") {
+        response.setHeader("allow", "POST, OPTIONS");
+        sendError(request, response, 405, "method_not_allowed", "This route accepts POST requests.");
+        return true;
+      }
+      if (!agentDraft?.supabaseUrl || !agentDraft?.publishableKey) {
+        sendError(request, response, 503, "agent_handoff_unavailable", "Project draft handoff is not configured.");
+        return true;
+      }
+      const authorization = Array.isArray(request.headers.authorization) ? request.headers.authorization[0] : request.headers.authorization;
+      const token = authorization?.match(/^Bearer\s+(fgp_[a-f0-9]+)$/i)?.[1];
+      if (!token) {
+        sendError(request, response, 401, "invalid_project_token", "A valid Formaglyph project token is required.");
+        return true;
+      }
+
+      let body;
+      try {
+        body = await readJsonBody(request);
+      } catch (error) {
+        const tooLarge = error instanceof Error && error.message === "request_too_large";
+        sendError(request, response, tooLarge ? 413 : 400, tooLarge ? "request_too_large" : "invalid_json", tooLarge ? "The request body cannot exceed 32 KB." : "The request body must be valid JSON.");
+        return true;
+      }
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        sendError(request, response, 400, "invalid_request", "A draft name and description are required.");
+        return true;
+      }
+
+      let upstream;
+      try {
+        upstream = await fetch(`${agentDraft.supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/create_agent_draft`, {
+          method: "POST",
+          headers: {
+            apikey: agentDraft.publishableKey,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            p_token: token,
+            p_name: body.name,
+            p_description: body.description,
+            p_keywords: Array.isArray(body.keywords) ? body.keywords : [],
+          }),
+          signal: AbortSignal.timeout(10_000),
+        });
+      } catch {
+        sendError(request, response, 502, "handoff_service_unavailable", "The project draft handoff service is temporarily unavailable.");
+        return true;
+      }
+      const payload = await upstream.json().catch(() => null);
+      if (!upstream.ok) {
+        const authorizationFailure = upstream.status === 401 || upstream.status === 403 || payload?.code === "28000";
+        sendError(
+          request,
+          response,
+          authorizationFailure ? 401 : 422,
+          authorizationFailure ? "invalid_project_token" : "invalid_draft",
+          authorizationFailure ? "The project token is invalid, expired, or revoked." : (payload?.message ?? "The draft handoff was rejected."),
+        );
+        return true;
+      }
+      const row = Array.isArray(payload) ? payload[0] : payload;
+      if (!row?.draft_id || !row?.create_path) {
+        sendError(request, response, 502, "invalid_handoff_response", "The draft handoff service returned an invalid response.");
+        return true;
+      }
+      sendJson(request, response, 201, {
+        data: {
+          draftId: row.draft_id,
+          name: row.draft_name,
+          projectSlug: row.project_slug,
+          status: row.status,
+          handoffUrl: new URL(row.create_path, publicOrigin(request, url)).toString(),
+        },
+      });
+      return true;
+    }
+
     if (request.method === "OPTIONS") {
       response.writeHead(204, { ...apiHeaders("public, max-age=86400"), allow: "GET, HEAD, OPTIONS", "access-control-allow-methods": "GET, HEAD, OPTIONS" });
       response.end();
@@ -136,11 +272,11 @@ export async function createCatalogApi({ catalogRoot }) {
     const origin = publicOrigin(request, url);
     if (url.pathname === "/api/v1" || url.pathname === "/api/v1/") {
       sendJson(request, response, 200, {
-        name: "Formaglyph Public API",
+        name: "Formaglyph API",
         version: API_VERSION,
-        access: "public-read-only",
+        access: "public-catalog-with-scoped-draft-handoff",
         catalogue: { name: manifest.name, version: manifest.version, concepts: manifest.conceptCount, assets: manifest.assetCount, licence: manifest.licence },
-        links: { icons: new URL("/api/v1/icons", origin), manifest: new URL("/api/v1/manifest", origin), openapi: new URL("/api/v1/openapi.json", origin), mcp: new URL("/mcp", origin) },
+        links: { icons: new URL("/api/v1/icons", origin), manifest: new URL("/api/v1/manifest", origin), openapi: new URL("/api/v1/openapi.json", origin), mcp: new URL("/mcp", origin), agentDrafts: new URL("/api/v1/agent/drafts", origin) },
       }, JSON_CACHE);
       return true;
     }

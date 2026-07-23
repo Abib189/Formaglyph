@@ -2,7 +2,7 @@ import { iconResults, initialAppState } from "../../data/catalog";
 import type { GenerationJob, Proposal, ReviewComment } from "../../domain/types";
 import { loadAppState } from "../storage";
 import { validateCandidateAsset } from "../candidateValidation";
-import type { CandidateAssetInput, FormaglyphRepository, ProjectAccess, SavedDraft, WorkspaceData } from "./types";
+import type { CandidateAssetInput, FormaglyphRepository, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
 
 const localProject: ProjectAccess = { id: "local-core", organizationId: "local-org", slug: "core", name: "Formaglyph Core", role: "admin" };
 
@@ -10,7 +10,7 @@ export class LocalRepository implements FormaglyphRepository {
   readonly mode = "local" as const;
   private readonly generationJobs = new Map<string, GenerationJob>();
   async listPublishedIcons() { return iconResults; }
-  async loadWorkspace(projectSlug: string): Promise<WorkspaceData | null> {
+  async loadWorkspace(projectSlug: string, _draftId?: string | null): Promise<WorkspaceData | null> {
     if (projectSlug !== localProject.slug) return null;
     const state = typeof window === "undefined" ? structuredClone(initialAppState) : loadAppState();
     return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal, auditEvents: state.auditEvents, releaseEntries: state.releaseEntries };
@@ -58,5 +58,8 @@ export class LocalRepository implements FormaglyphRepository {
     this.generationJobs.set(job.id, job);
     return job;
   }
+  async listProjectTokens(): Promise<ProjectTokenSummary[]> { return []; }
+  async issueProjectToken(): Promise<never> { throw new Error("Project tokens require the Supabase data mode."); }
+  async revokeProjectToken(): Promise<never> { throw new Error("Project tokens require the Supabase data mode."); }
   async bootstrapWorkspace() { return localProject; }
 }

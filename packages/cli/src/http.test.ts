@@ -33,5 +33,6 @@ describe("Formaglyph MCP HTTP boundary", () => {
     await handleFormaglyphMcpHttp(request("OPTIONS", { origin: "https://formaglyph.test" }) as never, optionsResponse as never);
     expect(optionsResponse.status).toBe(204);
     expect(optionsResponse.headers.get("access-control-allow-methods")).toBe("POST, OPTIONS");
+    expect(optionsResponse.headers.get("access-control-allow-headers")).toContain("authorization");
   });
 });

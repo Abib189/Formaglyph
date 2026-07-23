@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Check,
   Copy,
@@ -12,12 +12,15 @@ import {
   Robot,
   ShieldCheck,
   SlidersHorizontal,
+  Trash,
 } from "@phosphor-icons/react";
 import type { IntegrationName } from "../domain/types";
+import type { IssuedProjectToken, ProjectTokenSummary } from "../services/repositories/types";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { useAppState } from "../state/AppState";
 import { repository } from "../services/repositories";
 import { copyText } from "../services/svg";
+import { useParams } from "react-router-dom";
 
 function Toggle({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (value: boolean) => void; label: string; disabled?: boolean }) {
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} className={checked ? "settings-toggle active" : "settings-toggle"} onClick={() => onChange(!checked)}><span /></button>;
@@ -27,15 +30,21 @@ function SettingRow({ icon, title, description, children }: { icon: ReactNode; t
   return <div className="setting-row"><div className="setting-row-icon">{icon}</div><div className="setting-row-copy"><strong>{title}</strong><p>{description}</p></div><div className="setting-control">{children}</div></div>;
 }
 
-const integrationDetails: Record<IntegrationName, { label: string; description: string; icon: ReactNode }> = {
-  github: { label: "GitHub", description: "Prepare pull requests and release assets.", icon: <GithubLogo size={19} /> },
-  figma: { label: "Figma", description: "Send reviewed SVGs to a team library.", icon: <FigmaLogo size={19} /> },
-  penpot: { label: "Penpot", description: "Sync open design-system components.", icon: <SlidersHorizontal size={19} /> },
+const integrationDetails: Record<IntegrationName, { label: string; description: string; icon: ReactNode; available: boolean }> = {
+  github: { label: "GitHub", description: "Pull request automation and release commits are planned for a later milestone.", icon: <GithubLogo size={19} />, available: false },
+  figma: { label: "Figma", description: "Copy a named vector with stable ID, version, licence, and hash metadata from Explore.", icon: <FigmaLogo size={19} />, available: true },
+  penpot: { label: "Penpot", description: "Copy the same reviewed SVG handoff for an open design-system library.", icon: <SlidersHorizontal size={19} />, available: true },
 };
 
 export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (value: boolean) => void }) {
-  const { state, updateSetting } = useAppState();
+  const { state, updateSetting, role } = useAppState();
+  const { projectSlug = "core" } = useParams();
   const [mcpCopyState, setMcpCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [tokens, setTokens] = useState<ProjectTokenSummary[]>([]);
+  const [tokenName, setTokenName] = useState("Codex draft handoff");
+  const [issuedToken, setIssuedToken] = useState<IssuedProjectToken | null>(null);
+  const [tokenBusy, setTokenBusy] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
   const publicOrigin = import.meta.env.DEV ? "https://formaglyph.com" : window.location.origin;
   const publicApiEndpoint = `${publicOrigin}/api/v1`;
   const publicMcpEndpoint = `${publicOrigin}/mcp`;
@@ -47,6 +56,48 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
       setMcpCopyState("error");
     }
     window.setTimeout(() => setMcpCopyState("idle"), 1800);
+  };
+
+  useEffect(() => {
+    if (repository.mode !== "supabase" || role !== "admin") return;
+    let active = true;
+    setTokenError(null);
+    void repository.listProjectTokens(projectSlug)
+      .then((records) => { if (active) setTokens(records); })
+      .catch((error: unknown) => { if (active) setTokenError(error instanceof Error ? error.message : "Could not load project tokens."); });
+    return () => { active = false; };
+  }, [projectSlug, role]);
+
+  const issueToken = async () => {
+    if (tokenName.trim().length < 2) {
+      setTokenError("Give this token a name of at least 2 characters.");
+      return;
+    }
+    setTokenBusy(true);
+    setTokenError(null);
+    try {
+      const issued = await repository.issueProjectToken(projectSlug, tokenName.trim(), 30);
+      setIssuedToken(issued);
+      setTokens((current) => [issued, ...current]);
+    } catch (error) {
+      setTokenError(error instanceof Error ? error.message : "Could not issue the project token.");
+    } finally {
+      setTokenBusy(false);
+    }
+  };
+
+  const revokeToken = async (tokenId: string) => {
+    setTokenBusy(true);
+    setTokenError(null);
+    try {
+      const revoked = await repository.revokeProjectToken(tokenId);
+      setTokens((current) => current.map((token) => token.id === revoked.id ? revoked : token));
+      if (issuedToken?.id === revoked.id) setIssuedToken(null);
+    } catch (error) {
+      setTokenError(error instanceof Error ? error.message : "Could not revoke the project token.");
+    } finally {
+      setTokenBusy(false);
+    }
   };
 
   return (
@@ -93,17 +144,36 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
             <div className="connection-field"><label>Public REST endpoint</label><div><code>{publicApiEndpoint}</code><button onClick={() => window.open(publicApiEndpoint, "_blank", "noopener,noreferrer")}>Open</button></div><p>Read-only Formaglyph Core search, manifests, metadata, OpenAPI, and immutable SVG delivery. No key required.</p></div>
             <SettingRow icon={<PlugsConnected size={19} />} title="Public MCP server" description="Live read-only tools, resources, and prompts for agent clients."><Toggle disabled checked onChange={() => undefined} label="Public MCP server enabled" /></SettingRow>
             <div className="connection-field"><label>Streamable HTTP MCP endpoint</label><div><code>{publicMcpEndpoint}</code><button onClick={() => void copyMcpEndpoint()}>{mcpCopyState === "copied" ? <><Check size={13} />Copied</> : <><Copy size={13} />{mcpCopyState === "error" ? "Copy failed" : "Copy"}</>}</button></div><p>Connect an MCP client directly. Search, inspect, and retrieve public Core SVGs without a key; project data is never exposed.</p></div>
-            <SettingRow icon={<Key size={19} />} title="API permission" description="Public Core reads require no key; private project scopes remain unavailable."><select disabled value="public"><option value="public">Public read</option></select></SettingRow>
-            <div className="api-key-block"><div><strong>Private API keys</strong><p>Key issuance, rotation, quotas, and write scopes arrive with authenticated API access.</p></div><button className="secondary-action" disabled>Not yet available</button></div>
+            <SettingRow icon={<Key size={19} />} title="Project token scope" description="Tokens can create text-only drafts. They cannot upload SVGs, submit, review, approve, publish, or read private records."><select disabled value="drafts:write"><option value="drafts:write">drafts:write</option></select></SettingRow>
+            {repository.mode !== "supabase" ? (
+              <div className="api-key-block"><div><strong>Project tokens</strong><p>Switch to the Supabase data mode to issue scoped credentials.</p></div><button className="secondary-action" disabled>Unavailable locally</button></div>
+            ) : role !== "admin" ? (
+              <div className="api-key-block"><div><strong>Project tokens</strong><p>Only a project admin can issue or revoke agent credentials.</p></div><button className="secondary-action" disabled>Admin required</button></div>
+            ) : (
+              <div className="agent-token-manager">
+                <form className="agent-token-form" onSubmit={(event) => { event.preventDefault(); void issueToken(); }}>
+                  <label htmlFor="agent-token-name">Token name</label>
+                  <div><input id="agent-token-name" value={tokenName} maxLength={80} onChange={(event) => setTokenName(event.target.value)} /><button className="primary-action" disabled={tokenBusy} type="submit">Issue 30-day token</button></div>
+                  <p>The secret is shown once. Store it in your MCP client, never in source control.</p>
+                </form>
+                {issuedToken && <div className="connection-field token-secret" role="status"><label>New project token</label><div><code>{issuedToken.token}</code><button onClick={() => void copyText(issuedToken.token)}><Copy size={13} />Copy once</button></div><p>Created for {issuedToken.name}. Close this value after copying it.</p></div>}
+                {tokenError && <p className="token-error" role="alert">{tokenError}</p>}
+                <div className="token-list" aria-label="Project tokens">
+                  {tokens.length === 0 ? <p>No project tokens issued.</p> : tokens.map((token) => {
+                    const inactive = Boolean(token.revokedAt) || new Date(token.expiresAt).getTime() <= Date.now();
+                    return <article key={token.id}><div><strong>{token.name}</strong><code>{token.tokenPrefix}••••</code><small>{inactive ? token.revokedAt ? "Revoked" : "Expired" : `Expires ${new Date(token.expiresAt).toLocaleDateString("en-GB")}`} · {token.lastUsedAt ? `Last used ${new Date(token.lastUsedAt).toLocaleDateString("en-GB")}` : "Never used"}</small></div><button type="button" disabled={inactive || tokenBusy} onClick={() => void revokeToken(token.id)}><Trash size={15} />Revoke</button></article>;
+                  })}
+                </div>
+              </div>
+            )}
           </Panel>
 
-          <Panel className="settings-panel settings-unavailable">
+          <Panel className="settings-panel">
             <div id="integrations" className="settings-anchor" />
-            <PanelHeader number="05" title="Integrations" meta="FUTURE MILESTONE" />
+            <PanelHeader number="05" title="Design handoff" meta="COPY/EXPORT LIVE" accent />
             {(Object.keys(integrationDetails) as IntegrationName[]).map((name) => {
               const detail = integrationDetails[name];
-              const connected = state.settings.integrations[name];
-              return <SettingRow key={name} icon={detail.icon} title={detail.label} description={`${detail.description} Unavailable in Milestone 1.`}><button disabled className={connected ? "connection-button connected" : "connection-button"}><PlugsConnected size={15} />Unavailable</button></SettingRow>;
+              return <SettingRow key={name} icon={detail.icon} title={detail.label} description={detail.description}>{detail.available ? <a className="connection-button" href="/explore"><Copy size={15} />Open Explore</a> : <button disabled className="connection-button"><PlugsConnected size={15} />Planned</button>}</SettingRow>;
             })}
           </Panel>
 

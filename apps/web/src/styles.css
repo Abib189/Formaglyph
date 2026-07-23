@@ -713,6 +713,20 @@ select:focus-visible {
   width: 100%;
 }
 
+.design-handoff-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.design-handoff-actions .secondary-action {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
 .microcopy {
   color: var(--muted);
   font-size: 13px;
@@ -2435,11 +2449,125 @@ select:focus-visible {
   gap: 7px;
   cursor: pointer;
   font: 500 10px/1 "JetBrains Mono", monospace;
+  text-decoration: none;
 }
 
 .connection-button.connected {
   background: var(--fg);
   color: var(--bg);
+}
+
+.agent-token-manager {
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.agent-token-form {
+  padding: 14px;
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.agent-token-form > label {
+  display: block;
+  margin-bottom: 7px;
+  font: 600 10px/1 "JetBrains Mono", monospace;
+}
+
+.agent-token-form > div {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 8px;
+}
+
+.agent-token-form input {
+  min-width: 0;
+  height: 42px;
+  border: 1px solid var(--soft-line);
+  border-radius: 5px;
+  padding: 0 11px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 500 10px/1 "JetBrains Mono", monospace;
+}
+
+.agent-token-form .primary-action {
+  height: 42px;
+  white-space: nowrap;
+}
+
+.agent-token-form > p,
+.token-list > p,
+.token-error {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.token-secret {
+  background: var(--faint);
+}
+
+.token-list {
+  padding: 0 14px;
+}
+
+.token-list article {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.token-list article:last-child {
+  border-bottom: 0;
+}
+
+.token-list article > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(110px, auto);
+  gap: 5px 14px;
+}
+
+.token-list strong,
+.token-list code,
+.token-list small,
+.token-list button {
+  font: 500 9px/1.3 "JetBrains Mono", monospace;
+}
+
+.token-list code {
+  justify-self: end;
+}
+
+.token-list small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+
+.token-list button {
+  height: 34px;
+  border: 1px solid var(--soft-line);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.token-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.token-error {
+  margin: 10px 14px;
+  color: var(--accent);
+  font-family: "JetBrains Mono", monospace;
 }
 
 .privacy-note {
@@ -2756,6 +2884,10 @@ select:focus-visible {
   .api-key-value {
     max-width: none;
   }
+
+  .agent-token-form > div {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 520px) {
@@ -2778,6 +2910,23 @@ select:focus-visible {
 
   .hero-search input {
     font-size: 14px;
+  }
+
+  .design-handoff-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .token-list article {
+    grid-template-columns: 1fr;
+    padding: 12px 0;
+  }
+
+  .token-list article > div {
+    grid-template-columns: 1fr;
+  }
+
+  .token-list code {
+    justify-self: start;
   }
 
   .pair-preview,

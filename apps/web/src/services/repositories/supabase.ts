@@ -4,7 +4,7 @@ import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
 import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
-import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, SavedDraft, WorkspaceData } from "./types";
+import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
 
 type ProposalRow = Database["public"]["Tables"]["proposals"]["Row"];
 type GenerationJobRow = Database["public"]["Tables"]["generation_jobs"]["Row"];
@@ -46,6 +46,28 @@ function rowToReview(row: Database["public"]["Tables"]["reviews"]["Row"]): Revie
     time: new Date(row.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
     text: row.body,
     resolved: row.resolved,
+  };
+}
+
+function rowToProjectToken(row: {
+  id: string;
+  name: string;
+  token_prefix: string;
+  scopes: string[];
+  expires_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}): ProjectTokenSummary {
+  return {
+    id: row.id,
+    name: row.name,
+    tokenPrefix: row.token_prefix,
+    scopes: row.scopes,
+    expiresAt: row.expires_at,
+    lastUsedAt: row.last_used_at,
+    revokedAt: row.revoked_at,
+    createdAt: row.created_at,
   };
 }
 
@@ -119,7 +141,7 @@ export class SupabaseRepository implements FormaglyphRepository {
     });
   }
 
-  async loadWorkspace(projectSlug: string): Promise<WorkspaceData | null> {
+  async loadWorkspace(projectSlug: string, draftId?: string | null): Promise<WorkspaceData | null> {
     const client = requireSupabaseClient();
     let project: ProjectAccess;
     try { project = await currentProject(projectSlug); } catch { return null; }
@@ -158,7 +180,7 @@ export class SupabaseRepository implements FormaglyphRepository {
         databaseIconId: icon.id,
       })),
     ];
-    const activeDraft = drafts[0];
+    const activeDraft = (draftId ? drafts.find((draft) => draft.id === draftId) : undefined) ?? drafts[0];
     const activeProposal = proposals.find((item) => item.draft_id === activeDraft?.id) ?? proposals[0];
     let comments: Proposal["comments"] = [];
     if (activeProposal) {
@@ -359,6 +381,34 @@ export class SupabaseRepository implements FormaglyphRepository {
     const { data, error } = await requireSupabaseClient().rpc("cancel_generation_job", { p_job_id: jobId });
     if (error) throw new Error(error.message);
     return rowToGenerationJob(data);
+  }
+
+  async listProjectTokens(projectSlug: string) {
+    const project = await currentProject(projectSlug);
+    const { data, error } = await requireSupabaseClient().rpc("list_project_tokens", { p_project_id: project.id });
+    if (error) throw new Error(error.message);
+    return data.map(rowToProjectToken);
+  }
+
+  async issueProjectToken(projectSlug: string, name: string, expiresInDays = 30) {
+    const project = await currentProject(projectSlug);
+    const { data, error } = await requireSupabaseClient().rpc("issue_project_token", {
+      p_project_id: project.id,
+      p_name: name,
+      p_expires_in_days: expiresInDays,
+    });
+    if (error) throw new Error(error.message);
+    const row = data[0];
+    if (!row) throw new Error("The project token was not issued.");
+    return { ...rowToProjectToken(row), token: row.token };
+  }
+
+  async revokeProjectToken(tokenId: string) {
+    const { data, error } = await requireSupabaseClient().rpc("revoke_project_token", { p_token_id: tokenId });
+    if (error) throw new Error(error.message);
+    const row = data[0];
+    if (!row) throw new Error("The project token was not found.");
+    return rowToProjectToken(row);
   }
 
   async bootstrapWorkspace(input: { organizationName: string; organizationSlug: string; projectName: string; projectSlug: string }) {
