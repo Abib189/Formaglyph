@@ -12,7 +12,7 @@
     "url": "https://github.com/Abib189/Formaglyph.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://formaglyph-web-production.up.railway.app",
+  "homepage": "https://formaglyph.com",
   "bugs": "https://github.com/Abib189/Formaglyph/issues",
   "keywords": ["icons", "svg", "cli", "mcp", "model-context-protocol"],
   "bin": {

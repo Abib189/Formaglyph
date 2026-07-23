@@ -13,6 +13,7 @@ const root = resolve(fileURLToPath(new URL("./dist", import.meta.url)));
 const configuredPort = Number.parseInt(process.env.PORT ?? "3000", 10);
 const port = Number.isFinite(configuredPort) ? configuredPort : 3000;
 const host = "0.0.0.0";
+const canonicalHost = process.env.FORMAGLYPH_CANONICAL_HOST ?? "formaglyph.com";
 const catalogRoot = process.env.FORMAGLYPH_CATALOG_ROOT ?? resolve(fileURLToPath(new URL("../../packages/icons/assets", import.meta.url)));
 const handleCatalogApi = await createCatalogApi({ catalogRoot });
 
@@ -69,6 +70,18 @@ function sendJson(response, status, body) {
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  const forwardedHost = request.headers["x-forwarded-host"] ?? request.headers.host ?? "";
+  const requestHost = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost).split(",")[0].trim().toLowerCase();
+
+  if (requestHost === `www.${canonicalHost}` || requestHost.startsWith(`www.${canonicalHost}:`)) {
+    response.writeHead(308, {
+      "location": `https://${canonicalHost}${request.url ?? "/"}`,
+      "cache-control": "public, max-age=3600",
+      "x-content-type-options": "nosniff",
+    });
+    response.end();
+    return;
+  }
 
   if (url.pathname === "/health") {
     sendJson(response, 200, { status: "ok" });

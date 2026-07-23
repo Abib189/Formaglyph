@@ -5,7 +5,7 @@ The public API provides read-only access to the MIT-licensed Formaglyph Core rel
 Production base URL:
 
 ```text
-https://formaglyph-web-production.up.railway.app/api/v1
+https://formaglyph.com/api/v1
 ```
 
 ## Endpoints
@@ -24,7 +24,7 @@ https://formaglyph-web-production.up.railway.app/api/v1
 Example:
 
 ```bash
-curl "https://formaglyph-web-production.up.railway.app/api/v1/icons?q=payment%20successful&variant=regular&limit=5"
+curl "https://formaglyph.com/api/v1/icons?q=payment%20successful&variant=regular&limit=5"
 ```
 
 All write methods return `405`. Private/team catalog access, personal access tokens, write scopes, quotas, and API-key rotation remain unavailable until the authenticated API milestone.

@@ -7,7 +7,7 @@ Formaglyph exposes the original, MIT-licensed Core catalog to people, scripts, a
 The production Streamable HTTP endpoint is:
 
 ```text
-https://formaglyph-web-production.up.railway.app/mcp
+https://formaglyph.com/mcp
 ```
 
 Use that URL in clients that accept a remote MCP server URL. No key is required for the public Core catalog. The endpoint accepts stateless MCP `POST` requests and rejects writes, unapproved browser origins, and legacy SSE access.
@@ -18,7 +18,7 @@ Generic remote client configuration:
 {
   "mcpServers": {
     "formaglyph": {
-      "url": "https://formaglyph-web-production.up.railway.app/mcp"
+      "url": "https://formaglyph.com/mcp"
     }
   }
 }

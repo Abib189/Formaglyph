@@ -1,4 +1,4 @@
-export const DEFAULT_API_URL = "https://formaglyph-web-production.up.railway.app/api/v1";
+export const DEFAULT_API_URL = "https://formaglyph.com/api/v1";
 
 export type IconVariant = "regular" | "solid";
 

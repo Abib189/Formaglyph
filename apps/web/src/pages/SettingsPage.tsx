@@ -36,7 +36,7 @@ const integrationDetails: Record<IntegrationName, { label: string; description: 
 export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (value: boolean) => void }) {
   const { state, updateSetting } = useAppState();
   const [mcpCopyState, setMcpCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const publicOrigin = import.meta.env.DEV ? "https://formaglyph-web-production.up.railway.app" : window.location.origin;
+  const publicOrigin = import.meta.env.DEV ? "https://formaglyph.com" : window.location.origin;
   const publicApiEndpoint = `${publicOrigin}/api/v1`;
   const publicMcpEndpoint = `${publicOrigin}/mcp`;
   const copyMcpEndpoint = async () => {

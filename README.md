@@ -96,21 +96,21 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<current Formaglyph Staging publishable key>
 
 The Dockerfile declares all three as build arguments because Vite embeds publishable configuration during the build. Do not add a Supabase secret or service-role key. Railway uses `/health` for deployment health checks and the server falls back to `index.html` for client-side routes.
 
-The current production preview is [formaglyph-web-production.up.railway.app](https://formaglyph-web-production.up.railway.app/explore). In the hosted Supabase Auth URL configuration, set the site URL to `https://formaglyph-web-production.up.railway.app` and allow the exact redirect URL `https://formaglyph-web-production.up.railway.app/auth/callback` before testing magic-link sign-in.
+The production app is [formaglyph.com](https://formaglyph.com/explore). The Railway-provided hostname remains available as a rollback path. Hosted Supabase Auth uses `https://formaglyph.com` as its site URL and allows exact callbacks for the canonical domain, `www`, local development, and the Railway fallback.
 
 ## Use the public catalog API
 
-The versioned public API is available at [`/api/v1`](https://formaglyph-web-production.up.railway.app/api/v1). It exposes only the source-controlled, MIT-licensed Formaglyph Core release and accepts only `GET`, `HEAD`, and CORS preflight requests. Private project data and privileged Supabase access are not proxied through this API.
+The versioned public API is available at [`/api/v1`](https://formaglyph.com/api/v1). It exposes only the source-controlled, MIT-licensed Formaglyph Core release and accepts only `GET`, `HEAD`, and CORS preflight requests. Private project data and privileged Supabase access are not proxied through this API.
 
 ```bash
-curl "https://formaglyph-web-production.up.railway.app/api/v1/icons?q=payment%20successful&variant=regular"
+curl "https://formaglyph.com/api/v1/icons?q=payment%20successful&variant=regular"
 ```
 
 See [Public API v1](./docs/api-v1.md) for endpoints and caching behavior.
 
 ## Use the CLI and MCP server
 
-The npm-ready CLI can search, inspect, and export public Core icons. The production MCP endpoint is `https://formaglyph-web-production.up.railway.app/mcp` and exposes read-only tools, resources, and an icon-selection prompt without a key.
+The npm-ready CLI can search, inspect, and export public Core icons. The production MCP endpoint is `https://formaglyph.com/mcp` and exposes read-only tools, resources, and an icon-selection prompt without a key.
 
 ```bash
 pnpm --filter @formaglyph/cli build
