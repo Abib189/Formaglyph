@@ -14,6 +14,7 @@ describe("local repository contract", () => {
     const workspace = await repository.loadWorkspace("core");
     expect(workspace?.project.role).toBe("admin");
     expect(workspace?.icons.length).toBeGreaterThan(0);
+    expect(workspace?.candidates?.length).toBeGreaterThan(0);
     await expect(repository.loadWorkspace("missing")).resolves.toBeNull();
   });
 

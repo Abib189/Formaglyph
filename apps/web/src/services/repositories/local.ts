@@ -13,7 +13,7 @@ export class LocalRepository implements FormaglyphRepository {
   async loadWorkspace(projectSlug: string, _draftId?: string | null): Promise<WorkspaceData | null> {
     if (projectSlug !== localProject.slug) return null;
     const state = typeof window === "undefined" ? structuredClone(initialAppState) : loadAppState();
-    return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal, auditEvents: state.auditEvents, releaseEntries: state.releaseEntries };
+    return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal, candidates: state.candidates, auditEvents: state.auditEvents, releaseEntries: state.releaseEntries };
   }
   async saveDraft(_projectSlug: string, draft: { workspaceIconId: string }, candidate: CandidateAssetInput): Promise<SavedDraft> {
     return { draftId: draft.workspaceIconId || "local-draft", candidateId: candidate.id, validation: validateCandidateAsset(candidate) };

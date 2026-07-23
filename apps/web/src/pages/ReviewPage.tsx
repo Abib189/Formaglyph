@@ -2,26 +2,39 @@ import { useState, type FormEvent } from "react";
 import { Check, GridFour, Package, Plus, XCircle } from "@phosphor-icons/react";
 import type { PreviewWeight } from "../domain/types";
 import { SvgIcon } from "../components/IconPreview";
-import { Panel, PageIntro, PanelHeader } from "../components/Layout";
+import { Panel, PageIntro, PanelHeader, RouteLoading } from "../components/Layout";
+import { selectReviewAssets } from "../services/reviewAssets";
 import { useAppState } from "../state/AppState";
 
 function ReviewIconCell({ label, weight, after = false }: { label: string; weight: PreviewWeight; after?: boolean }) {
   const { state } = useAppState();
-  const proposed = state.candidates.find((item) => item.id === state.draft.selectedCandidateId) ?? state.candidates[0];
-  const current = state.candidates.find((item) => item.id !== proposed?.id) ?? proposed;
+  const { current, proposed } = selectReviewAssets(state.candidates, state.draft.selectedCandidateId);
   const candidate = after ? proposed : current;
   const svg = weight === "fill" ? candidate?.variants.solid : candidate?.variants.regular;
-  return <div className="review-icon-cell"><span>{label}</span><div className="review-cell-pair"><div className="review-icon-stage plain-stage">{svg ? <SvgIcon svg={svg} size={86} /> : <small>Variant unavailable</small>}</div><div className="review-icon-stage"><GridFour className="grid-asset" size={154} weight="thin" />{svg ? <SvgIcon svg={svg} size={78} /> : <small>Variant unavailable</small>}{after && <span className="change-pin">+1</span>}</div></div></div>;
+  const unavailable = after ? "Submitted variant unavailable" : "No current release";
+  return <div className="review-icon-cell"><span>{label}</span><div className="review-cell-pair"><div className="review-icon-stage plain-stage">{svg ? <SvgIcon svg={svg} size={86} /> : <small>{unavailable}</small>}</div><div className="review-icon-stage"><GridFour className="grid-asset" size={154} weight="thin" />{svg ? <SvgIcon svg={svg} size={78} /> : <small>{unavailable}</small>}{after && svg && <span className="change-pin">+1</span>}</div></div></div>;
 }
 
 export function ReviewPage() {
-  const { state, role, addComment, toggleComment, requestChanges, approveProposal, rejectProposal } = useAppState();
+  const { state, role, backendLoading, backendError, addComment, toggleComment, requestChanges, approveProposal, rejectProposal } = useAppState();
   const [newComment, setNewComment] = useState("");
   const [commenting, setCommenting] = useState(false);
   const [decisionNote, setDecisionNote] = useState("");
   const approved = state.proposal.status === "approved";
   const changesRequested = state.proposal.status === "changes_requested";
   const rejected = state.proposal.status === "rejected";
+
+  if (backendLoading) return <RouteLoading label="Loading submitted candidate" />;
+  if (backendError) {
+    return (
+      <main className="page-shell review-page">
+        <PageIntro number="01" title="Review unavailable.">
+          Formaglyph could not restore the submitted candidate from the protected project storage.
+        </PageIntro>
+        <Panel><div className="workspace-empty" role="alert"><strong>Candidate could not be verified</strong><p>{backendError}</p></div></Panel>
+      </main>
+    );
+  }
 
   const submitComment = async (event: FormEvent) => {
     event.preventDefault();
@@ -33,7 +46,7 @@ export function ReviewPage() {
 
   const releaseSteps = ["Draft", "Validated", "In review", `v${state.proposal.targetVersion}`];
   const activeStep = approved ? 3 : changesRequested || rejected ? 1 : 2;
-  const selectedCandidate = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
+  const { proposed: selectedCandidate } = selectReviewAssets(state.candidates, state.draft.selectedCandidateId);
   const adapterLabel = selectedCandidate?.provenance.adapter === "manual_import" ? "Manual import" : selectedCandidate?.provenance.model ?? "Unknown";
 
   return (

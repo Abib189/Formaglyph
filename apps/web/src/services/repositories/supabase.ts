@@ -1,8 +1,9 @@
 import { CloudArrowUp } from "@phosphor-icons/react";
-import type { AuditEvent, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
+import type { AuditEvent, Candidate, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
+import { hydratePersistedCandidate } from "../candidateAsset";
 import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
 import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
 
@@ -97,6 +98,28 @@ async function findProposal(proposalId: string): Promise<ProposalRow> {
   return data;
 }
 
+async function loadCandidateFromStorage(candidateId: string): Promise<Candidate> {
+  const client = requireSupabaseClient();
+  const { data: candidate, error: candidateError } = await client.from("candidates").select("*").eq("id", candidateId).single();
+  if (candidateError) throw new Error(`Could not load the submitted candidate: ${candidateError.message}`);
+  const { data: asset, error: assetError } = await client.from("asset_blobs").select("*").eq("id", candidate.asset_id).single();
+  if (assetError) throw new Error(`Could not load the submitted asset record: ${assetError.message}`);
+  const { data: blob, error: downloadError } = await client.storage.from(asset.storage_bucket).download(asset.storage_path);
+  if (downloadError) throw new Error(`Could not download the submitted SVG: ${downloadError.message}`);
+
+  return hydratePersistedCandidate({
+    id: candidate.id,
+    name: candidate.name,
+    description: candidate.description,
+    variant: candidate.variant,
+    issue: candidate.issue,
+    provenance: candidate.provenance,
+    generationJobId: candidate.generation_job_id,
+    promptSha256: candidate.prompt_sha256,
+    createdAt: candidate.created_at,
+  }, await blob.text(), asset.sha256);
+}
+
 export class SupabaseRepository implements FormaglyphRepository {
   readonly mode = "supabase" as const;
 
@@ -181,7 +204,11 @@ export class SupabaseRepository implements FormaglyphRepository {
       })),
     ];
     const activeDraft = (draftId ? drafts.find((draft) => draft.id === draftId) : undefined) ?? drafts[0];
-    const activeProposal = proposals.find((item) => item.draft_id === activeDraft?.id) ?? proposals[0];
+    const activeProposal = proposals.find((item) => (
+      item.draft_id === activeDraft?.id && item.status !== "published" && item.status !== "rejected"
+    )) ?? proposals.find((item) => item.draft_id === activeDraft?.id) ?? proposals[0];
+    const activeCandidateId = activeProposal?.candidate_id ?? activeDraft?.selected_candidate_id;
+    const candidates = activeCandidateId ? [await loadCandidateFromStorage(activeCandidateId)] : [];
     let comments: Proposal["comments"] = [];
     if (activeProposal) {
       const { data: reviews, error } = await client.from("reviews").select("*").eq("proposal_id", activeProposal.id).order("created_at");
@@ -226,8 +253,9 @@ export class SupabaseRepository implements FormaglyphRepository {
     return {
       project,
       icons: workspace,
-      draft: activeDraft ? { workspaceIconId: activeDraft.id, name: activeDraft.name, description: activeDraft.description, keywords: activeDraft.keywords.join(", "), selectedCandidateId: activeDraft.selected_candidate_id ?? "candidate-01", updatedAt: activeDraft.updated_at } : undefined,
+      draft: activeDraft ? { workspaceIconId: activeDraft.id, name: activeDraft.name, description: activeDraft.description, keywords: activeDraft.keywords.join(", "), selectedCandidateId: activeCandidateId ?? "", updatedAt: activeDraft.updated_at } : undefined,
       proposal: activeProposal ? rowToProposal(activeProposal, comments) : undefined,
+      candidates,
       auditEvents,
       releaseEntries,
     };

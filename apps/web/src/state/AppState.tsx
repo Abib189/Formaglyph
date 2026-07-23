@@ -78,6 +78,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     let active = true;
     setBackendLoading(true);
     setBackendError(null);
+    setState((current) => ({ ...current, candidates: [] }));
     void repository.loadWorkspace(projectSlug, requestedDraftId).then((workspace) => {
       if (!active) return;
       if (!workspace) throw new Error("Project not found or you do not have access.");
@@ -87,6 +88,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         workspace: workspace.icons,
         draft: workspace.draft ?? current.draft,
         proposal: workspace.proposal ?? current.proposal,
+        candidates: workspace.candidates ?? current.candidates,
         auditEvents: workspace.auditEvents,
         releaseEntries: workspace.releaseEntries,
       }));
@@ -112,6 +114,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       workspace: workspace.icons,
       draft: workspace.draft ?? current.draft,
       proposal: workspace.proposal ?? current.proposal,
+      candidates: workspace.candidates ?? current.candidates,
       auditEvents: workspace.auditEvents,
       releaseEntries: workspace.releaseEntries,
     }));

@@ -1,4 +1,4 @@
-import type { AuditEvent, CandidateProvenance, CatalogIcon, DraftBrief, GenerationJob, GenerationProvider, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
+import type { AuditEvent, Candidate, CandidateProvenance, CatalogIcon, DraftBrief, GenerationJob, GenerationProvider, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
 import type { SvgValidationResult } from "@formaglyph/validators";
 
 export type MembershipRole = "contributor" | "reviewer" | "admin";
@@ -34,6 +34,7 @@ export interface WorkspaceData {
   icons: WorkspaceIcon[];
   draft?: DraftBrief;
   proposal?: Proposal;
+  candidates?: Candidate[];
   auditEvents: AuditEvent[];
   releaseEntries: ReleaseEntry[];
 }
