@@ -8,6 +8,8 @@ export type PreviewWeight = "regular" | "fill";
 export type WorkspaceStatus = "draft" | "in_review" | "changes_requested" | "approved" | "published" | "archived";
 export type WorkspaceValidation = "passed" | "issues";
 export type GenerationAdapter = "local" | "hosted";
+export type GenerationProvider = "local_geometry" | "omnisvg" | "starvector" | "hosted";
+export type GenerationJobStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 export type ApiScope = "read" | "read_write";
 export type IntegrationName = "github" | "figma" | "penpot";
 
@@ -23,8 +25,35 @@ export interface Candidate {
   id: string;
   name: string;
   description: string;
-  Icon: Icon;
+  variants: {
+    regular: string | null;
+    solid: string | null;
+  };
   issue: string | null;
+  provenance: CandidateProvenance;
+  createdAt: string;
+}
+
+export interface CandidateProvenance {
+  kind: "generated" | "imported" | "reference";
+  adapter: GenerationProvider | "manual_import";
+  model: string;
+  promptHash: string | null;
+  generationJobId: string | null;
+  disclosed: true;
+}
+
+export interface GenerationJob {
+  id: string;
+  adapter: GenerationProvider;
+  status: GenerationJobStatus;
+  progress: number;
+  promptHash: string;
+  promptRetained: boolean;
+  candidateCount: number;
+  error: string | null;
+  startedAt: string;
+  completedAt: string | null;
 }
 
 export interface DraftBrief {
@@ -70,15 +99,19 @@ export interface AppSettings {
 }
 
 export interface PersistedAppState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   draft: DraftBrief;
   proposal: Proposal;
   workspace: WorkspaceIcon[];
   settings: AppSettings;
+  candidates: Candidate[];
+  generationJob: GenerationJob | null;
 }
 
 export interface LegacyPersistedAppState {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   draft: DraftBrief;
   proposal: Proposal;
+  workspace?: WorkspaceIcon[];
+  settings?: AppSettings;
 }

@@ -1,11 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { candidates } from "../data/catalog";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AppSettings, DraftBrief, IntegrationName, PersistedAppState, ReviewComment, WorkspaceStatus } from "../domain/types";
 import { loadAppState, saveAppState } from "../services/storage";
 import { transitionProposal } from "../services/workflow";
 import { canTransitionWorkspaceIcon, transitionWorkspaceIcon } from "../services/workspace";
 import { repository } from "../services/repositories";
-import { renderIconSvg } from "../services/svg";
+import { generationPrompt, importSvgCandidate, LocalGeometryAdapter, sha256Text } from "../services/generation";
 import { useLocation } from "react-router-dom";
 import { useAuthState } from "./AuthState";
 
@@ -24,6 +23,9 @@ interface AppStateValue {
   notice: Notice | null;
   updateDraft: (field: keyof Pick<DraftBrief, "name" | "description" | "keywords">, value: string) => void;
   selectCandidate: (candidateId: string) => void;
+  generateCandidates: () => Promise<boolean>;
+  importCandidate: (svg: string, variant: "regular" | "solid", filename: string) => boolean;
+  cancelGeneration: () => Promise<void>;
   saveDraft: () => Promise<void>;
   submitForReview: () => Promise<boolean>;
   addComment: (text: string) => void;
@@ -47,6 +49,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [backendLoading, setBackendLoading] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [role, setRole] = useState<"contributor" | "reviewer" | "admin">("admin");
+  const generationController = useRef<AbortController | null>(null);
   const { user } = useAuthState();
   const location = useLocation();
   const projectSlug = location.pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? "core";
@@ -90,24 +93,121 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectCandidate = useCallback((candidateId: string) => {
-    if (!candidates.some((candidate) => candidate.id === candidateId)) return;
     setState((current) => ({
       ...current,
-      draft: { ...current.draft, selectedCandidateId: candidateId },
+      draft: current.candidates.some((candidate) => candidate.id === candidateId) ? { ...current.draft, selectedCandidateId: candidateId } : current.draft,
     }));
   }, []);
 
+  const generateCandidates = useCallback(async () => {
+    if (!state.draft.name.trim() || !state.draft.description.trim()) {
+      setNotice({ tone: "error", message: "Add an icon name and description before generating candidates." });
+      return false;
+    }
+    if (state.settings.generationAdapter !== "local") {
+      setNotice({ tone: "error", message: "Hosted generation is not enabled for this project." });
+      return false;
+    }
+    const prompt = generationPrompt(state.draft);
+    const promptHash = await sha256Text(prompt);
+    let jobId: string | null = null;
+    const controller = new AbortController();
+    generationController.current?.abort();
+    generationController.current = controller;
+    try {
+      const job = await repository.startGenerationJob(projectSlug, {
+        draftId: state.draft.workspaceIconId,
+        adapter: "local_geometry",
+        prompt,
+        promptHash,
+        retainPrompt: state.settings.retainPrompts,
+        candidateCount: 3,
+      });
+      jobId = job.id;
+      setState((current) => ({ ...current, generationJob: job }));
+      const generated = await new LocalGeometryAdapter().generate({ brief: state.draft, candidateCount: 3, generationJobId: job.id }, {
+        signal: controller.signal,
+        onProgress: ({ progress }) => setState((current) => current.generationJob?.id === job.id ? { ...current, generationJob: { ...current.generationJob, progress } } : current),
+      });
+      const completed = await repository.completeGenerationJob(job.id, { candidateCount: generated.length, passedCount: generated.filter((candidate) => !candidate.issue).length });
+      setState((current) => ({
+        ...current,
+        candidates: generated,
+        draft: { ...current.draft, selectedCandidateId: generated[0].id, updatedAt: new Date().toISOString() },
+        generationJob: completed,
+      }));
+      setNotice({ tone: "success", message: "Three local candidates generated and validated. No prompt was sent to a model provider." });
+      return true;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setNotice({ tone: "info", message: "Generation cancelled." });
+        return false;
+      }
+      const message = error instanceof Error ? error.message : "Could not generate candidates.";
+      if (jobId) {
+        try {
+          const failed = await repository.failGenerationJob(jobId, "generation_failed", message);
+          setState((current) => ({ ...current, generationJob: failed }));
+        } catch {
+          setState((current) => current.generationJob?.id === jobId ? { ...current, generationJob: { ...current.generationJob, status: "failed", error: message, completedAt: new Date().toISOString() } } : current);
+        }
+      }
+      setNotice({ tone: "error", message });
+      return false;
+    } finally {
+      if (generationController.current === controller) generationController.current = null;
+    }
+  }, [projectSlug, state.draft, state.settings.generationAdapter, state.settings.retainPrompts]);
+
+  const importCandidate = useCallback((svg: string, variant: "regular" | "solid", filename: string) => {
+    try {
+      const candidate = importSvgCandidate(svg, variant, filename);
+      setState((current) => ({ ...current, candidates: [candidate, ...current.candidates], draft: { ...current.draft, selectedCandidateId: candidate.id, updatedAt: new Date().toISOString() } }));
+      setNotice({ tone: candidate.issue ? "info" : "success", message: candidate.issue ?? "SVG imported, normalized, and validated locally." });
+      return true;
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not import that SVG." });
+      return false;
+    }
+  }, []);
+
+  const cancelGeneration = useCallback(async () => {
+    generationController.current?.abort();
+    const job = state.generationJob;
+    if (!job || (job.status !== "queued" && job.status !== "running")) return;
+    try {
+      const cancelled = await repository.cancelGenerationJob(job.id);
+      setState((current) => ({ ...current, generationJob: cancelled }));
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not cancel generation." });
+    }
+  }, [state.generationJob]);
+
   const persistDraft = useCallback(async () => {
-    const selected = candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? candidates[0];
-    return repository.saveDraft(projectSlug, state.draft, { id: selected.id, name: selected.name, description: selected.description, svg: renderIconSvg(selected.Icon), issue: selected.issue });
-  }, [projectSlug, state.draft]);
+    const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
+    if (!selected) throw new Error("Generate or import a candidate before saving this draft.");
+    const variant = state.settings.defaultVariant;
+    const svg = selected.variants[variant];
+    if (!svg) throw new Error(`${variant === "regular" ? "Regular" : "Solid"} geometry is missing from the selected candidate.`);
+    return repository.saveDraft(projectSlug, state.draft, {
+      id: selected.id,
+      name: selected.name,
+      description: selected.description,
+      svg,
+      issue: selected.issue,
+      variant,
+      provenance: selected.provenance,
+      generationJobId: selected.provenance.generationJobId,
+      promptSha256: selected.provenance.promptHash,
+    });
+  }, [projectSlug, state.candidates, state.draft, state.settings.defaultVariant]);
 
   const saveDraft = useCallback(async () => {
     try {
       const saved = await persistDraft();
       setState((current) => ({
         ...current,
-        draft: { ...current.draft, workspaceIconId: saved.draftId, selectedCandidateId: saved.candidateId, updatedAt: new Date().toISOString() },
+        draft: { ...current.draft, workspaceIconId: saved.draftId, updatedAt: new Date().toISOString() },
         proposal: { ...current.proposal, draftId: saved.draftId, candidateId: saved.candidateId },
         workspace: current.workspace.map((icon) => icon.id === current.draft.workspaceIconId ? { ...icon, updatedAt: new Date().toISOString() } : icon),
       }));
@@ -124,7 +224,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [persistDraft]);
 
   const submitForReview = useCallback(async () => {
-    const selected = candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId);
+    const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId);
     if (!state.draft.name.trim() || !state.draft.description.trim()) {
       setNotice({ tone: "error", message: "Name and description are required." });
       return false;
@@ -137,7 +237,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (repository.mode === "supabase") {
         const saved = await persistDraft();
         const proposal = await repository.submitProposal(saved.draftId, saved.candidateId, state.proposal.targetVersion);
-        setState((current) => ({ ...current, draft: { ...current.draft, workspaceIconId: saved.draftId, selectedCandidateId: saved.candidateId, updatedAt: new Date().toISOString() }, proposal }));
+        setState((current) => ({ ...current, draft: { ...current.draft, workspaceIconId: saved.draftId, updatedAt: new Date().toISOString() }, proposal }));
       } else setState((current) => ({
         ...current,
         draft: { ...current.draft, updatedAt: new Date().toISOString() },
@@ -163,7 +263,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not submit proposal." });
       return false;
     }
-  }, [persistDraft, state.draft, state.proposal.status, state.proposal.targetVersion]);
+  }, [persistDraft, state.candidates, state.draft, state.proposal.status, state.proposal.targetVersion]);
 
   const addComment = useCallback((text: string) => {
     const cleanText = text.trim();
@@ -236,14 +336,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         name: icon.name,
         description: icon.description,
         keywords: icon.tags.join(", "),
-        selectedCandidateId: "candidate-01",
+        selectedCandidateId: current.candidates[0]?.id ?? "candidate-01",
         updatedAt: icon.updatedAt,
       },
       proposal: {
         ...current.proposal,
         draftId: icon.id.toUpperCase(),
         status: proposalStatus,
-        candidateId: "candidate-01",
+        candidateId: current.candidates[0]?.id ?? "candidate-01",
         decidedAt: proposalStatus === "approved" || proposalStatus === "changes_requested" ? icon.updatedAt : null,
         submittedAt: proposalStatus === "in_review" ? icon.updatedAt : null,
         comments: icon.id === "wrk-cloud-upload" ? current.proposal.comments : [],
@@ -322,6 +422,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     notice,
     updateDraft,
     selectCandidate,
+    generateCandidates,
+    importCandidate,
+    cancelGeneration,
     saveDraft,
     submitForReview,
     addComment,
@@ -335,7 +438,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     toggleIntegration,
     markApiKeyCreated,
     clearNotice: () => setNotice(null),
-  }), [state, backendLoading, backendError, role, notice, updateDraft, selectCandidate, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
+  }), [state, backendLoading, backendError, role, notice, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }

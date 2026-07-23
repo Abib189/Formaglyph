@@ -1,12 +1,14 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(33);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
 select extensions.has_table('public', 'audit_events', 'audit events exists');
+select extensions.has_table('public', 'generation_jobs', 'generation jobs exists');
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.icons'::regclass), 'icons has RLS enabled');
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.audit_events'::regclass), 'audit events has RLS enabled');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.generation_jobs'::regclass), 'generation jobs have RLS enabled');
 select extensions.is((select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'drafts'), 3, 'draft policies are explicit');
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname like 'published_assets_%' and cmd in ('UPDATE', 'DELETE')),
@@ -57,6 +59,52 @@ select extensions.is((select description from public.drafts where id = 'dddddddd
 select extensions.lives_ok(
   $$insert into public.validation_issues (validation_run_id, rule_id, severity, message) values ('89898989-8989-4989-8989-898989898989', 'svg.style.viewbox-mismatch', 'warning', 'Development fixture uses the Phosphor coordinate system.')$$,
   'contributors can append immutable issues to their own validation run'
+);
+select extensions.is(
+  (select status from public.start_generation_job(
+    '22222222-2222-4222-8222-222222222222',
+    'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    'local_geometry',
+    'Private cloud upload brief',
+    repeat('e', 64),
+    false,
+    3
+  )),
+  'running',
+  'contributors can start an allowed local generation job'
+);
+select extensions.is(
+  (select prompt from public.generation_jobs where requested_by = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' order by created_at desc limit 1),
+  null,
+  'generation prompts are omitted when retention is disabled'
+);
+select extensions.throws_ok(
+  $$select public.start_generation_job('22222222-2222-4222-8222-222222222222', null, 'hosted', 'private prompt', repeat('f', 64), false, 3)$$,
+  '42501',
+  'generation adapter is not enabled for this project',
+  'hosted generation cannot run without project opt-in'
+);
+select extensions.is(
+  (select status from public.cancel_generation_job((select id from public.generation_jobs where requested_by = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' order by created_at desc limit 1))),
+  'cancelled',
+  'job authors can cancel running generation'
+);
+select extensions.throws_ok(
+  $$select public.complete_generation_job((select id from public.generation_jobs where requested_by = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' order by created_at desc limit 1), '{}'::jsonb)$$,
+  '22023',
+  'generation job is not running',
+  'cancelled jobs cannot be completed'
+);
+select extensions.throws_ok(
+  $$insert into public.candidates (id, draft_id, name, asset_id, validation_run_id, generation_job_id, prompt_sha256, provenance, created_by)
+    select '18181818-1818-4818-8818-181818181818', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'Forged provenance', c.asset_id, c.validation_run_id,
+      gj.id, repeat('e', 64), '{"kind":"generated","disclosed":true}'::jsonb, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+    from public.candidates c cross join public.generation_jobs gj
+    where c.id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee' and gj.requested_by = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+    order by gj.created_at desc limit 1$$,
+  '23514',
+  'candidate requires its author completed generation job and matching prompt hash',
+  'candidate provenance cannot link to an unfinished generation job'
 );
 reset role;
 

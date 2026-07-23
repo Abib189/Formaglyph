@@ -21,4 +21,10 @@ describe("local repository contract", () => {
     await expect(repository.saveDraft("core", { workspaceIconId: "draft-1" } as never, { id: "candidate-1", name: "Candidate", description: "", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0"/></svg>', issue: null })).resolves.toMatchObject({ draftId: "draft-1", candidateId: "candidate-1", validation: { status: "passed", safe: true } });
     await expect(repository.bootstrapWorkspace()).resolves.toMatchObject({ slug: "core", role: "admin" });
   });
+
+  it("persists the local generation lifecycle through the repository contract", async () => {
+    const job = await repository.startGenerationJob("core", { adapter: "local_geometry", prompt: "private brief", promptHash: "a".repeat(64), retainPrompt: false, candidateCount: 3 });
+    expect(job).toMatchObject({ status: "running", promptRetained: false, candidateCount: 3 });
+    await expect(repository.completeGenerationJob(job.id, { candidateCount: 3, passedCount: 3 })).resolves.toMatchObject({ status: "completed", progress: 100, promptHash: "a".repeat(64) });
+  });
 });

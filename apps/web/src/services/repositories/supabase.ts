@@ -1,5 +1,5 @@
 import { CloudArrowUp } from "@phosphor-icons/react";
-import type { CatalogIcon, DraftBrief, Proposal, WorkspaceIcon } from "../../domain/types";
+import type { CatalogIcon, DraftBrief, GenerationJob, Proposal, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
@@ -7,6 +7,7 @@ import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
 import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, SavedDraft, WorkspaceData } from "./types";
 
 type ProposalRow = Database["public"]["Tables"]["proposals"]["Row"];
+type GenerationJobRow = Database["public"]["Tables"]["generation_jobs"]["Row"];
 
 function rowToProposal(row: ProposalRow, comments: Proposal["comments"] = []): Proposal {
   return {
@@ -19,6 +20,21 @@ function rowToProposal(row: ProposalRow, comments: Proposal["comments"] = []): P
     submittedAt: row.submitted_at,
     decidedAt: row.decided_at,
     publishedAt: row.published_at,
+  };
+}
+
+function rowToGenerationJob(row: GenerationJobRow): GenerationJob {
+  return {
+    id: row.id,
+    adapter: row.adapter as GenerationJob["adapter"],
+    status: row.status as GenerationJob["status"],
+    progress: row.progress,
+    promptHash: row.prompt_sha256,
+    promptRetained: row.retain_prompt,
+    candidateCount: row.candidate_count,
+    error: row.error_message,
+    startedAt: row.started_at ?? row.created_at,
+    completedAt: row.completed_at,
   };
 }
 
@@ -179,7 +195,20 @@ export class SupabaseRepository implements FormaglyphRepository {
       if (issuesError) throw issuesError;
     }
     const blockingIssue = candidate.issue ?? validation.issues.find((issue) => issue.severity === "blocker" || issue.severity === "error")?.message ?? null;
-    const { error: candidateError } = await client.from("candidates").insert({ id: candidateId, draft_id: draftId, name: candidate.name, description: candidate.description, asset_id: assetId, validation_run_id: validationId, issue: blockingIssue, created_by: authData.user.id });
+    const { error: candidateError } = await client.from("candidates").insert({
+      id: candidateId,
+      draft_id: draftId,
+      name: candidate.name,
+      description: candidate.description,
+      variant: candidate.variant ?? "regular",
+      asset_id: assetId,
+      validation_run_id: validationId,
+      issue: blockingIssue,
+      generation_job_id: candidate.generationJobId ?? null,
+      prompt_sha256: candidate.promptSha256 ?? null,
+      provenance: (candidate.provenance ?? { kind: "import", disclosed: true }) as unknown as Json,
+      created_by: authData.user.id,
+    });
     if (candidateError) throw candidateError;
     const { error: selectionError } = await client.from("drafts").update({ selected_candidate_id: candidateId, updated_at: new Date().toISOString() }).eq("id", draftId);
     if (selectionError) throw selectionError;
@@ -222,6 +251,40 @@ export class SupabaseRepository implements FormaglyphRepository {
     }
     const { error } = await client.rpc("publish_proposal", { p_proposal_id: proposal.id });
     if (error) throw error;
+  }
+
+  async startGenerationJob(projectSlug: string, input: { draftId?: string | null; adapter: GenerationJob["adapter"]; prompt: string; promptHash: string; retainPrompt: boolean; candidateCount: number }) {
+    const project = await currentProject(projectSlug);
+    const draftId = input.draftId && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(input.draftId) ? input.draftId : null;
+    const { data, error } = await requireSupabaseClient().rpc("start_generation_job", {
+      p_project_id: project.id,
+      p_draft_id: draftId,
+      p_adapter: input.adapter,
+      p_prompt: input.retainPrompt ? input.prompt : "",
+      p_prompt_sha256: input.promptHash,
+      p_retain_prompt: input.retainPrompt,
+      p_candidate_count: input.candidateCount,
+    });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
+  }
+
+  async completeGenerationJob(jobId: string, result: { candidateCount: number; passedCount: number }) {
+    const { data, error } = await requireSupabaseClient().rpc("complete_generation_job", { p_job_id: jobId, p_result_summary: { candidate_count: result.candidateCount, passed_count: result.passedCount } });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
+  }
+
+  async failGenerationJob(jobId: string, errorCode: string, errorMessage: string) {
+    const { data, error } = await requireSupabaseClient().rpc("fail_generation_job", { p_job_id: jobId, p_error_code: errorCode, p_error_message: errorMessage });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
+  }
+
+  async cancelGenerationJob(jobId: string) {
+    const { data, error } = await requireSupabaseClient().rpc("cancel_generation_job", { p_job_id: jobId });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
   }
 
   async bootstrapWorkspace(input: { organizationName: string; organizationSlug: string; projectName: string; projectSlug: string }) {

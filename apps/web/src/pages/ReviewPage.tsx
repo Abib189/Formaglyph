@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from "react";
 import { Check, GridFour, Package, Plus } from "@phosphor-icons/react";
-import { candidates } from "../data/catalog";
 import type { PreviewWeight } from "../domain/types";
+import { SvgIcon } from "../components/IconPreview";
 import { Panel, PageIntro, PanelHeader } from "../components/Layout";
 import { useAppState } from "../state/AppState";
 
 function ReviewIconCell({ label, weight, after = false }: { label: string; weight: PreviewWeight; after?: boolean }) {
   const { state } = useAppState();
-  const candidate = candidates.find((item) => item.id === state.proposal.candidateId) ?? candidates[0];
-  const Icon = candidate.Icon;
-  return <div className="review-icon-cell"><span>{label}</span><div className="review-cell-pair"><div className="review-icon-stage plain-stage"><Icon size={86} weight={weight} /></div><div className="review-icon-stage"><GridFour className="grid-asset" size={154} weight="thin" /><Icon size={78} weight={weight} />{after && <span className="change-pin">+1</span>}</div></div></div>;
+  const proposed = state.candidates.find((item) => item.id === state.draft.selectedCandidateId) ?? state.candidates[0];
+  const current = state.candidates.find((item) => item.id !== proposed?.id) ?? proposed;
+  const candidate = after ? proposed : current;
+  const svg = weight === "fill" ? candidate?.variants.solid : candidate?.variants.regular;
+  return <div className="review-icon-cell"><span>{label}</span><div className="review-cell-pair"><div className="review-icon-stage plain-stage">{svg ? <SvgIcon svg={svg} size={86} /> : <small>Variant unavailable</small>}</div><div className="review-icon-stage"><GridFour className="grid-asset" size={154} weight="thin" />{svg ? <SvgIcon svg={svg} size={78} /> : <small>Variant unavailable</small>}{after && <span className="change-pin">+1</span>}</div></div></div>;
 }
 
 export function ReviewPage() {
@@ -29,6 +31,8 @@ export function ReviewPage() {
 
   const releaseSteps = ["Draft", "Validated", "In review", `v${state.proposal.targetVersion}`];
   const activeStep = approved ? 3 : changesRequested ? 1 : 2;
+  const selectedCandidate = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
+  const adapterLabel = selectedCandidate?.provenance.adapter === "manual_import" ? "Manual import" : selectedCandidate?.provenance.model ?? "Unknown";
 
   return (
     <main className="page-shell review-page">
@@ -54,7 +58,7 @@ export function ReviewPage() {
           </Panel>
 
           <div className="review-meta-grid">
-            <Panel><PanelHeader number="03" title="Metadata & provenance" /><dl className="compact-dl"><div><dt>Status</dt><dd>{state.proposal.status.replace("_", " ")}</dd></div><div><dt>Style</dt><dd>Regular / Solid</dd></div><div><dt>Licence</dt><dd>MIT</dd></div><div><dt>Author</dt><dd>Maintainer</dd></div><div><dt>Adapter</dt><dd>OmniSVG 1.1</dd></div><div><dt>Validation</dt><dd><Check size={13} /> Passed</dd></div></dl></Panel>
+            <Panel><PanelHeader number="03" title="Metadata & provenance" /><dl className="compact-dl"><div><dt>Status</dt><dd>{state.proposal.status.replace("_", " ")}</dd></div><div><dt>Style</dt><dd>{state.settings.defaultVariant}</dd></div><div><dt>Licence</dt><dd>MIT</dd></div><div><dt>Author</dt><dd>Maintainer</dd></div><div><dt>Adapter</dt><dd>{adapterLabel}</dd></div><div><dt>Validation</dt><dd><Check size={13} /> Passed</dd></div></dl></Panel>
             <Panel><PanelHeader number="04" title="Release impact" /><div className="impact-list"><strong>Aliases</strong><span>{state.draft.name}</span><span>upload-cloud</span><span>cloud-uploaded</span><strong>Packages</strong><span>@formaglyph/core</span><span>@formaglyph/react</span></div></Panel>
           </div>
         </div>

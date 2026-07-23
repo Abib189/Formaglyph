@@ -793,7 +793,7 @@ select:focus-visible {
   display: grid;
   grid-template-columns: minmax(250px, 0.9fr) minmax(510px, 2.1fr) minmax(280px, 1fr);
   gap: 14px;
-  height: 600px;
+  min-height: 690px;
 }
 
 .brief-fields {
@@ -865,6 +865,96 @@ select:focus-visible {
 .reference-notes p {
   color: var(--muted);
   margin: 8px 0 0;
+}
+
+.creation-tools {
+  border-top: 1px solid var(--soft-line);
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.creation-tools .primary-action,
+.creation-tools .secondary-action {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+}
+
+.creation-tools > p,
+.generation-status > p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font: 400 12px/1.35 "Newsreader", serif;
+}
+
+.import-action {
+  position: relative;
+  cursor: pointer;
+}
+
+.import-action input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.generation-status {
+  margin: 0 14px 14px;
+  padding: 12px;
+  border: 1px solid var(--soft-line);
+  border-radius: 6px;
+  display: grid;
+  gap: 9px;
+}
+
+.generation-status.failed,
+.generation-status.cancelled {
+  border-color: var(--accent);
+}
+
+.generation-status > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font: 600 9px/1 "JetBrains Mono", monospace;
+  text-transform: uppercase;
+}
+
+.generation-status progress {
+  width: 100%;
+  height: 4px;
+  border: 0;
+  appearance: none;
+  background: var(--faint);
+}
+
+.generation-status progress::-webkit-progress-bar {
+  background: var(--faint);
+}
+
+.generation-status progress::-webkit-progress-value {
+  background: var(--accent);
+}
+
+.generation-status progress::-moz-progress-bar {
+  background: var(--accent);
+}
+
+.generation-status > button {
+  width: fit-content;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font: 500 9px/1 "JetBrains Mono", monospace;
+  text-decoration: underline;
 }
 
 .candidate-head {
@@ -940,8 +1030,42 @@ select:focus-visible {
   color: var(--muted);
 }
 
-.candidate-row > svg {
-  justify-self: center;
+.candidate-svg-cell {
+  min-width: 0;
+  min-height: 94px;
+  display: grid;
+  place-items: center;
+  justify-self: stretch;
+  color: var(--fg);
+}
+
+.candidate-svg-cell small {
+  max-width: 62px;
+  color: var(--muted);
+  text-align: center;
+  font: 500 8px/1.25 "JetBrains Mono", monospace;
+  text-transform: uppercase;
+}
+
+.candidate-empty {
+  min-height: 470px;
+  padding: 40px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.candidate-empty strong {
+  font: 600 12px/1 "JetBrains Mono", monospace;
+  text-transform: uppercase;
+}
+
+.candidate-empty p {
+  margin: 0;
+  color: var(--muted);
+  font: 400 14px/1.35 "Newsreader", serif;
 }
 
 .candidate-footer {
@@ -963,6 +1087,11 @@ select:focus-visible {
   gap: 6px;
   align-items: center;
   cursor: pointer;
+}
+
+.candidate-footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .validation-group {
@@ -2133,6 +2262,12 @@ select:focus-visible {
   .main-nav {
     gap: 6px;
     overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .main-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-link {
@@ -2207,9 +2342,9 @@ select:focus-visible {
     grid-template-columns: 24px minmax(130px, 1fr) 70px 70px;
   }
 
-  .candidate-row > svg {
-    width: 54px;
-    height: 54px;
+  .candidate-svg-cell .formaglyph-svg {
+    width: 54px !important;
+    height: 54px !important;
   }
 
   .sticky-actions,
@@ -2366,7 +2501,7 @@ select:focus-visible {
     grid-template-columns: 24px 1fr 52px;
   }
 
-  .candidate-row > svg:last-child {
+  .candidate-row > .candidate-svg-cell:last-child {
     display: none;
   }
 

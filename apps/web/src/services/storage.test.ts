@@ -10,7 +10,7 @@ function memoryStorage(initial: Record<string, string> = {}) {
 describe("versioned local persistence", () => {
   it("falls back safely when persisted state is malformed", () => {
     const storage = memoryStorage({ [STORAGE_KEY]: "not-json" });
-    expect(loadAppState(storage).schemaVersion).toBe(2);
+    expect(loadAppState(storage).schemaVersion).toBe(3);
   });
 
   it("round-trips application state", () => {
@@ -27,9 +27,10 @@ describe("versioned local persistence", () => {
     };
     const storage = memoryStorage({ [LEGACY_STORAGE_KEY]: JSON.stringify(legacy) });
     const migrated = loadAppState(storage);
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(3);
     expect(migrated.draft.name).toBe("legacy-icon");
     expect(migrated.proposal.id).toBe("PRP-LEGACY");
     expect(migrated.workspace.length).toBeGreaterThan(0);
+    expect(migrated.candidates.length).toBeGreaterThan(0);
   });
 });

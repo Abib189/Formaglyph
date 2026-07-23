@@ -24,13 +24,15 @@ This is an early production foundation, not yet the complete hosted platform or 
 - A self-contained npm-ready `@formaglyph/icons` release artifact with typed catalog and per-asset exports.
 - An npm-ready `@formaglyph/cli` with human and JSON output, guarded SVG export, local stdio MCP, and a hosted Streamable HTTP MCP server.
 - Four read-only MCP tools, catalog resources, and an icon-selection prompt for AI agents.
+- A browser-local, deterministic geometry adapter that creates three sanitized Regular/Solid candidate pairs without sending prompts to a model provider.
+- Safe SVG import, generation job cancellation and retry, prompt-hash provenance, optional prompt retention, and audited Supabase job transitions.
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
 - Invite-only magic-link authentication, route guards, session restoration, and transactional onboarding.
 - PostgreSQL tables, explicit Data API grants, RLS, private/public Storage policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
 
-Generation workers, vector semantic search, authenticated/private API scopes, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). Public CLI and MCP access are live; private project agent access and write tools remain deliberately unavailable.
+GPU-backed OmniSVG and StarVector workers, hosted generation, vector semantic search, authenticated/private API scopes, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). The local creation adapter, public CLI, and public MCP access are live; private project agent access and write tools remain deliberately unavailable.
 
 ## Repository layout
 

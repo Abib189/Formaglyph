@@ -77,14 +77,14 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="generation" className="settings-anchor" />
-            <PanelHeader number="03" title="Generation policy" meta="FUTURE MILESTONE" />
+            <PanelHeader number="03" title="Generation policy" meta="LOCAL ADAPTER LIVE" accent />
             <div className="adapter-options">
-              <button disabled className={state.settings.generationAdapter === "local" ? "active" : ""}><HardDrives size={22} /><span><strong>Local SVG adapter</strong><small>Unavailable until the generation-adapter milestone.</small></span><i /></button>
-              <button disabled className={state.settings.generationAdapter === "hosted" ? "active" : ""}><Robot size={22} /><span><strong>Hosted generation</strong><small>Reserved for the generation-adapter milestone.</small></span><i /></button>
+              <button className={state.settings.generationAdapter === "local" ? "active" : ""} onClick={() => updateSetting("generationAdapter", "local")}><HardDrives size={22} /><span><strong>Local Geometry</strong><small>Deterministic, open, and processed in this browser.</small></span><i /></button>
+              <button disabled className={state.settings.generationAdapter === "hosted" ? "active" : ""}><Robot size={22} /><span><strong>OmniSVG worker</strong><small>Requires a separately deployed GPU worker and project opt-in.</small></span><i /></button>
             </div>
-            <SettingRow icon={<ShieldCheck size={19} />} title="Enable hosted generation" description="Next milestone: connect the default local/open adapter before enabling hosted generation."><Toggle disabled checked={false} onChange={() => undefined} label="Enable hosted generation" /></SettingRow>
+            <SettingRow icon={<ShieldCheck size={19} />} title="Enable hosted generation" description="Disabled until an administrator connects and approves a disclosed model provider."><Toggle disabled checked={state.settings.hostedGeneration} onChange={() => undefined} label="Enable hosted generation" /></SettingRow>
             <SettingRow icon={<Check size={19} />} title="Automatic validation" description="Run geometry, naming, provenance, and licence checks after generation."><Toggle checked={state.settings.automaticValidation} onChange={(value) => updateSetting("automaticValidation", value)} label="Enable automatic validation" /></SettingRow>
-            <SettingRow icon={<Database size={19} />} title="Retain generation prompts" description="Available after the generation-adapter milestone."><Toggle disabled checked={false} onChange={() => undefined} label="Retain generation prompts" /></SettingRow>
+            <SettingRow icon={<Database size={19} />} title="Retain generation prompts" description="Off stores only a SHA-256 hash for provenance. On stores the complete brief in project history."><Toggle checked={state.settings.retainPrompts} onChange={(value) => updateSetting("retainPrompts", value)} label="Retain generation prompts" /></SettingRow>
           </Panel>
 
           <Panel className="settings-panel">

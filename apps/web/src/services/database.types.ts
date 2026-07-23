@@ -120,9 +120,12 @@ export type Database = {
           created_by: string
           description: string
           draft_id: string
+          generation_job_id: string | null
           id: string
           issue: string | null
           name: string
+          prompt_sha256: string | null
+          provenance: Json
           validation_run_id: string | null
           variant: string
         }
@@ -132,9 +135,12 @@ export type Database = {
           created_by: string
           description?: string
           draft_id: string
+          generation_job_id?: string | null
           id?: string
           issue?: string | null
           name: string
+          prompt_sha256?: string | null
+          provenance?: Json
           validation_run_id?: string | null
           variant?: string
         }
@@ -144,9 +150,12 @@ export type Database = {
           created_by?: string
           description?: string
           draft_id?: string
+          generation_job_id?: string | null
           id?: string
           issue?: string | null
           name?: string
+          prompt_sha256?: string | null
+          provenance?: Json
           validation_run_id?: string | null
           variant?: string
         }
@@ -163,6 +172,13 @@ export type Database = {
             columns: ["draft_id"]
             isOneToOne: false
             referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidates_generation_job_id_fkey"
+            columns: ["generation_job_id"]
+            isOneToOne: false
+            referencedRelation: "generation_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -234,6 +250,84 @@ export type Database = {
             columns: ["selected_candidate_id"]
             isOneToOne: false
             referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generation_jobs: {
+        Row: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          adapter: string
+          candidate_count: number
+          completed_at?: string | null
+          created_at?: string
+          draft_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          progress?: number
+          project_id: string
+          prompt?: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary?: Json
+          retain_prompt?: boolean
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          adapter?: string
+          candidate_count?: number
+          completed_at?: string | null
+          created_at?: string
+          draft_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          progress?: number
+          project_id?: string
+          prompt?: string | null
+          prompt_sha256?: string
+          requested_by?: string
+          result_summary?: Json
+          retain_prompt?: boolean
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_jobs_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generation_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -804,6 +898,75 @@ export type Database = {
           project_slug: string
         }[]
       }
+      cancel_generation_job: {
+        Args: { p_job_id: string }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+      }
+      complete_generation_job: {
+        Args: { p_job_id: string; p_result_summary?: Json }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+      }
+      fail_generation_job: {
+        Args: { p_error_code: string; p_error_message: string; p_job_id: string }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+      }
       publish_proposal: {
         Args: { p_proposal_id: string }
         Returns: {
@@ -849,6 +1012,37 @@ export type Database = {
           to: "proposals"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      start_generation_job: {
+        Args: {
+          p_adapter: string
+          p_candidate_count?: number
+          p_draft_id: string | null
+          p_project_id: string
+          p_prompt: string
+          p_prompt_sha256: string
+          p_retain_prompt?: boolean
+        }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
         }
       }
       submit_proposal: {

@@ -12,9 +12,10 @@ Production foundation for Formaglyph’s Explore → Create → Review workflow.
 - The original Formaglyph Core starter release with 12 concepts and 24 Regular/Solid SVG assets.
 - Public REST API v1 with search, metadata, manifests, OpenAPI, and immutable SVG endpoints.
 - Public stateless Streamable HTTP MCP with read-only tools, resources, and a selection prompt.
+- Local Geometry candidate generation with no provider network request, sanitized SVG import, job provenance, cancellation, retry, and optional prompt retention.
 - Strict TypeScript and automated tests for search, storage, and workflow rules.
 
-Explore always includes the source-controlled `@formaglyph/icons` core release and overlays approved Supabase project icons by stable ID and variant. `@phosphor-icons/react` remains an MIT-licensed interface and prototype-candidate dependency; its glyphs are not published as Formaglyph catalog assets. The remaining V1 family, generation workers, authenticated API scopes, and private project MCP remain separate delivery milestones defined in the V1 PRD.
+Explore always includes the source-controlled `@formaglyph/icons` core release and overlays approved Supabase project icons by stable ID and variant. `@phosphor-icons/react` remains an MIT-licensed interface dependency; its glyphs are not published as Formaglyph catalog assets. The remaining V1 family, GPU-backed generation workers, hosted adapters, authenticated API scopes, and private project MCP remain separate delivery milestones defined in the V1 PRD.
 
 ## Local development
 
