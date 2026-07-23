@@ -1,5 +1,5 @@
 import { iconResults, initialAppState } from "../../data/catalog";
-import type { GenerationJob, Proposal } from "../../domain/types";
+import type { GenerationJob, Proposal, ReviewComment } from "../../domain/types";
 import { loadAppState } from "../storage";
 import { validateCandidateAsset } from "../candidateValidation";
 import type { CandidateAssetInput, FormaglyphRepository, ProjectAccess, SavedDraft, WorkspaceData } from "./types";
@@ -13,7 +13,7 @@ export class LocalRepository implements FormaglyphRepository {
   async loadWorkspace(projectSlug: string): Promise<WorkspaceData | null> {
     if (projectSlug !== localProject.slug) return null;
     const state = typeof window === "undefined" ? structuredClone(initialAppState) : loadAppState();
-    return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal };
+    return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal, auditEvents: state.auditEvents, releaseEntries: state.releaseEntries };
   }
   async saveDraft(_projectSlug: string, draft: { workspaceIconId: string }, candidate: CandidateAssetInput): Promise<SavedDraft> {
     return { draftId: draft.workspaceIconId || "local-draft", candidateId: candidate.id, validation: validateCandidateAsset(candidate) };
@@ -25,6 +25,13 @@ export class LocalRepository implements FormaglyphRepository {
     return (typeof window === "undefined" ? initialAppState : loadAppState()).proposal;
   }
   async publishProposal() { return; }
+  async commentProposal(_proposalId: string, title: string, body: string): Promise<ReviewComment> {
+    return { id: `local-review-${crypto.randomUUID()}`, title, author: "You", time: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date()), text: body, resolved: false };
+  }
+  async resolveReview(reviewId: string, resolved: boolean): Promise<ReviewComment> {
+    return { id: reviewId, title: "", author: "You", time: "", text: "", resolved };
+  }
+  async deprecateIcon(_iconId: string, _reason: string) { return; }
   async startGenerationJob(_projectSlug: string, input: { draftId?: string | null; adapter: GenerationJob["adapter"]; prompt: string; promptHash: string; retainPrompt: boolean; candidateCount: number }): Promise<GenerationJob> {
     const job: GenerationJob = { id: `local-job-${crypto.randomUUID()}`, adapter: input.adapter, status: "running", progress: 10, promptHash: input.promptHash, promptRetained: input.retainPrompt, candidateCount: input.candidateCount, error: null, startedAt: new Date().toISOString(), completedAt: null };
     this.generationJobs.set(job.id, job);

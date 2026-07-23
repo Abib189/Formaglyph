@@ -5,7 +5,7 @@ export type { Proposal, ProposalStatus, ReviewComment } from "@formaglyph/schema
 
 export type RouteName = "explore" | "workspace" | "create" | "review" | "settings";
 export type PreviewWeight = "regular" | "fill";
-export type WorkspaceStatus = "draft" | "in_review" | "changes_requested" | "approved" | "published" | "archived";
+export type WorkspaceStatus = "draft" | "in_review" | "changes_requested" | "approved" | "rejected" | "published" | "deprecated" | "archived";
 export type WorkspaceValidation = "passed" | "issues";
 export type GenerationAdapter = "local" | "hosted";
 export type GenerationProvider = "local_geometry" | "omnisvg" | "starvector" | "hosted";
@@ -81,6 +81,30 @@ export interface WorkspaceIcon {
   updatedAt: string;
   validation: WorkspaceValidation;
   version: string;
+  databaseIconId?: string | null;
+}
+
+export interface AuditEvent {
+  id: string;
+  action: string;
+  actorId: string | null;
+  targetType: string;
+  targetId: string | null;
+  source: string;
+  occurredAt: string;
+  metadata: Record<string, string | number | boolean | null>;
+}
+
+export interface ReleaseEntry {
+  id: string;
+  iconId: string;
+  iconName: string;
+  version: string;
+  variant: "regular" | "solid";
+  status: "published" | "deprecated";
+  contentHash: string;
+  occurredAt: string;
+  reason: string | null;
 }
 
 export interface AppSettings {
@@ -99,19 +123,23 @@ export interface AppSettings {
 }
 
 export interface PersistedAppState {
-  schemaVersion: 3;
+  schemaVersion: 4;
   draft: DraftBrief;
   proposal: Proposal;
   workspace: WorkspaceIcon[];
   settings: AppSettings;
   candidates: Candidate[];
   generationJob: GenerationJob | null;
+  auditEvents: AuditEvent[];
+  releaseEntries: ReleaseEntry[];
 }
 
 export interface LegacyPersistedAppState {
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   draft: DraftBrief;
   proposal: Proposal;
   workspace?: WorkspaceIcon[];
   settings?: AppSettings;
+  candidates?: Candidate[];
+  generationJob?: GenerationJob | null;
 }

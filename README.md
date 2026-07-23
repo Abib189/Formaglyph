@@ -2,12 +2,12 @@
 
 Formaglyph is an open-source, AI-native system for finding, creating, validating, reviewing, and shipping coherent icon families.
 
-The current repository contains Milestone 1 of the production core workflow:
+The current repository contains the production core workflow through review and governance:
 
 1. **Explore** — search and compare catalog icons by intent.
 2. **Create** — generate or import candidates, validate them, and submit a proposal.
-3. **Review** — inspect validation and provenance, comment, and approve through a guarded workflow.
-4. **Publish** — allow an administrator to release an immutable, content-hashed version with an audit record.
+3. **Review** — inspect validation and provenance, add or resolve notes, and record approval, change, or rejection decisions.
+4. **Govern** — allow an administrator to publish or deprecate an immutable, content-hashed version with a release and audit record.
 
 AI-generated candidates are always drafts. Publishing, deprecating, syncing, and overwriting remain human-approved operations.
 
@@ -16,7 +16,7 @@ AI-generated candidates are always drafts. Publishing, deprecating, syncing, and
 This is an early production foundation, not yet the complete hosted platform or the full 100-concept Formaglyph V1 family. It includes:
 
 - A strict TypeScript React application with responsive light and dark modes.
-- Search, filtering, SVG copy/export, proposal validation, review comments, and approval flows.
+- Search, filtering, SVG copy/export, proposal validation, review comments, rejection, approval, publication, and deprecation flows.
 - Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
 - An original Formaglyph Core starter release: 12 concepts, 24 validated Regular/Solid SVG assets, and a content-hashed build manifest.
 - Ranked core-catalog search with reviewed aliases, intent phrases, typo tolerance, category and weight filters, and true sibling-variant comparison.
@@ -29,6 +29,7 @@ This is an early production foundation, not yet the complete hosted platform or 
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
 - Invite-only magic-link authentication, route guards, session restoration, and transactional onboarding.
 - PostgreSQL tables, explicit Data API grants, RLS, private/public Storage policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
+- A permission-aware release changelog and audit trail with deprecation reasons and immutable content hashes.
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
 
@@ -125,10 +126,12 @@ See [Formaglyph CLI and MCP](./docs/mcp-cli.md) for remote agent configuration, 
 
 - Every exposed table has RLS and explicit grants.
 - Authorization comes from immutable membership rows, never editable user metadata.
-- Contributors own drafts; reviewers and administrators may review only proposals authored by somebody else; only administrators publish.
-- Submit, review, publish, and onboarding operations write their audit event in the same database transaction.
+- Contributors own drafts; reviewers and administrators may review only proposals authored by somebody else; only administrators publish or deprecate.
+- Submit, review, comment resolution, publish, deprecate, generation, and onboarding operations write their audit event in the same database transaction.
 - Published Storage objects use immutable ID/version paths and cannot be updated or deleted through the Data API.
 - Public anonymous reads are limited to published icons in public projects and the matching public assets.
+
+See [Review and governance](./docs/governance.md) for the lifecycle, permission matrix, release history, and audit boundary.
 
 ## Catalog assets
 

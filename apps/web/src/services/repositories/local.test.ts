@@ -27,4 +27,14 @@ describe("local repository contract", () => {
     expect(job).toMatchObject({ status: "running", promptRetained: false, candidateCount: 3 });
     await expect(repository.completeGenerationJob(job.id, { candidateCount: 3, passedCount: 3 })).resolves.toMatchObject({ status: "completed", progress: 100, promptHash: "a".repeat(64) });
   });
+
+  it("implements the review and governance contract without network access", async () => {
+    const workspace = await repository.loadWorkspace("core");
+    expect(workspace?.auditEvents.length).toBeGreaterThan(0);
+    expect(workspace?.releaseEntries.length).toBeGreaterThan(0);
+
+    const comment = await repository.commentProposal("local-proposal", "Geometry", "Align the shoulder to the keyline.");
+    await expect(repository.resolveReview(comment.id, true)).resolves.toMatchObject({ id: comment.id, resolved: true });
+    await expect(repository.deprecateIcon("local-icon", "Replaced by the reviewed sibling.")).resolves.toBeUndefined();
+  });
 });

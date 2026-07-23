@@ -1,4 +1,4 @@
-import type { CandidateProvenance, CatalogIcon, DraftBrief, GenerationJob, GenerationProvider, Proposal, WorkspaceIcon } from "../../domain/types";
+import type { AuditEvent, CandidateProvenance, CatalogIcon, DraftBrief, GenerationJob, GenerationProvider, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
 import type { SvgValidationResult } from "@formaglyph/validators";
 
 export type MembershipRole = "contributor" | "reviewer" | "admin";
@@ -34,6 +34,8 @@ export interface WorkspaceData {
   icons: WorkspaceIcon[];
   draft?: DraftBrief;
   proposal?: Proposal;
+  auditEvents: AuditEvent[];
+  releaseEntries: ReleaseEntry[];
 }
 
 export interface FormaglyphRepository {
@@ -44,6 +46,9 @@ export interface FormaglyphRepository {
   submitProposal(draftId: string, candidateId: string, targetVersion: string): Promise<Proposal>;
   reviewProposal(proposalId: string, decision: "approve" | "request_changes" | "reject", body?: string): Promise<Proposal>;
   publishProposal(proposalId: string): Promise<void>;
+  commentProposal(proposalId: string, title: string, body: string): Promise<ReviewComment>;
+  resolveReview(reviewId: string, resolved: boolean): Promise<ReviewComment>;
+  deprecateIcon(iconId: string, reason: string): Promise<void>;
   startGenerationJob(projectSlug: string, input: { draftId?: string | null; adapter: GenerationProvider; prompt: string; promptHash: string; retainPrompt: boolean; candidateCount: number }): Promise<GenerationJob>;
   completeGenerationJob(jobId: string, result: { candidateCount: number; passedCount: number }): Promise<GenerationJob>;
   failGenerationJob(jobId: string, errorCode: string, errorMessage: string): Promise<GenerationJob>;

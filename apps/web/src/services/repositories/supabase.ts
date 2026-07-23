@@ -1,5 +1,5 @@
 import { CloudArrowUp } from "@phosphor-icons/react";
-import type { CatalogIcon, DraftBrief, GenerationJob, Proposal, WorkspaceIcon } from "../../domain/types";
+import type { AuditEvent, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
@@ -35,6 +35,17 @@ function rowToGenerationJob(row: GenerationJobRow): GenerationJob {
     error: row.error_message,
     startedAt: row.started_at ?? row.created_at,
     completedAt: row.completed_at,
+  };
+}
+
+function rowToReview(row: Database["public"]["Tables"]["reviews"]["Row"]): ReviewComment {
+  return {
+    id: row.id,
+    title: row.title,
+    author: row.reviewer_id,
+    time: new Date(row.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+    text: row.body,
+    resolved: row.resolved,
   };
 }
 
@@ -119,27 +130,32 @@ export class SupabaseRepository implements FormaglyphRepository {
     ]);
     if (iconError || draftError || proposalError) throw iconError ?? draftError ?? proposalError;
     const workspace: WorkspaceIcon[] = [
-      ...drafts.map((draft) => ({
-        id: draft.id,
-        stableId: draft.icon_id ? `ico_${draft.icon_id.replaceAll("-", "_")}` : `draft_${draft.id.replaceAll("-", "_")}`,
-        name: draft.name,
-        label: draft.name.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" "),
-        description: draft.description,
-        category: "Workspace",
-        tags: draft.keywords,
-        project: project.name,
-        status: draft.status === "rejected" ? "changes_requested" : draft.status === "published" ? "published" : draft.status as WorkspaceIcon["status"],
-        variant: "regular" as const,
-        visualKey: "cloud-upload",
-        creator: "Team member",
-        updatedAt: draft.updated_at,
-        validation: "passed" as const,
-        version: proposals.find((item) => item.draft_id === draft.id)?.target_version ?? "1.0.0",
-      })),
+      ...drafts.map((draft) => {
+        const linkedIcon = icons.find((icon) => icon.id === draft.icon_id);
+        return {
+          id: draft.id,
+          stableId: draft.icon_id ? `ico_${draft.icon_id.replaceAll("-", "_")}` : `draft_${draft.id.replaceAll("-", "_")}`,
+          name: draft.name,
+          label: draft.name.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" "),
+          description: draft.description,
+          category: "Workspace",
+          tags: draft.keywords,
+          project: project.name,
+          status: (linkedIcon?.status === "deprecated" ? "deprecated" : draft.status) as WorkspaceIcon["status"],
+          variant: "regular" as const,
+          visualKey: "cloud-upload",
+          creator: "Team member",
+          updatedAt: linkedIcon?.status === "deprecated" ? linkedIcon.updated_at : draft.updated_at,
+          validation: "passed" as const,
+          version: proposals.find((item) => item.draft_id === draft.id)?.target_version ?? "1.0.0",
+          databaseIconId: draft.icon_id,
+        };
+      }),
       ...icons.filter((icon) => !drafts.some((draft) => draft.icon_id === icon.id)).map((icon) => ({
         id: icon.id, stableId: icon.stable_id, name: icon.canonical_name, label: icon.label, description: icon.description,
         category: icon.category, tags: [], project: project.name, status: icon.status as WorkspaceIcon["status"], variant: "regular" as const,
         visualKey: "cloud-upload", creator: "Team member", updatedAt: icon.updated_at, validation: "passed" as const, version: "1.0.0",
+        databaseIconId: icon.id,
       })),
     ];
     const activeDraft = drafts[0];
@@ -148,13 +164,50 @@ export class SupabaseRepository implements FormaglyphRepository {
     if (activeProposal) {
       const { data: reviews, error } = await client.from("reviews").select("*").eq("proposal_id", activeProposal.id).order("created_at");
       if (error) throw error;
-      comments = reviews.map((review, index) => ({ id: `R${index + 1}`, title: review.title, author: review.reviewer_id, time: new Date(review.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), text: review.body, resolved: review.resolved }));
+      comments = reviews.filter((review) => review.decision === "comment").map(rowToReview);
     }
+    let auditEvents: AuditEvent[] = [];
+    if (project.role !== "contributor") {
+      const { data: events, error } = await client.from("audit_events").select("*").eq("project_id", project.id).order("created_at", { ascending: false }).limit(50);
+      if (error) throw error;
+      auditEvents = events.map((event) => ({
+        id: String(event.id),
+        action: event.action,
+        actorId: event.actor_id,
+        targetType: event.target_type,
+        targetId: event.target_id,
+        source: event.source,
+        occurredAt: event.created_at,
+        metadata: (event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata) ? event.metadata : {}) as AuditEvent["metadata"],
+      }));
+    }
+    const iconIds = icons.map((icon) => icon.id);
+    const { data: versions, error: versionError } = iconIds.length
+      ? await client.from("icon_versions").select("*").in("icon_id", iconIds).order("created_at", { ascending: false }).limit(50)
+      : { data: [], error: null };
+    if (versionError) throw versionError;
+    const releaseEntries: ReleaseEntry[] = versions.map((version) => {
+      const icon = icons.find((item) => item.id === version.icon_id)!;
+      const deprecation = auditEvents.find((event) => event.action === "icon.deprecated" && event.targetId === icon.id);
+      return {
+        id: version.id,
+        iconId: icon.id,
+        iconName: icon.canonical_name,
+        version: version.version,
+        variant: version.variant === "solid" ? "solid" : "regular",
+        status: icon.status === "deprecated" && icon.current_version_id === version.id ? "deprecated" : "published",
+        contentHash: version.content_hash,
+        occurredAt: version.created_at,
+        reason: typeof deprecation?.metadata.reason === "string" ? deprecation.metadata.reason : null,
+      };
+    });
     return {
       project,
       icons: workspace,
       draft: activeDraft ? { workspaceIconId: activeDraft.id, name: activeDraft.name, description: activeDraft.description, keywords: activeDraft.keywords.join(", "), selectedCandidateId: activeDraft.selected_candidate_id ?? "candidate-01", updatedAt: activeDraft.updated_at } : undefined,
       proposal: activeProposal ? rowToProposal(activeProposal, comments) : undefined,
+      auditEvents,
+      releaseEntries,
     };
   }
 
@@ -253,12 +306,33 @@ export class SupabaseRepository implements FormaglyphRepository {
     if (error) throw error;
   }
 
+  async commentProposal(proposalId: string, title: string, body: string) {
+    const client = requireSupabaseClient();
+    const proposal = await findProposal(proposalId);
+    const { data, error } = await client.rpc("comment_proposal", { p_proposal_id: proposal.id, p_title: title, p_body: body });
+    if (error) throw new Error(error.message);
+    return rowToReview(data);
+  }
+
+  async resolveReview(reviewId: string, resolved: boolean) {
+    const { data, error } = await requireSupabaseClient().rpc("resolve_review", { p_review_id: reviewId, p_resolved: resolved });
+    if (error) throw new Error(error.message);
+    return rowToReview(data);
+  }
+
+  async deprecateIcon(iconId: string, reason: string) {
+    const { error } = await requireSupabaseClient().rpc("deprecate_icon", { p_icon_id: iconId, p_reason: reason });
+    if (error) throw new Error(error.message);
+  }
+
   async startGenerationJob(projectSlug: string, input: { draftId?: string | null; adapter: GenerationJob["adapter"]; prompt: string; promptHash: string; retainPrompt: boolean; candidateCount: number }) {
     const project = await currentProject(projectSlug);
     const draftId = input.draftId && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(input.draftId) ? input.draftId : null;
     const { data, error } = await requireSupabaseClient().rpc("start_generation_job", {
       p_project_id: project.id,
-      p_draft_id: draftId,
+      // PostgreSQL accepts NULL for this UUID argument; generated RPC types do
+      // not currently represent nullable function arguments.
+      p_draft_id: draftId as string,
       p_adapter: input.adapter,
       p_prompt: input.retainPrompt ? input.prompt : "",
       p_prompt_sha256: input.promptHash,

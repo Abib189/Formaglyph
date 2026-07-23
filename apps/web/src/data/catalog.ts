@@ -45,7 +45,7 @@ export const workspaceIconLibrary = {
 } as const;
 
 export const initialAppState: PersistedAppState = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   draft: {
     workspaceIconId: "wrk-cloud-upload",
     name: "cloud-upload",
@@ -92,4 +92,12 @@ export const initialAppState: PersistedAppState = {
   },
   candidates,
   generationJob: null,
+  auditEvents: [
+    { id: "evt-local-3", action: "proposal.submitted", actorId: "local-contributor", targetType: "proposal", targetId: "PRP-028", source: "local", occurredAt: "2026-07-20T14:48:00.000Z", metadata: { candidate: "candidate-01" } },
+    { id: "evt-local-2", action: "icon.published", actorId: "local-admin", targetType: "icon_version", targetId: "rel-secure-file-101", source: "local", occurredAt: "2026-07-19T16:10:00.000Z", metadata: { version: "1.0.1" } },
+    { id: "evt-local-1", action: "review.comment_added", actorId: "local-reviewer", targetType: "review", targetId: "R2", source: "local", occurredAt: "2026-07-19T09:42:00.000Z", metadata: { title: "Shoulder balance" } },
+  ],
+  releaseEntries: [
+    { id: "rel-secure-file-101", iconId: "wrk-secure-file", iconName: "secure-file", version: "1.0.1", variant: "regular", status: "published", contentHash: "5ee61b90d2a0d4f4b3107756ee7c26f4399a895f25f7bfcf152f4a947aae64d1", occurredAt: "2026-07-19T16:10:00.000Z", reason: null },
+  ],
 };

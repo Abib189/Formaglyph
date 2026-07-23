@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { AppSettings, DraftBrief, IntegrationName, PersistedAppState, ReviewComment, WorkspaceStatus } from "../domain/types";
+import type { AppSettings, AuditEvent, DraftBrief, IntegrationName, PersistedAppState, ReviewComment, WorkspaceStatus } from "../domain/types";
 import { loadAppState, saveAppState } from "../services/storage";
 import { transitionProposal } from "../services/workflow";
 import { canTransitionWorkspaceIcon, transitionWorkspaceIcon } from "../services/workspace";
@@ -28,12 +28,13 @@ interface AppStateValue {
   cancelGeneration: () => Promise<void>;
   saveDraft: () => Promise<void>;
   submitForReview: () => Promise<boolean>;
-  addComment: (text: string) => void;
-  toggleComment: (commentId: string) => void;
-  requestChanges: () => Promise<void>;
-  approveProposal: () => Promise<void>;
+  addComment: (text: string) => Promise<void>;
+  toggleComment: (commentId: string) => Promise<void>;
+  requestChanges: (note: string) => Promise<void>;
+  approveProposal: (note?: string) => Promise<void>;
+  rejectProposal: (note: string) => Promise<void>;
   openWorkspaceIcon: (iconId: string) => boolean;
-  updateWorkspaceStatus: (iconId: string, status: WorkspaceStatus) => Promise<void>;
+  updateWorkspaceStatus: (iconId: string, status: WorkspaceStatus, reason?: string) => Promise<void>;
   duplicateWorkspaceIcon: (iconId: string) => void;
   updateSetting: <Key extends keyof Omit<AppSettings, "integrations">>(key: Key, value: AppSettings[Key]) => void;
   toggleIntegration: (integration: IntegrationName) => void;
@@ -42,6 +43,19 @@ interface AppStateValue {
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null);
+
+function localAuditEvent(action: string, targetType: string, targetId: string | null, metadata: AuditEvent["metadata"] = {}): AuditEvent {
+  return {
+    id: `evt-${crypto.randomUUID()}`,
+    action,
+    actorId: "local-admin",
+    targetType,
+    targetId,
+    source: "local",
+    occurredAt: new Date().toISOString(),
+    metadata,
+  };
+}
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PersistedAppState>(() => loadAppState());
@@ -67,7 +81,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       if (!workspace) throw new Error("Project not found or you do not have access.");
       setRole(workspace.project.role);
-      setState((current) => ({ ...current, workspace: workspace.icons, draft: workspace.draft ?? current.draft, proposal: workspace.proposal ?? current.proposal }));
+      setState((current) => ({
+        ...current,
+        workspace: workspace.icons,
+        draft: workspace.draft ?? current.draft,
+        proposal: workspace.proposal ?? current.proposal,
+        auditEvents: workspace.auditEvents,
+        releaseEntries: workspace.releaseEntries,
+      }));
     }).catch((error: unknown) => {
       if (active) setBackendError(error instanceof Error ? error.message : "Could not load this workspace.");
     }).finally(() => { if (active) setBackendLoading(false); });
@@ -79,6 +100,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const timeout = window.setTimeout(() => setNotice(null), 2600);
     return () => window.clearTimeout(timeout);
   }, [notice]);
+
+  const refreshWorkspace = useCallback(async () => {
+    if (repository.mode !== "supabase") return null;
+    const workspace = await repository.loadWorkspace(projectSlug);
+    if (!workspace) throw new Error("Project not found or you do not have access.");
+    setRole(workspace.project.role);
+    setState((current) => ({
+      ...current,
+      workspace: workspace.icons,
+      draft: workspace.draft ?? current.draft,
+      proposal: workspace.proposal ?? current.proposal,
+      auditEvents: workspace.auditEvents,
+      releaseEntries: workspace.releaseEntries,
+    }));
+    return workspace;
+  }, [projectSlug]);
 
   const updateDraft = useCallback<AppStateValue["updateDraft"]>((field, value) => {
     setState((current) => ({
@@ -265,69 +302,95 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [persistDraft, state.candidates, state.draft, state.proposal.status, state.proposal.targetVersion]);
 
-  const addComment = useCallback((text: string) => {
+  const addComment = useCallback(async (text: string) => {
     const cleanText = text.trim();
     if (!cleanText) return;
-    setState((current) => {
-      const comment: ReviewComment = {
-        id: `R${current.proposal.comments.length + 1}`,
-        title: "Reviewer note",
-        author: "You",
-        time: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()),
-        text: cleanText,
-        resolved: false,
-      };
-      return { ...current, proposal: { ...current.proposal, comments: [...current.proposal.comments, comment] } };
-    });
-    setNotice({ tone: "success", message: "Review note added." });
-  }, []);
+    try {
+      const comment = await repository.commentProposal(state.proposal.id, "Reviewer note", cleanText);
+      if (repository.mode === "supabase") await refreshWorkspace();
+      else setState((current) => ({
+        ...current,
+        proposal: { ...current.proposal, comments: [...current.proposal.comments, comment] },
+        auditEvents: [localAuditEvent("review.comment_added", "review", comment.id, { title: comment.title }), ...current.auditEvents],
+      }));
+      setNotice({ tone: "success", message: "Review note added and audited." });
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not add review note." });
+    }
+  }, [refreshWorkspace, state.proposal.id]);
 
-  const toggleComment = useCallback((commentId: string) => {
-    setState((current) => ({
-      ...current,
-      proposal: {
-        ...current.proposal,
-        comments: current.proposal.comments.map((comment) => comment.id === commentId ? { ...comment, resolved: !comment.resolved } : comment),
-      },
-    }));
-  }, []);
+  const toggleComment = useCallback(async (commentId: string) => {
+    const currentComment = state.proposal.comments.find((comment) => comment.id === commentId);
+    if (!currentComment) return;
+    try {
+      const comment = await repository.resolveReview(commentId, !currentComment.resolved);
+      if (repository.mode === "supabase") await refreshWorkspace();
+      else setState((current) => ({
+        ...current,
+        proposal: { ...current.proposal, comments: current.proposal.comments.map((item) => item.id === commentId ? { ...item, resolved: comment.resolved } : item) },
+        auditEvents: [localAuditEvent(comment.resolved ? "review.comment_resolved" : "review.comment_reopened", "review", commentId), ...current.auditEvents],
+      }));
+      setNotice({ tone: "info", message: comment.resolved ? "Review note resolved." : "Review note reopened." });
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not update review note." });
+    }
+  }, [refreshWorkspace, state.proposal.comments]);
 
-  const requestChanges = useCallback(async () => {
+  const requestChanges = useCallback(async (note: string) => {
     try {
       if (repository.mode === "supabase") {
-        const proposal = await repository.reviewProposal(state.proposal.id, "request_changes");
-        setState((current) => ({ ...current, proposal, workspace: current.workspace.map((icon) => icon.id === current.draft.workspaceIconId ? { ...icon, status: "changes_requested", updatedAt: new Date().toISOString() } : icon) }));
+        await repository.reviewProposal(state.proposal.id, "request_changes", note);
+        await refreshWorkspace();
       } else setState((current) => ({
         ...current,
         proposal: transitionProposal(current.proposal, "changes_requested"),
         workspace: current.workspace.map((icon) => icon.id === current.draft.workspaceIconId ? { ...icon, status: "changes_requested", updatedAt: new Date().toISOString() } : icon),
+        auditEvents: [localAuditEvent("proposal.changes_requested", "proposal", current.proposal.id, { note }), ...current.auditEvents],
       }));
       setNotice({ tone: "info", message: "Changes requested. The proposal is back with its author." });
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not update proposal." });
     }
-  }, [state.proposal.id]);
+  }, [refreshWorkspace, state.proposal.id]);
 
-  const approveProposal = useCallback(async () => {
+  const approveProposal = useCallback(async (note = "") => {
     try {
       if (repository.mode === "supabase") {
-        const proposal = await repository.reviewProposal(state.proposal.id, "approve");
-        setState((current) => ({ ...current, proposal, workspace: current.workspace.map((icon) => icon.id === current.draft.workspaceIconId ? { ...icon, status: "approved", updatedAt: new Date().toISOString() } : icon) }));
+        await repository.reviewProposal(state.proposal.id, "approve", note);
+        await refreshWorkspace();
       } else setState((current) => ({
         ...current,
         proposal: transitionProposal(current.proposal, "approved"),
         workspace: current.workspace.map((icon) => icon.id === current.draft.workspaceIconId ? { ...icon, status: "approved", updatedAt: new Date().toISOString() } : icon),
+        auditEvents: [localAuditEvent("proposal.approved", "proposal", current.proposal.id, { note: note || null }), ...current.auditEvents],
       }));
-      setNotice({ tone: "success", message: "Proposal approved and queued for v1.1.0." });
+      setNotice({ tone: "success", message: `Proposal approved and queued for v${state.proposal.targetVersion}.` });
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not approve proposal." });
     }
-  }, [state.proposal.id]);
+  }, [refreshWorkspace, state.proposal.id, state.proposal.targetVersion]);
+
+  const rejectProposal = useCallback(async (note: string) => {
+    try {
+      if (repository.mode === "supabase") {
+        await repository.reviewProposal(state.proposal.id, "reject", note);
+        await refreshWorkspace();
+      } else setState((current) => ({
+        ...current,
+        proposal: transitionProposal(current.proposal, "rejected"),
+        workspace: current.workspace.map((icon) => icon.id === current.draft.workspaceIconId ? { ...icon, status: "rejected", updatedAt: new Date().toISOString() } : icon),
+        auditEvents: [localAuditEvent("proposal.rejected", "proposal", current.proposal.id, { note }), ...current.auditEvents],
+      }));
+      setNotice({ tone: "info", message: "Proposal rejected with an audited decision note." });
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not reject proposal." });
+    }
+  }, [refreshWorkspace, state.proposal.id]);
 
   const openWorkspaceIcon = useCallback((iconId: string) => {
     const icon = state.workspace.find((item) => item.id === iconId);
     if (!icon) return false;
-    const proposalStatus = icon.status === "in_review" || icon.status === "changes_requested" || icon.status === "approved" ? icon.status : "draft";
+    const proposalStatus = icon.status === "in_review" || icon.status === "changes_requested" || icon.status === "approved" || icon.status === "rejected" ? icon.status : "draft";
     setState((current) => ({
       ...current,
       draft: {
@@ -344,7 +407,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         draftId: icon.id.toUpperCase(),
         status: proposalStatus,
         candidateId: current.candidates[0]?.id ?? "candidate-01",
-        decidedAt: proposalStatus === "approved" || proposalStatus === "changes_requested" ? icon.updatedAt : null,
+        decidedAt: proposalStatus === "approved" || proposalStatus === "changes_requested" || proposalStatus === "rejected" ? icon.updatedAt : null,
         submittedAt: proposalStatus === "in_review" ? icon.updatedAt : null,
         comments: icon.id === "wrk-cloud-upload" ? current.proposal.comments : [],
       },
@@ -352,26 +415,55 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return true;
   }, [state.workspace]);
 
-  const updateWorkspaceStatus = useCallback(async (iconId: string, status: WorkspaceStatus) => {
+  const updateWorkspaceStatus = useCallback(async (iconId: string, status: WorkspaceStatus, reason = "") => {
     const target = state.workspace.find((icon) => icon.id === iconId);
     if (!target || !canTransitionWorkspaceIcon(target.status, status)) {
       setNotice({ tone: "error", message: target ? `Icon cannot move from ${target.status.replace("_", " ")} to ${status.replace("_", " ")}.` : "Workspace icon was not found." });
       return;
     }
     try {
-      if (repository.mode === "supabase" && status === "published") await repository.publishProposal(state.proposal.id);
-      setState((current) => ({
-        ...current,
-        proposal: status === "published" && current.proposal.status === "approved" ? transitionProposal(current.proposal, "published") : current.proposal,
-        workspace: current.workspace.map((icon) => icon.id === iconId ? transitionWorkspaceIcon(icon, status) : icon),
-      }));
+      if (repository.mode === "supabase") {
+        if (status === "published") await repository.publishProposal(state.proposal.id);
+        else if (status === "deprecated") await repository.deprecateIcon(target.databaseIconId ?? target.id, reason);
+        await refreshWorkspace();
+      } else setState((current) => {
+        const now = new Date().toISOString();
+        const selected = current.candidates.find((candidate) => candidate.id === current.proposal.candidateId);
+        const next = {
+          ...current,
+          proposal: status === "published" && current.proposal.status === "approved" ? transitionProposal(current.proposal, "published") : current.proposal,
+          workspace: current.workspace.map((icon) => icon.id === iconId ? transitionWorkspaceIcon(icon, status) : icon),
+        };
+        if (status === "published") {
+          const entry = {
+            id: `rel-${crypto.randomUUID()}`,
+            iconId,
+            iconName: target.name,
+            version: target.version,
+            variant: target.variant,
+            status: "published" as const,
+            contentHash: selected?.provenance.promptHash ?? "0".repeat(64),
+            occurredAt: now,
+            reason: null,
+          };
+          return { ...next, releaseEntries: [entry, ...current.releaseEntries], auditEvents: [localAuditEvent("icon.published", "icon_version", entry.id, { version: entry.version }), ...current.auditEvents] };
+        }
+        if (status === "deprecated") {
+          return {
+            ...next,
+            releaseEntries: current.releaseEntries.map((entry) => entry.iconId === iconId && entry.status === "published" ? { ...entry, status: "deprecated" as const, reason } : entry),
+            auditEvents: [localAuditEvent("icon.deprecated", "icon", iconId, { reason }), ...current.auditEvents],
+          };
+        }
+        return next;
+      });
     } catch (error) {
-      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not publish icon." });
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not update icon governance." });
       return;
     }
-    const message = status === "published" ? "Icon published to Explore." : status === "archived" ? "Icon archived." : status === "draft" ? "Icon restored as a draft." : `Icon moved to ${status.replace("_", " ")}.`;
+    const message = status === "published" ? "Icon published to Explore." : status === "deprecated" ? "Icon deprecated. Its immutable release remains available by URL." : status === "archived" ? "Icon archived." : status === "draft" ? "Icon restored as a draft." : `Icon moved to ${status.replace("_", " ")}.`;
     setNotice({ tone: status === "published" ? "success" : "info", message });
-  }, [state.proposal.id, state.workspace]);
+  }, [refreshWorkspace, state.candidates, state.proposal.id, state.workspace]);
 
   const duplicateWorkspaceIcon = useCallback((iconId: string) => {
     setState((current) => {
@@ -431,6 +523,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     toggleComment,
     requestChanges,
     approveProposal,
+    rejectProposal,
     openWorkspaceIcon,
     updateWorkspaceStatus,
     duplicateWorkspaceIcon,
@@ -438,7 +531,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     toggleIntegration,
     markApiKeyCreated,
     clearNotice: () => setNotice(null),
-  }), [state, backendLoading, backendError, role, notice, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
+  }), [state, backendLoading, backendError, role, notice, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, rejectProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }

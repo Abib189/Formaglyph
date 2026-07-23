@@ -920,6 +920,31 @@ export type Database = {
           status: string
           updated_at: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      comment_proposal: {
+        Args: { p_body: string; p_proposal_id: string; p_title: string }
+        Returns: {
+          body: string
+          created_at: string
+          decision: string
+          id: string
+          proposal_id: string
+          resolved: boolean
+          reviewer_id: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       complete_generation_job: {
         Args: { p_job_id: string; p_result_summary?: Json }
@@ -943,9 +968,44 @@ export type Database = {
           status: string
           updated_at: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      deprecate_icon: {
+        Args: { p_icon_id: string; p_reason: string }
+        Returns: {
+          canonical_name: string
+          category: string
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          description: string
+          directionality: string
+          id: string
+          label: string
+          licence: string
+          project_id: string
+          stable_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "icons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       fail_generation_job: {
-        Args: { p_error_code: string; p_error_message: string; p_job_id: string }
+        Args: {
+          p_error_code: string
+          p_error_message: string
+          p_job_id: string
+        }
         Returns: {
           adapter: string
           candidate_count: number
@@ -965,6 +1025,12 @@ export type Database = {
           started_at: string | null
           status: string
           updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       publish_proposal: {
@@ -986,6 +1052,25 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "icon_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolve_review: {
+        Args: { p_resolved: boolean; p_review_id: string }
+        Returns: {
+          body: string
+          created_at: string
+          decision: string
+          id: string
+          proposal_id: string
+          resolved: boolean
+          reviewer_id: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reviews"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1018,7 +1103,7 @@ export type Database = {
         Args: {
           p_adapter: string
           p_candidate_count?: number
-          p_draft_id: string | null
+          p_draft_id: string
           p_project_id: string
           p_prompt: string
           p_prompt_sha256: string
@@ -1043,6 +1128,12 @@ export type Database = {
           started_at: string | null
           status: string
           updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       submit_proposal: {

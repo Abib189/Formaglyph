@@ -7,8 +7,8 @@ Production foundation for Formaglyph’s Explore → Create → Review workflow.
 - Ranked catalog search with linkable query, category, and weight filters.
 - Real SVG copy and candidate export with a resilient clipboard fallback.
 - Versioned local persistence for draft and proposal state.
-- Guarded proposal transitions: draft, in review, changes requested, and approved.
-- Candidate validation, review comments, approval, light/dark themes, and responsive layouts.
+- Guarded proposal transitions from draft through review, changes, approval or rejection, publication, and deprecation.
+- Candidate validation, review comments, recorded decisions, release history, audit inspection, light/dark themes, and responsive layouts.
 - The original Formaglyph Core starter release with 12 concepts and 24 Regular/Solid SVG assets.
 - Public REST API v1 with search, metadata, manifests, OpenAPI, and immutable SVG endpoints.
 - Public stateless Streamable HTTP MCP with read-only tools, resources, and a selection prompt.

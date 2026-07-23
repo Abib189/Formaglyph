@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(43);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
@@ -78,6 +78,11 @@ select extensions.is(
   null,
   'generation prompts are omitted when retention is disabled'
 );
+select extensions.is(
+  (select count(*)::integer from public.audit_events),
+  0,
+  'contributors cannot read privileged audit history'
+);
 select extensions.throws_ok(
   $$select public.start_generation_job('22222222-2222-4222-8222-222222222222', null, 'hosted', 'private prompt', repeat('f', 64), false, 3)$$,
   '42501',
@@ -133,6 +138,12 @@ select extensions.is(
   'contributor can submit a valid proposal'
 );
 select extensions.throws_ok(
+  $$select public.comment_proposal((select id from public.proposals where draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'), 'Self review', 'The author should not add a privileged review comment.')$$,
+  '42501',
+  'authors cannot review their own proposal',
+  'proposal authors cannot add reviewer comments'
+);
+select extensions.throws_ok(
   $$select public.review_proposal((select id from public.proposals where draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'), 'approve', 'self review')$$,
   '42501',
   'authors cannot review their own proposal'
@@ -141,6 +152,38 @@ reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', true);
+select extensions.throws_ok(
+  $$select public.review_proposal((select id from public.proposals where draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'), 'request_changes', 'too short')$$,
+  '22023',
+  'a decision note of at least 10 characters is required',
+  'change requests require an actionable decision note'
+);
+select extensions.is(
+  (select decision from public.comment_proposal(
+    (select id from public.proposals where draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'),
+    'Geometry',
+    'The shoulder alignment now matches the project keyline.'
+  )),
+  'comment',
+  'a non-author reviewer can add a review comment'
+);
+select extensions.ok(
+  (select resolved from public.resolve_review(
+    (select id from public.reviews where decision = 'comment' and title = 'Geometry' order by created_at desc limit 1),
+    true
+  )),
+  'a comment author can resolve their review comment'
+);
+select extensions.ok(
+  (select count(*) > 0 from public.audit_events where action = 'review.comment_added'),
+  'review comments produce immutable audit events'
+);
+select extensions.throws_ok(
+  $$select public.deprecate_icon('99999999-9999-4999-8999-999999999999', 'The icon is replaced by a more precise system concept.')$$,
+  '42501',
+  'admin permission required',
+  'reviewers cannot deprecate published icons'
+);
 select extensions.is(
   (select status from public.review_proposal((select id from public.proposals where draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'), 'approve', 'reviewed')),
   'approved',
@@ -156,6 +199,29 @@ select extensions.is(
   'an admin can publish an approved proposal'
 );
 select extensions.is((select count(*)::integer from public.icons where status = 'published'), 2, 'published icon is visible in the catalog');
+select extensions.is(
+  (select status from public.deprecate_icon(
+    '99999999-9999-4999-8999-999999999999',
+    'Replaced by the reviewed check-circle family.'
+  )),
+  'deprecated',
+  'an admin can deprecate a published icon'
+);
+select extensions.is(
+  (select metadata->>'reason' from public.audit_events where action = 'icon.deprecated' order by created_at desc limit 1),
+  'Replaced by the reviewed check-circle family.',
+  'deprecation audit events retain the required reason'
+);
+reset role;
+
+set local role anon;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', 'anon', true);
+select extensions.is(
+  (select count(*)::integer from public.icons),
+  1,
+  'deprecated icons leave the public catalog while immutable versions remain stored'
+);
 reset role;
 
 select extensions.throws_ok(
