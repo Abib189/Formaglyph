@@ -26,8 +26,18 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
   const [importing, setImporting] = useState(false);
   const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
   const generationRunning = state.generationJob?.status === "queued" || state.generationJob?.status === "running";
-  const activeStep = state.proposal.status === "changes_requested" ? 2 : state.candidates.length ? 3 : 1;
+  const activeStep = state.proposal.status === "in_review" || state.proposal.status === "approved" ? 4 : state.proposal.status === "changes_requested" ? 2 : state.candidates.length ? 3 : 1;
   const selectedSvg = selected?.variants[state.settings.defaultVariant] ?? selected?.variants.regular ?? selected?.variants.solid ?? null;
+  const submissionLocked = state.proposal.status === "in_review" || state.proposal.status === "approved";
+  const submissionLabel = state.proposal.status === "in_review"
+    ? "Awaiting review"
+    : state.proposal.status === "approved"
+      ? "Review complete"
+      : state.proposal.status === "changes_requested"
+        ? "Resubmit for review"
+        : state.proposal.status === "published" || state.proposal.status === "rejected"
+          ? "Submit new review"
+          : "Submit for review";
 
   const submit = async () => {
     setSubmitting(true);
@@ -98,7 +108,7 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
         </Panel>
       </div>
 
-      <div className="sticky-actions"><span>Draft ID: {state.proposal.draftId}</span><span>Updated: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(state.draft.updatedAt))} UTC</span><div><button className="secondary-action" onClick={() => void saveDraft()} disabled={!selectedSvg || generationRunning}><FloppyDisk size={18} />Save draft</button><button className="primary-action" onClick={() => void submit()} disabled={submitting || !selectedSvg || generationRunning}>{submitting ? <Check size={19} /> : null}{submitting ? "Submitting" : state.proposal.status === "changes_requested" ? "Resubmit for review" : "Submit for review"}<ArrowRight size={18} /></button></div></div>
+      <div className="sticky-actions"><span>Draft ID: {state.proposal.draftId}</span><span>Updated: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(state.draft.updatedAt))} UTC</span><div><button className="secondary-action" onClick={() => void saveDraft()} disabled={!selectedSvg || generationRunning}><FloppyDisk size={18} />Save draft</button><button className="primary-action" onClick={() => void submit()} disabled={submitting || !selectedSvg || generationRunning || submissionLocked}>{submitting ? <Check size={19} /> : null}{submitting ? "Submitting" : submissionLabel}<ArrowRight size={18} /></button></div></div>
       <PageFooter dark={dark} />
     </main>
   );

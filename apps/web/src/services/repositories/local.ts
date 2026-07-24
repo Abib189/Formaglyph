@@ -1,5 +1,5 @@
 import { iconResults, initialAppState } from "../../data/catalog";
-import type { GenerationJob, Proposal, ReviewComment } from "../../domain/types";
+import type { GenerationJob, Proposal, ReviewComment, ReviewQueueItem } from "../../domain/types";
 import { loadAppState } from "../storage";
 import { validateCandidateAsset } from "../candidateValidation";
 import type { CandidateAssetInput, FormaglyphRepository, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
@@ -10,10 +10,26 @@ export class LocalRepository implements FormaglyphRepository {
   readonly mode = "local" as const;
   private readonly generationJobs = new Map<string, GenerationJob>();
   async listPublishedIcons() { return iconResults; }
-  async loadWorkspace(projectSlug: string, _draftId?: string | null): Promise<WorkspaceData | null> {
+  async loadWorkspace(projectSlug: string, _draftId?: string | null, _proposalId?: string | null): Promise<WorkspaceData | null> {
     if (projectSlug !== localProject.slug) return null;
     const state = typeof window === "undefined" ? structuredClone(initialAppState) : loadAppState();
-    return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal, candidates: state.candidates, auditEvents: state.auditEvents, releaseEntries: state.releaseEntries };
+    const reviewQueue: ReviewQueueItem[] = [{
+      proposal: state.proposal,
+      databaseProposalId: state.proposal.id,
+      draft: state.draft,
+      authorId: "local-contributor",
+      updatedAt: state.proposal.decidedAt ?? state.proposal.submittedAt ?? state.draft.updatedAt,
+      revisions: [{
+        id: "local-revision-1",
+        sequence: 1,
+        candidate: state.candidates.find((candidate) => candidate.id === state.proposal.candidateId) ?? state.candidates[0],
+        submittedAt: state.proposal.submittedAt ?? state.draft.updatedAt,
+        submittedBy: "local-contributor",
+      }],
+      baselineCandidate: null,
+      decisions: [],
+    }];
+    return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal, candidates: state.candidates, reviewQueue, auditEvents: state.auditEvents, releaseEntries: state.releaseEntries };
   }
   async saveDraft(_projectSlug: string, draft: { workspaceIconId: string }, candidate: CandidateAssetInput): Promise<SavedDraft> {
     return { draftId: draft.workspaceIconId || "local-draft", candidateId: candidate.id, validation: validateCandidateAsset(candidate) };

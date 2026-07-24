@@ -1,9 +1,10 @@
 import { CloudArrowUp } from "@phosphor-icons/react";
-import type { AuditEvent, Candidate, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
+import type { AuditEvent, Candidate, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, ReviewQueueItem, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
 import { hydratePersistedCandidate } from "../candidateAsset";
+import { sortReviewQueue } from "../reviewQueue";
 import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
 import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
 
@@ -164,7 +165,7 @@ export class SupabaseRepository implements FormaglyphRepository {
     });
   }
 
-  async loadWorkspace(projectSlug: string, draftId?: string | null): Promise<WorkspaceData | null> {
+  async loadWorkspace(projectSlug: string, draftId?: string | null, proposalId?: string | null): Promise<WorkspaceData | null> {
     const client = requireSupabaseClient();
     let project: ProjectAccess;
     try { project = await currentProject(projectSlug); } catch { return null; }
@@ -203,22 +204,17 @@ export class SupabaseRepository implements FormaglyphRepository {
         databaseIconId: icon.id,
       })),
     ];
-    const activeDraft = (draftId ? drafts.find((draft) => draft.id === draftId) : undefined) ?? drafts[0];
-    const activeProposal = proposals.find((item) => (
-      item.draft_id === activeDraft?.id && item.status !== "published" && item.status !== "rejected"
-    )) ?? proposals.find((item) => item.draft_id === activeDraft?.id) ?? proposals[0];
-    const activeCandidateId = activeProposal?.candidate_id ?? activeDraft?.selected_candidate_id;
-    const candidates = activeCandidateId ? [await loadCandidateFromStorage(activeCandidateId)] : [];
-    let comments: Proposal["comments"] = [];
-    if (activeProposal) {
-      const { data: reviews, error } = await client.from("reviews").select("*").eq("proposal_id", activeProposal.id).order("created_at");
-      if (error) throw error;
-      comments = reviews.filter((review) => review.decision === "comment").map(rowToReview);
-    }
+    const proposalIds = proposals.map((proposal) => proposal.id);
+    const { data: reviews, error: reviewError } = proposalIds.length
+      ? await client.from("reviews").select("*").in("proposal_id", proposalIds).order("created_at")
+      : { data: [], error: null };
+    if (reviewError) throw reviewError;
     let auditEvents: AuditEvent[] = [];
+    let auditRows: Database["public"]["Tables"]["audit_events"]["Row"][] = [];
     if (project.role !== "contributor") {
-      const { data: events, error } = await client.from("audit_events").select("*").eq("project_id", project.id).order("created_at", { ascending: false }).limit(50);
+      const { data: events, error } = await client.from("audit_events").select("*").eq("project_id", project.id).order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
+      auditRows = events;
       auditEvents = events.map((event) => ({
         id: String(event.id),
         action: event.action,
@@ -230,6 +226,89 @@ export class SupabaseRepository implements FormaglyphRepository {
         metadata: (event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata) ? event.metadata : {}) as AuditEvent["metadata"],
       }));
     }
+    const revisionCandidateIds = auditRows.flatMap((event) => {
+      if (event.action !== "proposal.submitted" || !event.metadata || typeof event.metadata !== "object" || Array.isArray(event.metadata)) return [];
+      const candidateId = event.metadata.candidate_id;
+      return typeof candidateId === "string" ? [candidateId] : [];
+    });
+    const candidateIds = [...new Set([...proposals.map((proposal) => proposal.candidate_id), ...revisionCandidateIds])];
+    const hydratedCandidates = await Promise.all(candidateIds.map(async (candidateId) => [candidateId, await loadCandidateFromStorage(candidateId)] as const));
+    const candidateMap = new Map(hydratedCandidates);
+    const reviewQueue = sortReviewQueue(proposals.flatMap<ReviewQueueItem>((proposal) => {
+      const draft = drafts.find((item) => item.id === proposal.draft_id);
+      const currentCandidate = candidateMap.get(proposal.candidate_id);
+      if (!draft || !currentCandidate) return [];
+      const submissionEvents = auditRows
+        .filter((event) => event.action === "proposal.submitted" && event.target_id === proposal.id)
+        .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime());
+      const revisions = submissionEvents.flatMap((event, index) => {
+        const metadata = event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata) ? event.metadata : {};
+        const submittedCandidate = typeof metadata.candidate_id === "string" ? candidateMap.get(metadata.candidate_id) : undefined;
+        return submittedCandidate ? [{
+          id: String(event.id),
+          sequence: index + 1,
+          candidate: submittedCandidate,
+          submittedAt: event.created_at,
+          submittedBy: event.actor_id,
+        }] : [];
+      });
+      if (!revisions.length) {
+        revisions.push({
+          id: `proposal-${proposal.id}`,
+          sequence: 1,
+          candidate: currentCandidate,
+          submittedAt: proposal.submitted_at ?? proposal.created_at,
+          submittedBy: proposal.author_id,
+        });
+      }
+      const previousPublished = proposals
+        .filter((item) => item.id !== proposal.id && item.draft_id === proposal.draft_id && item.status === "published" && new Date(item.created_at) < new Date(proposal.created_at))
+        .sort((left, right) => new Date(right.published_at ?? right.updated_at).getTime() - new Date(left.published_at ?? left.updated_at).getTime())[0];
+      const proposalReviews = reviews.filter((review) => review.proposal_id === proposal.id);
+      const comments = proposalReviews.filter((review) => review.decision === "comment").map(rowToReview);
+      return [{
+        proposal: rowToProposal(proposal, comments),
+        databaseProposalId: proposal.id,
+        draft: {
+          workspaceIconId: draft.id,
+          name: draft.name,
+          description: draft.description,
+          keywords: draft.keywords.join(", "),
+          selectedCandidateId: proposal.candidate_id,
+          updatedAt: draft.updated_at,
+        },
+        authorId: proposal.author_id,
+        updatedAt: proposal.updated_at,
+        revisions,
+        baselineCandidate: previousPublished ? candidateMap.get(previousPublished.candidate_id) ?? null : null,
+        decisions: proposalReviews.flatMap((review) => review.decision === "comment" ? [] : [{
+          id: review.id,
+          decision: review.decision as "approve" | "request_changes" | "reject",
+          reviewerId: review.reviewer_id,
+          body: review.body,
+          createdAt: review.created_at,
+        }]),
+      }];
+    }));
+    const requestedProposal = proposalId && proposalId !== "current"
+      ? proposals.find((item) => item.id === proposalId || item.public_id === proposalId)
+      : undefined;
+    const requestedProposalDraft = requestedProposal ? drafts.find((draft) => draft.id === requestedProposal.draft_id) : undefined;
+    const activeDraft = requestedProposalDraft ?? (draftId ? drafts.find((draft) => draft.id === draftId) : undefined) ?? drafts[0];
+    const activeProposal = requestedProposal ?? proposals.find((item) => (
+      item.draft_id === activeDraft?.id && item.status === "in_review"
+    )) ?? proposals.find((item) => (
+      item.draft_id === activeDraft?.id && item.status !== "published" && item.status !== "rejected"
+    )) ?? proposals.find((item) => item.draft_id === activeDraft?.id) ?? proposals[0];
+    const activeQueueItem = reviewQueue.find((item) => item.databaseProposalId === activeProposal?.id);
+    const activeCandidateId = activeProposal?.candidate_id ?? activeDraft?.selected_candidate_id;
+    const candidates = activeQueueItem
+      ? [...new Map([
+          ...(activeQueueItem.baselineCandidate ? [[activeQueueItem.baselineCandidate.id, activeQueueItem.baselineCandidate] as const] : []),
+          ...activeQueueItem.revisions.map((revision) => [revision.candidate.id, revision.candidate] as const),
+        ]).values()]
+      : activeCandidateId && candidateMap.has(activeCandidateId) ? [candidateMap.get(activeCandidateId)!] : [];
+    const comments = activeQueueItem?.proposal.comments ?? [];
     const iconIds = icons.map((icon) => icon.id);
     const { data: versions, error: versionError } = iconIds.length
       ? await client.from("icon_versions").select("*").in("icon_id", iconIds).order("created_at", { ascending: false }).limit(50)
@@ -256,6 +335,7 @@ export class SupabaseRepository implements FormaglyphRepository {
       draft: activeDraft ? { workspaceIconId: activeDraft.id, name: activeDraft.name, description: activeDraft.description, keywords: activeDraft.keywords.join(", "), selectedCandidateId: activeCandidateId ?? "", updatedAt: activeDraft.updated_at } : undefined,
       proposal: activeProposal ? rowToProposal(activeProposal, comments) : undefined,
       candidates,
+      reviewQueue,
       auditEvents,
       releaseEntries,
     };

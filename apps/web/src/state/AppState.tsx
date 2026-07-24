@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { AppSettings, AuditEvent, DraftBrief, IntegrationName, PersistedAppState, ReviewComment, WorkspaceStatus } from "../domain/types";
+import type { AppSettings, AuditEvent, DraftBrief, IntegrationName, PersistedAppState, ReviewQueueItem, WorkspaceStatus } from "../domain/types";
 import { loadAppState, saveAppState } from "../services/storage";
 import { transitionProposal } from "../services/workflow";
 import { canTransitionWorkspaceIcon, transitionWorkspaceIcon } from "../services/workspace";
@@ -17,6 +17,7 @@ interface Notice {
 
 interface AppStateValue {
   state: PersistedAppState;
+  reviewQueue: ReviewQueueItem[];
   backendLoading: boolean;
   backendError: string | null;
   role: "contributor" | "reviewer" | "admin";
@@ -28,11 +29,12 @@ interface AppStateValue {
   cancelGeneration: () => Promise<void>;
   saveDraft: () => Promise<void>;
   submitForReview: () => Promise<boolean>;
-  addComment: (text: string) => Promise<void>;
-  toggleComment: (commentId: string) => Promise<void>;
-  requestChanges: (note: string) => Promise<void>;
-  approveProposal: (note?: string) => Promise<void>;
-  rejectProposal: (note: string) => Promise<void>;
+  refreshWorkspace: () => Promise<void>;
+  addComment: (text: string, proposalId?: string) => Promise<void>;
+  toggleComment: (commentId: string, proposalId?: string) => Promise<void>;
+  requestChanges: (note: string, proposalId?: string) => Promise<void>;
+  approveProposal: (note?: string, proposalId?: string) => Promise<void>;
+  rejectProposal: (note: string, proposalId?: string) => Promise<void>;
   openWorkspaceIcon: (iconId: string) => boolean;
   updateWorkspaceStatus: (iconId: string, status: WorkspaceStatus, reason?: string) => Promise<void>;
   duplicateWorkspaceIcon: (iconId: string) => void;
@@ -59,6 +61,7 @@ function localAuditEvent(action: string, targetType: string, targetId: string | 
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PersistedAppState>(() => loadAppState());
+  const [reviewQueue, setReviewQueue] = useState<ReviewQueueItem[]>([]);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [backendLoading, setBackendLoading] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
@@ -68,10 +71,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const projectSlug = location.pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? "core";
   const requestedDraftId = new URLSearchParams(location.search).get("draft");
+  const requestedProposalId = location.pathname.match(/^\/projects\/[^/]+\/review\/([^/]+)/)?.[1] ?? null;
 
   useEffect(() => {
     if (repository.mode === "local") saveAppState(state);
   }, [state]);
+
+  useEffect(() => {
+    if (repository.mode !== "local" || !location.pathname.startsWith("/projects/")) return;
+    void repository.loadWorkspace(projectSlug, requestedDraftId, requestedProposalId)
+      .then((workspace) => setReviewQueue(workspace?.reviewQueue ?? []));
+  }, [location.pathname, projectSlug, requestedDraftId, requestedProposalId]);
 
   useEffect(() => {
     if (repository.mode !== "supabase" || !user || !location.pathname.startsWith("/projects/")) return;
@@ -79,10 +89,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setBackendLoading(true);
     setBackendError(null);
     setState((current) => ({ ...current, candidates: [] }));
-    void repository.loadWorkspace(projectSlug, requestedDraftId).then((workspace) => {
+    void repository.loadWorkspace(projectSlug, requestedDraftId, requestedProposalId).then((workspace) => {
       if (!active) return;
       if (!workspace) throw new Error("Project not found or you do not have access.");
       setRole(workspace.project.role);
+      setReviewQueue(workspace.reviewQueue ?? []);
       setState((current) => ({
         ...current,
         workspace: workspace.icons,
@@ -96,7 +107,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (active) setBackendError(error instanceof Error ? error.message : "Could not load this workspace.");
     }).finally(() => { if (active) setBackendLoading(false); });
     return () => { active = false; };
-  }, [location.pathname, projectSlug, requestedDraftId, user]);
+  }, [location.pathname, projectSlug, requestedDraftId, requestedProposalId, user]);
 
   useEffect(() => {
     if (!notice) return;
@@ -106,9 +117,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const refreshWorkspace = useCallback(async () => {
     if (repository.mode !== "supabase") return null;
-    const workspace = await repository.loadWorkspace(projectSlug, requestedDraftId);
+    const workspace = await repository.loadWorkspace(projectSlug, requestedDraftId, requestedProposalId);
     if (!workspace) throw new Error("Project not found or you do not have access.");
     setRole(workspace.project.role);
+    setReviewQueue(workspace.reviewQueue ?? []);
     setState((current) => ({
       ...current,
       workspace: workspace.icons,
@@ -119,7 +131,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       releaseEntries: workspace.releaseEntries,
     }));
     return workspace;
-  }, [projectSlug, requestedDraftId]);
+  }, [projectSlug, requestedDraftId, requestedProposalId]);
 
   const updateDraft = useCallback<AppStateValue["updateDraft"]>((field, value) => {
     setState((current) => ({
@@ -266,6 +278,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const submitForReview = useCallback(async () => {
     const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId);
+    if (state.proposal.status === "in_review") {
+      setNotice({ tone: "info", message: "This proposal is still in review. A reviewer must request changes before you can submit a replacement." });
+      return false;
+    }
+    if (state.proposal.status === "approved") {
+      setNotice({ tone: "info", message: "This proposal is approved and cannot be replaced." });
+      return false;
+    }
     if (!state.draft.name.trim() || !state.draft.description.trim()) {
       setNotice({ tone: "error", message: "Name and description are required." });
       return false;
@@ -297,34 +317,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setNotice({ tone: "success", message: "Proposal submitted for human review." });
       return true;
     } catch (error) {
-      if (state.proposal.status === "in_review") {
-        setNotice({ tone: "info", message: "Proposal is already in review." });
-        return true;
-      }
       setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not submit proposal." });
       return false;
     }
   }, [persistDraft, state.candidates, state.draft, state.proposal.status, state.proposal.targetVersion]);
 
-  const addComment = useCallback(async (text: string) => {
+  const addComment = useCallback(async (text: string, proposalId = state.proposal.id) => {
     const cleanText = text.trim();
     if (!cleanText) return;
     try {
-      const comment = await repository.commentProposal(state.proposal.id, "Reviewer note", cleanText);
+      const comment = await repository.commentProposal(proposalId, "Reviewer note", cleanText);
       if (repository.mode === "supabase") await refreshWorkspace();
       else setState((current) => ({
         ...current,
         proposal: { ...current.proposal, comments: [...current.proposal.comments, comment] },
         auditEvents: [localAuditEvent("review.comment_added", "review", comment.id, { title: comment.title }), ...current.auditEvents],
       }));
-      setNotice({ tone: "success", message: "Review note added and audited." });
+      setNotice({ tone: "success", message: "Review note added. The proposal remains in review until a decision is recorded." });
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not add review note." });
     }
   }, [refreshWorkspace, state.proposal.id]);
 
-  const toggleComment = useCallback(async (commentId: string) => {
-    const currentComment = state.proposal.comments.find((comment) => comment.id === commentId);
+  const toggleComment = useCallback(async (commentId: string, proposalId = state.proposal.id) => {
+    const currentComment = reviewQueue.flatMap((item) => item.proposal.comments).find((comment) => comment.id === commentId)
+      ?? state.proposal.comments.find((comment) => comment.id === commentId);
     if (!currentComment) return;
     try {
       const comment = await repository.resolveReview(commentId, !currentComment.resolved);
@@ -338,12 +355,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not update review note." });
     }
-  }, [refreshWorkspace, state.proposal.comments]);
+  }, [refreshWorkspace, reviewQueue, state.proposal.comments, state.proposal.id]);
 
-  const requestChanges = useCallback(async (note: string) => {
+  const requestChanges = useCallback(async (note: string, proposalId = state.proposal.id) => {
     try {
       if (repository.mode === "supabase") {
-        await repository.reviewProposal(state.proposal.id, "request_changes", note);
+        await repository.reviewProposal(proposalId, "request_changes", note);
         await refreshWorkspace();
       } else setState((current) => ({
         ...current,
@@ -357,10 +374,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshWorkspace, state.proposal.id]);
 
-  const approveProposal = useCallback(async (note = "") => {
+  const approveProposal = useCallback(async (note = "", proposalId = state.proposal.id) => {
     try {
       if (repository.mode === "supabase") {
-        await repository.reviewProposal(state.proposal.id, "approve", note);
+        await repository.reviewProposal(proposalId, "approve", note);
         await refreshWorkspace();
       } else setState((current) => ({
         ...current,
@@ -374,10 +391,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshWorkspace, state.proposal.id, state.proposal.targetVersion]);
 
-  const rejectProposal = useCallback(async (note: string) => {
+  const rejectProposal = useCallback(async (note: string, proposalId = state.proposal.id) => {
     try {
       if (repository.mode === "supabase") {
-        await repository.reviewProposal(state.proposal.id, "reject", note);
+        await repository.reviewProposal(proposalId, "reject", note);
         await refreshWorkspace();
       } else setState((current) => ({
         ...current,
@@ -512,10 +529,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppStateValue>(() => ({
     state,
+    reviewQueue,
     backendLoading,
     backendError,
     role,
     notice,
+    refreshWorkspace: async () => { await refreshWorkspace(); },
     updateDraft,
     selectCandidate,
     generateCandidates,
@@ -535,7 +554,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     toggleIntegration,
     markApiKeyCreated,
     clearNotice: () => setNotice(null),
-  }), [state, backendLoading, backendError, role, notice, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, rejectProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
+  }), [state, reviewQueue, backendLoading, backendError, role, notice, refreshWorkspace, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, rejectProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }

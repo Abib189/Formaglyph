@@ -1,4 +1,4 @@
-import type { AuditEvent, Candidate, CandidateProvenance, CatalogIcon, DraftBrief, GenerationJob, GenerationProvider, Proposal, ReleaseEntry, ReviewComment, WorkspaceIcon } from "../../domain/types";
+import type { AuditEvent, Candidate, CandidateProvenance, CatalogIcon, DraftBrief, GenerationJob, GenerationProvider, Proposal, ReleaseEntry, ReviewComment, ReviewQueueItem, WorkspaceIcon } from "../../domain/types";
 import type { SvgValidationResult } from "@formaglyph/validators";
 
 export type MembershipRole = "contributor" | "reviewer" | "admin";
@@ -35,6 +35,7 @@ export interface WorkspaceData {
   draft?: DraftBrief;
   proposal?: Proposal;
   candidates?: Candidate[];
+  reviewQueue?: ReviewQueueItem[];
   auditEvents: AuditEvent[];
   releaseEntries: ReleaseEntry[];
 }
@@ -57,7 +58,7 @@ export interface IssuedProjectToken extends ProjectTokenSummary {
 export interface FormaglyphRepository {
   readonly mode: "local" | "supabase";
   listPublishedIcons(): Promise<CatalogIcon[]>;
-  loadWorkspace(projectSlug: string, draftId?: string | null): Promise<WorkspaceData | null>;
+  loadWorkspace(projectSlug: string, draftId?: string | null, proposalId?: string | null): Promise<WorkspaceData | null>;
   saveDraft(projectSlug: string, draft: DraftBrief, candidate: CandidateAssetInput): Promise<SavedDraft>;
   submitProposal(draftId: string, candidateId: string, targetVersion: string): Promise<Proposal>;
   reviewProposal(proposalId: string, decision: "approve" | "request_changes" | "reject", body?: string): Promise<Proposal>;

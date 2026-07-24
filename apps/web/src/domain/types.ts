@@ -107,6 +107,33 @@ export interface ReleaseEntry {
   reason: string | null;
 }
 
+export interface ReviewDecision {
+  id: string;
+  decision: "approve" | "request_changes" | "reject";
+  reviewerId: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface ProposalRevision {
+  id: string;
+  sequence: number;
+  candidate: Candidate;
+  submittedAt: string;
+  submittedBy: string | null;
+}
+
+export interface ReviewQueueItem {
+  proposal: Proposal;
+  databaseProposalId: string;
+  draft: DraftBrief;
+  authorId: string;
+  updatedAt: string;
+  revisions: ProposalRevision[];
+  baselineCandidate: Candidate | null;
+  decisions: ReviewDecision[];
+}
+
 export interface AppSettings {
   generationAdapter: GenerationAdapter;
   hostedGeneration: boolean;
