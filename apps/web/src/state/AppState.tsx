@@ -239,16 +239,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const persistDraft = useCallback(async () => {
     const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
     if (!selected) throw new Error("Generate or import a candidate before saving this draft.");
-    const variant = state.settings.defaultVariant;
-    const svg = selected.variants[variant];
-    if (!svg) throw new Error(`${variant === "regular" ? "Regular" : "Solid"} geometry is missing from the selected candidate.`);
+    const primaryVariant = selected.variants[state.settings.defaultVariant]
+      ? state.settings.defaultVariant
+      : selected.variants.regular
+        ? "regular"
+        : "solid";
     return repository.saveDraft(projectSlug, state.draft, {
       id: selected.id,
       name: selected.name,
       description: selected.description,
-      svg,
+      variants: selected.variants,
       issue: selected.issue,
-      variant,
+      primaryVariant,
       provenance: selected.provenance,
       generationJobId: selected.provenance.generationJobId,
       promptSha256: selected.provenance.promptHash,
@@ -292,6 +294,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     if (selected?.issue) {
       setNotice({ tone: "error", message: "Resolve the candidate validation issue before review." });
+      return false;
+    }
+    if (!selected?.variants.regular || !selected.variants.solid) {
+      setNotice({ tone: "error", message: "Regular and Solid geometry are both required before review." });
       return false;
     }
     try {

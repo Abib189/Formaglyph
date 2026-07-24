@@ -32,7 +32,14 @@ export class LocalRepository implements FormaglyphRepository {
     return { project: localProject, icons: state.workspace, draft: state.draft, proposal: state.proposal, candidates: state.candidates, reviewQueue, auditEvents: state.auditEvents, releaseEntries: state.releaseEntries };
   }
   async saveDraft(_projectSlug: string, draft: { workspaceIconId: string }, candidate: CandidateAssetInput): Promise<SavedDraft> {
-    return { draftId: draft.workspaceIconId || "local-draft", candidateId: candidate.id, validation: validateCandidateAsset(candidate) };
+    const variant = candidate.primaryVariant ?? (candidate.variants.regular ? "regular" : "solid");
+    const svg = candidate.variants[variant];
+    if (!svg) throw new Error("At least one candidate variant is required.");
+    return {
+      draftId: draft.workspaceIconId || "local-draft",
+      candidateId: candidate.id,
+      validation: validateCandidateAsset({ ...candidate, svg, variant }),
+    };
   }
   async submitProposal(_draftId: string, _candidateId: string, _targetVersion: string): Promise<Proposal> {
     return (typeof window === "undefined" ? initialAppState : loadAppState()).proposal;

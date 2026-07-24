@@ -20,7 +20,16 @@ describe("local repository contract", () => {
   });
 
   it("implements the same draft and onboarding surface as Supabase mode", async () => {
-    await expect(repository.saveDraft("core", { workspaceIconId: "draft-1" } as never, { id: "candidate-1", name: "Candidate", description: "", svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0"/></svg>', issue: null })).resolves.toMatchObject({ draftId: "draft-1", candidateId: "candidate-1", validation: { status: "passed", safe: true } });
+    await expect(repository.saveDraft("core", { workspaceIconId: "draft-1" } as never, {
+      id: "candidate-1",
+      name: "Candidate",
+      description: "",
+      variants: {
+        regular: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0"/></svg>',
+        solid: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M0 0"/></svg>',
+      },
+      issue: null,
+    })).resolves.toMatchObject({ draftId: "draft-1", candidateId: "candidate-1", validation: { status: "passed", safe: true } });
     await expect(repository.bootstrapWorkspace()).resolves.toMatchObject({ slug: "core", role: "admin" });
   });
 

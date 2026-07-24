@@ -64,6 +64,21 @@ function ReviewQueue({ items, selected, onSelect }: { items: ReviewQueueItem[]; 
   );
 }
 
+function RevisionVariants({ candidate }: { candidate: Candidate }) {
+  return (
+    <div className="revision-variants" aria-label={`${candidate.name} Regular and Solid variants`}>
+      <div>
+        <span>Regular</span>
+        {candidate.variants.regular ? <SvgIcon svg={candidate.variants.regular} size={52} /> : <small>Not captured</small>}
+      </div>
+      <div>
+        <span>Solid</span>
+        {candidate.variants.solid ? <SvgIcon svg={candidate.variants.solid} size={52} /> : <small>Not captured</small>}
+      </div>
+    </div>
+  );
+}
+
 function RevisionHistory({ item }: { item: ReviewQueueItem }) {
   return (
     <Panel className="revision-panel">
@@ -72,7 +87,7 @@ function RevisionHistory({ item }: { item: ReviewQueueItem }) {
         {item.baselineCandidate && (
           <article className="revision-card baseline">
             <span>Published baseline</span>
-            <div>{item.baselineCandidate.variants.regular ? <SvgIcon svg={item.baselineCandidate.variants.regular} size={56} /> : <small>Unavailable</small>}</div>
+            <RevisionVariants candidate={item.baselineCandidate} />
             <strong>{item.baselineCandidate.name}</strong>
             <small>Current release</small>
           </article>
@@ -82,7 +97,7 @@ function RevisionHistory({ item }: { item: ReviewQueueItem }) {
           return (
             <article className={index === item.revisions.length - 1 ? "revision-card current" : "revision-card"} key={revision.id}>
               <span>Revision {revision.sequence}</span>
-              <div>{revision.candidate.variants.regular ? <SvgIcon svg={revision.candidate.variants.regular} size={56} /> : <small>Unavailable</small>}</div>
+              <RevisionVariants candidate={revision.candidate} />
               <strong>{revision.candidate.name}</strong>
               <small>{formatDate(revision.submittedAt)}</small>
               {feedback && <p><b>Returned:</b> {feedback.body}</p>}

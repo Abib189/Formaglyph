@@ -113,6 +113,52 @@ export type Database = {
           },
         ]
       }
+      candidate_variant_assets: {
+        Row: {
+          asset_id: string
+          candidate_id: string
+          created_at: string
+          validation_run_id: string
+          variant: string
+        }
+        Insert: {
+          asset_id: string
+          candidate_id: string
+          created_at?: string
+          validation_run_id: string
+          variant: string
+        }
+        Update: {
+          asset_id?: string
+          candidate_id?: string
+          created_at?: string
+          validation_run_id?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_variant_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: true
+            referencedRelation: "asset_blobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_variant_assets_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_variant_assets_validation_run_id_fkey"
+            columns: ["validation_run_id"]
+            isOneToOne: false
+            referencedRelation: "validation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidates: {
         Row: {
           asset_id: string

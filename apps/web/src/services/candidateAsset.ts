@@ -13,6 +13,12 @@ export interface PersistedCandidateAsset {
   createdAt: string;
 }
 
+export interface PersistedCandidateVariant {
+  variant: "regular" | "solid";
+  svg: string;
+  expectedSha256: string;
+}
+
 const adapters = new Set<CandidateProvenance["adapter"]>([
   "local_geometry",
   "omnisvg",
@@ -70,35 +76,36 @@ export async function sha256Text(value: string) {
 
 export async function hydratePersistedCandidate(
   candidate: PersistedCandidateAsset,
-  svg: string,
-  expectedSha256: string,
+  assets: PersistedCandidateVariant[],
 ): Promise<Candidate> {
-  const actualSha256 = await sha256Text(svg);
-  if (actualSha256 !== expectedSha256) {
-    throw new Error("The submitted candidate failed its content integrity check.");
+  const variants: Candidate["variants"] = { regular: null, solid: null };
+  for (const asset of assets) {
+    const actualSha256 = await sha256Text(asset.svg);
+    if (actualSha256 !== asset.expectedSha256) {
+      throw new Error(`The submitted ${asset.variant} candidate failed its content integrity check.`);
+    }
+    const validation = validateCandidateAsset({
+      id: candidate.id,
+      name: candidate.name,
+      description: candidate.description,
+      svg: asset.svg,
+      issue: candidate.issue,
+      variant: asset.variant,
+    });
+    if (!validation.normalizedSvg) {
+      throw new Error(`The submitted ${asset.variant} candidate does not contain safe SVG geometry.`);
+    }
+    variants[asset.variant] = validation.normalizedSvg;
   }
-
-  const validation = validateCandidateAsset({
-    id: candidate.id,
-    name: candidate.name,
-    description: candidate.description,
-    svg,
-    issue: candidate.issue,
-    variant: candidate.variant === "solid" ? "solid" : "regular",
-  });
-  if (!validation.normalizedSvg) {
-    throw new Error("The submitted candidate does not contain safe SVG geometry.");
+  if (!variants.regular && !variants.solid) {
+    throw new Error("The submitted candidate does not contain a stored SVG variant.");
   }
-  const variant = candidate.variant === "solid" ? "solid" : "regular";
 
   return {
     id: candidate.id,
     name: candidate.name,
     description: candidate.description,
-    variants: {
-      regular: variant === "regular" ? validation.normalizedSvg : null,
-      solid: variant === "solid" ? validation.normalizedSvg : null,
-    },
+    variants,
     issue: candidate.issue,
     provenance: persistedProvenance(candidate),
     createdAt: candidate.createdAt,

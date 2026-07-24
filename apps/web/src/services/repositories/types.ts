@@ -15,9 +15,12 @@ export interface CandidateAssetInput {
   id: string;
   name: string;
   description: string;
-  svg: string;
+  variants: {
+    regular: string | null;
+    solid: string | null;
+  };
   issue: string | null;
-  variant?: "regular" | "solid";
+  primaryVariant?: "regular" | "solid";
   provenance?: CandidateProvenance;
   generationJobId?: string | null;
   promptSha256?: string | null;

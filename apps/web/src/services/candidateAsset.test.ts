@@ -22,13 +22,16 @@ const persisted: PersistedCandidateAsset = {
 };
 
 describe("persisted candidate hydration", () => {
-  it("returns only the exact stored variant with its persisted provenance", async () => {
-    const candidate = await hydratePersistedCandidate(persisted, svg, await sha256Text(svg));
+  it("returns every exact stored variant with its persisted provenance", async () => {
+    const solidSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 12h18"/></svg>';
+    const candidate = await hydratePersistedCandidate(persisted, [
+      { variant: "regular", svg, expectedSha256: await sha256Text(svg) },
+      { variant: "solid", svg: solidSvg, expectedSha256: await sha256Text(solidSvg) },
+    ]);
 
     expect(candidate).toMatchObject({
       id: "candidate-live",
       name: "Balanced",
-      variants: { solid: null },
       provenance: {
         kind: "generated",
         adapter: "local_geometry",
@@ -37,10 +40,13 @@ describe("persisted candidate hydration", () => {
       },
     });
     expect(candidate.variants.regular).toContain('viewBox="0 0 24 24"');
+    expect(candidate.variants.solid).toContain('fill="currentColor"');
   });
 
   it("rejects content that does not match the immutable asset hash", async () => {
-    await expect(hydratePersistedCandidate(persisted, svg, "0".repeat(64))).rejects.toThrow(/integrity check/i);
+    await expect(hydratePersistedCandidate(persisted, [
+      { variant: "regular", svg, expectedSha256: "0".repeat(64) },
+    ])).rejects.toThrow(/integrity check/i);
   });
 
   it("normalizes legacy import provenance without trusting missing fields", async () => {
@@ -49,7 +55,7 @@ describe("persisted candidate hydration", () => {
       provenance: { kind: "import", disclosed: true },
       generationJobId: null,
       promptSha256: null,
-    }, svg, await sha256Text(svg));
+    }, [{ variant: "regular", svg, expectedSha256: await sha256Text(svg) }]);
 
     expect(candidate.provenance).toEqual({
       kind: "imported",

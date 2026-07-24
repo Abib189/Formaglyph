@@ -1390,14 +1390,14 @@ select:focus-visible {
 }
 
 .revision-card {
-  flex: 0 0 190px;
-  min-height: 128px;
+  flex: 0 0 252px;
+  min-height: 178px;
   border: 1px solid var(--soft-line);
   border-radius: 8px;
   display: grid;
-  grid-template-columns: 68px 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: auto 1fr auto auto;
-  gap: 5px 9px;
+  gap: 8px;
   padding: 10px;
   font-family: "JetBrains Mono", monospace;
 }
@@ -1418,14 +1418,44 @@ select:focus-visible {
   color: var(--muted);
 }
 
-.revision-card > div {
-  grid-row: 2 / 5;
+.revision-variants {
   display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 92px;
+  border: 1px solid var(--soft-line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.revision-variants > div {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
   place-items: center;
+  gap: 5px;
+  padding: 7px 5px;
+}
+
+.revision-variants > div + div {
+  border-left: 1px solid var(--soft-line);
+}
+
+.revision-variants span {
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.revision-variants small {
+  max-width: 78px;
+  color: var(--quiet);
+  text-align: center;
+  font-size: 7px;
+  line-height: 1.25;
 }
 
 .revision-card > strong {
-  align-self: end;
   font-size: 10px;
 }
 

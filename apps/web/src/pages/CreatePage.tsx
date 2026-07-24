@@ -28,6 +28,7 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
   const generationRunning = state.generationJob?.status === "queued" || state.generationJob?.status === "running";
   const activeStep = state.proposal.status === "in_review" || state.proposal.status === "approved" ? 4 : state.proposal.status === "changes_requested" ? 2 : state.candidates.length ? 3 : 1;
   const selectedSvg = selected?.variants[state.settings.defaultVariant] ?? selected?.variants.regular ?? selected?.variants.solid ?? null;
+  const hasRequiredVariants = Boolean(selected?.variants.regular && selected.variants.solid);
   const submissionLocked = state.proposal.status === "in_review" || state.proposal.status === "approved";
   const submissionLabel = state.proposal.status === "in_review"
     ? "Awaiting review"
@@ -67,7 +68,7 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
 
   return (
     <main className="page-shell create-page">
-      <PageIntro number="01" title="Create the missing glyph.">Write the brief, generate or import real SVG candidates, validate the system rules, then submit one variant for human review.</PageIntro>
+      <PageIntro number="01" title="Create the missing glyph.">Write the brief, generate or import real SVG candidates, validate the system rules, then submit the Regular and Solid pair for human review.</PageIntro>
       <WorkflowSteps active={activeStep} />
       <div className="create-grid">
         <Panel className="brief-panel">
@@ -104,11 +105,11 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
           <ValidationGroup title="Naming" checks={["Kebab-case", "Project uniqueness", "Semantic keywords present"]} />
           <ValidationGroup title="Provenance" checks={[adapterLabel, selected?.provenance.promptHash ? "Prompt hash recorded" : "Source import recorded", "Human review required"]} defaultOpen={false} />
           <ValidationGroup title="Licence" checks={["Project asset licence", "Attribution metadata retained"]} defaultOpen={false} />
-          <div className={!selected || selected.issue ? "issue-box" : "issue-box passed"}>{!selected || selected.issue ? <WarningCircle size={18} /> : <CheckCircle size={18} />}<div><strong>{!selected ? "Candidate required" : selected.issue ? "Review required" : "All checks passed"}</strong><p>{!selected ? "Generate or import a candidate before saving." : selected.issue ?? `${state.settings.defaultVariant === "regular" ? "Regular" : "Solid"} is ready to submit for human review.`}</p></div></div>
+          <div className={!selected || selected.issue || !hasRequiredVariants ? "issue-box" : "issue-box passed"}>{!selected || selected.issue || !hasRequiredVariants ? <WarningCircle size={18} /> : <CheckCircle size={18} />}<div><strong>{!selected ? "Candidate required" : selected.issue ? "Review required" : !hasRequiredVariants ? "Both variants required" : "All checks passed"}</strong><p>{!selected ? "Generate or import a candidate before saving." : selected.issue ?? (!hasRequiredVariants ? "Regular and Solid must both be present before review." : "Regular and Solid are ready to submit together for human review.")}</p></div></div>
         </Panel>
       </div>
 
-      <div className="sticky-actions"><span>Draft ID: {state.proposal.draftId}</span><span>Updated: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(state.draft.updatedAt))} UTC</span><div><button className="secondary-action" onClick={() => void saveDraft()} disabled={!selectedSvg || generationRunning}><FloppyDisk size={18} />Save draft</button><button className="primary-action" onClick={() => void submit()} disabled={submitting || !selectedSvg || generationRunning || submissionLocked}>{submitting ? <Check size={19} /> : null}{submitting ? "Submitting" : submissionLabel}<ArrowRight size={18} /></button></div></div>
+      <div className="sticky-actions"><span>Draft ID: {state.proposal.draftId}</span><span>Updated: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(state.draft.updatedAt))} UTC</span><div><button className="secondary-action" onClick={() => void saveDraft()} disabled={!selectedSvg || generationRunning}><FloppyDisk size={18} />Save draft</button><button className="primary-action" onClick={() => void submit()} disabled={submitting || !hasRequiredVariants || generationRunning || submissionLocked}>{submitting ? <Check size={19} /> : null}{submitting ? "Submitting" : submissionLabel}<ArrowRight size={18} /></button></div></div>
       <PageFooter dark={dark} />
     </main>
   );

@@ -1,14 +1,26 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(56);
+select plan(60);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
 select extensions.has_table('public', 'audit_events', 'audit events exists');
 select extensions.has_table('public', 'generation_jobs', 'generation jobs exists');
+select extensions.has_table('public', 'candidate_variant_assets', 'candidate variant assets exist');
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.icons'::regclass), 'icons has RLS enabled');
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.audit_events'::regclass), 'audit events has RLS enabled');
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.generation_jobs'::regclass), 'generation jobs have RLS enabled');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.candidate_variant_assets'::regclass), 'candidate variant assets have RLS enabled');
+select extensions.is(
+  (select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'candidate_variant_assets'),
+  2,
+  'candidate variant policies are explicit'
+);
+select extensions.is(
+  (select count(*)::integer from public.candidate_variant_assets where candidate_id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'),
+  2,
+  'development candidate stores Regular and Solid assets together'
+);
 select extensions.is((select count(*)::integer from pg_policies where schemaname = 'public' and tablename = 'drafts'), 3, 'draft policies are explicit');
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname like 'published_assets_%' and cmd in ('UPDATE', 'DELETE')),
@@ -129,7 +141,7 @@ select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb
 select extensions.throws_ok(
   $$select public.submit_proposal('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '17171717-1717-4717-8717-171717171717', '1.0.0')$$,
   '22023',
-  'sanitized candidate with passing validation required',
+  'Regular and Solid candidates with passing validation are required',
   'a failed validation run cannot be submitted for review'
 );
 select extensions.is(

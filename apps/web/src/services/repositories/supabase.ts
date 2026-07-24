@@ -103,10 +103,35 @@ async function loadCandidateFromStorage(candidateId: string): Promise<Candidate>
   const client = requireSupabaseClient();
   const { data: candidate, error: candidateError } = await client.from("candidates").select("*").eq("id", candidateId).single();
   if (candidateError) throw new Error(`Could not load the submitted candidate: ${candidateError.message}`);
-  const { data: asset, error: assetError } = await client.from("asset_blobs").select("*").eq("id", candidate.asset_id).single();
-  if (assetError) throw new Error(`Could not load the submitted asset record: ${assetError.message}`);
-  const { data: blob, error: downloadError } = await client.storage.from(asset.storage_bucket).download(asset.storage_path);
-  if (downloadError) throw new Error(`Could not download the submitted SVG: ${downloadError.message}`);
+  const { data: storedVariants, error: variantError } = await client
+    .from("candidate_variant_assets")
+    .select("*")
+    .eq("candidate_id", candidateId)
+    .order("variant");
+  if (variantError) throw new Error(`Could not load the submitted variants: ${variantError.message}`);
+  const variantLinks = storedVariants.length
+    ? storedVariants
+    : [{
+        candidate_id: candidate.id,
+        variant: candidate.variant,
+        asset_id: candidate.asset_id,
+        validation_run_id: candidate.validation_run_id,
+        created_at: candidate.created_at,
+      }];
+  const assetIds = variantLinks.map((link) => link.asset_id);
+  const { data: assets, error: assetError } = await client.from("asset_blobs").select("*").in("id", assetIds);
+  if (assetError) throw new Error(`Could not load the submitted asset records: ${assetError.message}`);
+  const hydratedVariants = await Promise.all(variantLinks.map(async (link) => {
+    const asset = assets.find((item) => item.id === link.asset_id);
+    if (!asset) throw new Error(`The submitted ${link.variant} asset record is missing.`);
+    const { data: blob, error: downloadError } = await client.storage.from(asset.storage_bucket).download(asset.storage_path);
+    if (downloadError) throw new Error(`Could not download the submitted ${link.variant} SVG: ${downloadError.message}`);
+    return {
+      variant: link.variant === "solid" ? "solid" as const : "regular" as const,
+      svg: await blob.text(),
+      expectedSha256: asset.sha256,
+    };
+  }));
 
   return hydratePersistedCandidate({
     id: candidate.id,
@@ -118,7 +143,7 @@ async function loadCandidateFromStorage(candidateId: string): Promise<Candidate>
     generationJobId: candidate.generation_job_id,
     promptSha256: candidate.prompt_sha256,
     createdAt: candidate.created_at,
-  }, await blob.text(), asset.sha256);
+  }, hydratedVariants);
 }
 
 export class SupabaseRepository implements FormaglyphRepository {
@@ -357,35 +382,54 @@ export class SupabaseRepository implements FormaglyphRepository {
       draftId = data.id;
     }
     const candidateId = crypto.randomUUID();
-    const assetId = crypto.randomUUID();
-    const validationId = crypto.randomUUID();
-    const path = `${project.organizationId}/${project.id}/${draftId}/${assetId}/source.svg`;
-    const validation = validateCandidateAsset(candidate);
-    const normalizedSvg = validation.normalizedSvg;
-    if (!normalizedSvg) throw new Error("Safe normalized SVG output is required before upload.");
-    const normalizedBlob = new Blob([normalizedSvg], { type: "image/svg+xml" });
-    const hash = await sha256(normalizedSvg);
-    const { error: uploadError } = await client.storage.from("source-assets").upload(path, normalizedBlob, { contentType: "image/svg+xml", upsert: false });
-    if (uploadError) throw uploadError;
-    const { error: assetError } = await client.from("asset_blobs").insert({ id: assetId, project_id: project.id, storage_bucket: "source-assets", storage_path: path, byte_size: normalizedBlob.size, sha256: hash, sanitization_status: "passed", created_by: authData.user.id });
-    if (assetError) throw assetError;
-    const issueCounts = validation.issues.reduce<Record<string, number>>((counts, issue) => ({ ...counts, [issue.severity]: (counts[issue.severity] ?? 0) + 1 }), {});
-    const summary = { safe: validation.safe, changes: validation.changes, measurements: validation.measurements, issueCounts } as unknown as Json;
-    const { error: validationError } = await client.from("validation_runs").insert({ id: validationId, project_id: project.id, target_type: "candidate", target_id: candidateId, validator_version: SVG_VALIDATOR_VERSION, status: validation.status, summary, created_by: authData.user.id });
-    if (validationError) throw validationError;
-    if (validation.issues.length) {
-      const { error: issuesError } = await client.from("validation_issues").insert(validation.issues.map((issue) => ({ validation_run_id: validationId, rule_id: issue.ruleId, severity: issue.severity, location: issue.location ?? null, message: issue.message, remediation: issue.remediation ?? null })));
-      if (issuesError) throw issuesError;
+    const availableVariants = (["regular", "solid"] as const).flatMap((variant) => {
+      const svg = candidate.variants[variant];
+      return svg ? [{ variant, svg }] : [];
+    });
+    if (!availableVariants.length) throw new Error("At least one safe SVG variant is required before saving.");
+    const storedVariants: Array<{
+      variant: "regular" | "solid";
+      svg: string;
+      assetId: string;
+      validationId: string;
+      validation: ReturnType<typeof validateCandidateAsset>;
+    }> = [];
+    for (const source of availableVariants) {
+      const assetId = crypto.randomUUID();
+      const validationId = crypto.randomUUID();
+      const path = `${project.organizationId}/${project.id}/${draftId}/${candidateId}/${source.variant}/${assetId}.svg`;
+      const validation = validateCandidateAsset({ ...candidate, svg: source.svg, variant: source.variant });
+      const normalizedSvg = validation.normalizedSvg;
+      if (!normalizedSvg) throw new Error(`Safe normalized ${source.variant} SVG output is required before upload.`);
+      const normalizedBlob = new Blob([normalizedSvg], { type: "image/svg+xml" });
+      const hash = await sha256(normalizedSvg);
+      const { error: uploadError } = await client.storage.from("source-assets").upload(path, normalizedBlob, { contentType: "image/svg+xml", upsert: false });
+      if (uploadError) throw uploadError;
+      const { error: assetError } = await client.from("asset_blobs").insert({ id: assetId, project_id: project.id, storage_bucket: "source-assets", storage_path: path, byte_size: normalizedBlob.size, sha256: hash, sanitization_status: "passed", created_by: authData.user.id });
+      if (assetError) throw assetError;
+      const issueCounts = validation.issues.reduce<Record<string, number>>((counts, issue) => ({ ...counts, [issue.severity]: (counts[issue.severity] ?? 0) + 1 }), {});
+      const summary = { variant: source.variant, safe: validation.safe, changes: validation.changes, measurements: validation.measurements, issueCounts } as unknown as Json;
+      const { error: validationError } = await client.from("validation_runs").insert({ id: validationId, project_id: project.id, target_type: "candidate", target_id: candidateId, validator_version: SVG_VALIDATOR_VERSION, status: validation.status, summary, created_by: authData.user.id });
+      if (validationError) throw validationError;
+      if (validation.issues.length) {
+        const { error: issuesError } = await client.from("validation_issues").insert(validation.issues.map((issue) => ({ validation_run_id: validationId, rule_id: issue.ruleId, severity: issue.severity, location: issue.location ?? null, message: issue.message, remediation: issue.remediation ?? null })));
+        if (issuesError) throw issuesError;
+      }
+      storedVariants.push({ ...source, assetId, validationId, validation });
     }
-    const blockingIssue = candidate.issue ?? validation.issues.find((issue) => issue.severity === "blocker" || issue.severity === "error")?.message ?? null;
+    const primaryVariant = candidate.primaryVariant && storedVariants.some((item) => item.variant === candidate.primaryVariant)
+      ? candidate.primaryVariant
+      : storedVariants[0].variant;
+    const primary = storedVariants.find((item) => item.variant === primaryVariant)!;
+    const blockingIssue = candidate.issue ?? storedVariants.flatMap((item) => item.validation.issues).find((issue) => issue.severity === "blocker" || issue.severity === "error")?.message ?? null;
     const { error: candidateError } = await client.from("candidates").insert({
       id: candidateId,
       draft_id: draftId,
       name: candidate.name,
       description: candidate.description,
-      variant: candidate.variant ?? "regular",
-      asset_id: assetId,
-      validation_run_id: validationId,
+      variant: primaryVariant,
+      asset_id: primary.assetId,
+      validation_run_id: primary.validationId,
       issue: blockingIssue,
       generation_job_id: candidate.generationJobId ?? null,
       prompt_sha256: candidate.promptSha256 ?? null,
@@ -393,9 +437,16 @@ export class SupabaseRepository implements FormaglyphRepository {
       created_by: authData.user.id,
     });
     if (candidateError) throw candidateError;
+    const { error: variantLinkError } = await client.from("candidate_variant_assets").insert(storedVariants.map((item) => ({
+      candidate_id: candidateId,
+      variant: item.variant,
+      asset_id: item.assetId,
+      validation_run_id: item.validationId,
+    })));
+    if (variantLinkError) throw variantLinkError;
     const { error: selectionError } = await client.from("drafts").update({ selected_candidate_id: candidateId, updated_at: new Date().toISOString() }).eq("id", draftId);
     if (selectionError) throw selectionError;
-    return { draftId, candidateId, validation };
+    return { draftId, candidateId, validation: primary.validation };
   }
 
   async submitProposal(draftId: string, candidateId: string, targetVersion: string) {
