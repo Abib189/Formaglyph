@@ -3,6 +3,7 @@ import { ArrowClockwise, ArrowRight, Check, Clock, GridFour, Package, Plus, XCir
 import { useNavigate, useParams } from "react-router-dom";
 import type { Candidate, PreviewWeight, ReviewQueueItem } from "../domain/types";
 import { SvgIcon } from "../components/IconPreview";
+import { MotionCheck } from "../components/MotionCheck";
 import { Panel, PageIntro, PanelHeader, RouteLoading } from "../components/Layout";
 import { reviewFeedbackForRevision, selectReviewComparison } from "../services/reviewQueue";
 import { useAppState } from "../state/AppState";
@@ -150,9 +151,20 @@ function ReviewDetail({ item }: { item: ReviewQueueItem }) {
 
       <RevisionHistory item={item} />
 
+      <Panel className="motion-check-panel">
+        <PanelHeader number="03" title="Motion check" meta={previous && proposed ? "LIVE REVISION DIFF" : "AWAITING BASELINE"} />
+        <MotionCheck
+          key={`${previous?.id ?? "none"}-${proposed?.id ?? "none"}`}
+          previous={previous}
+          proposed={proposed}
+          previousLabel={item.revisions.length > 1 ? `Revision ${item.revisions.length - 1}` : "Baseline"}
+          proposedLabel={`Revision ${latestRevision?.sequence ?? 1}`}
+        />
+      </Panel>
+
       <div className="review-grid">
         <Panel className="diff-panel">
-          <PanelHeader number="03" title={`Visual diff: ${item.draft.name}`} meta="GRID 24 / STROKE 2" />
+          <PanelHeader number="04" title={`Visual diff: ${item.draft.name}`} meta="GRID 24 / STROKE 2" />
           <div className="diff-head"><span>Style</span><span>{item.revisions.length > 1 ? `Revision ${item.revisions.length - 1}` : "Before"}</span><span>Revision {latestRevision?.sequence ?? 1}</span></div>
           <div className="diff-row"><strong>Regular<br /><small>24 × 24</small></strong><ReviewIconCell candidate={previous} label={previous?.name ?? "No baseline"} weight="regular" /><ReviewIconCell candidate={proposed} label={proposed?.name ?? "Submitted"} weight="regular" changed /></div>
           <div className="diff-row"><strong>Solid<br /><small>24 × 24</small></strong><ReviewIconCell candidate={previous} label={previous?.name ?? "No baseline"} weight="fill" /><ReviewIconCell candidate={proposed} label={proposed?.name ?? "Submitted"} weight="fill" changed /></div>
@@ -161,7 +173,7 @@ function ReviewDetail({ item }: { item: ReviewQueueItem }) {
 
         <div className="review-sidebar">
           <Panel className="ledger-panel">
-            <PanelHeader number="04" title="Review activity" meta={`${proposal.comments.length + item.decisions.length} EVENTS`} />
+            <PanelHeader number="05" title="Review activity" meta={`${proposal.comments.length + item.decisions.length} EVENTS`} />
             <div className="comment-list">
               {proposal.comments.map((comment) => (
                 <button key={comment.id} className="comment-row" onClick={() => void toggleComment(comment.id, proposal.id)} aria-label={`${comment.resolved ? "Reopen" : "Resolve"} ${comment.title}`}>
@@ -184,14 +196,14 @@ function ReviewDetail({ item }: { item: ReviewQueueItem }) {
           </Panel>
 
           <div className="review-meta-grid">
-            <Panel><PanelHeader number="05" title="Metadata & provenance" /><dl className="compact-dl"><div><dt>Status</dt><dd>{statusLabel(proposal.status)}</dd></div><div><dt>Candidate</dt><dd>{proposed?.name ?? "Unavailable"}</dd></div><div><dt>Licence</dt><dd>MIT</dd></div><div><dt>Author</dt><dd>{item.authorId.slice(0, 8)}</dd></div><div><dt>Adapter</dt><dd>{adapterLabel}</dd></div><div><dt>Validation</dt><dd><Check size={13} /> Passed</dd></div></dl></Panel>
-            <Panel><PanelHeader number="06" title="Submission" /><div className="impact-list"><strong>Received</strong><span>{formatDate(proposal.submittedAt)}</span><strong>Revision</strong><span>{latestRevision?.sequence ?? 1} of {item.revisions.length}</span><strong>Target</strong><span>v{proposal.targetVersion}</span></div></Panel>
+            <Panel><PanelHeader number="06" title="Metadata & provenance" /><dl className="compact-dl"><div><dt>Status</dt><dd>{statusLabel(proposal.status)}</dd></div><div><dt>Candidate</dt><dd>{proposed?.name ?? "Unavailable"}</dd></div><div><dt>Licence</dt><dd>MIT</dd></div><div><dt>Author</dt><dd>{item.authorId.slice(0, 8)}</dd></div><div><dt>Adapter</dt><dd>{adapterLabel}</dd></div><div><dt>Validation</dt><dd><Check size={13} /> Passed</dd></div></dl></Panel>
+            <Panel><PanelHeader number="07" title="Submission" /><div className="impact-list"><strong>Received</strong><span>{formatDate(proposal.submittedAt)}</span><strong>Revision</strong><span>{latestRevision?.sequence ?? 1} of {item.revisions.length}</span><strong>Target</strong><span>v{proposal.targetVersion}</span></div></Panel>
           </div>
         </div>
       </div>
 
       <div className={approved ? "decision-bar approved" : changesRequested ? "decision-bar changes-requested" : rejected ? "decision-bar rejected" : "decision-bar"}>
-        <div className="decision-summary"><span>07</span><strong>{approved ? "Approved" : changesRequested ? "Changes requested" : rejected ? "Rejected" : "Decision"}</strong><p>{approved ? `${proposal.id} is ready for v${proposal.targetVersion}.` : changesRequested ? "The author can revise this icon and resubmit it as the next visible revision." : rejected ? "This proposal is closed. Its submission history remains available." : "Comments add notes. Request changes returns this revision to its author."}</p></div>
+        <div className="decision-summary"><span>08</span><strong>{approved ? "Approved" : changesRequested ? "Changes requested" : rejected ? "Rejected" : "Decision"}</strong><p>{approved ? `${proposal.id} is ready for v${proposal.targetVersion}.` : changesRequested ? "The author can revise this icon and resubmit it as the next visible revision." : rejected ? "This proposal is closed. Its submission history remains available." : "Comments add notes. Request changes returns this revision to its author."}</p></div>
         {proposal.status === "in_review" && role !== "contributor" && <label className="decision-note"><span>Decision note</span><textarea value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} placeholder="Required for changes or rejection" /><small>{decisionNote.trim().length}/10 minimum for changes or rejection</small></label>}
         <div className="decision-actions">
           <button className="primary-action" onClick={() => { void approveProposal(decisionNote, proposal.id); setDecisionNote(""); }} disabled={proposal.status !== "in_review" || role === "contributor"}><Package size={19} />Approve for v{proposal.targetVersion}</button>
