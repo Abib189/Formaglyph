@@ -11,8 +11,10 @@ import {
   PlugsConnected,
   Robot,
   ShieldCheck,
+  SignOut,
   SlidersHorizontal,
   Trash,
+  UserCircle,
 } from "@phosphor-icons/react";
 import type { IntegrationName } from "../domain/types";
 import type { IssuedProjectToken, ProjectTokenSummary } from "../services/repositories/types";
@@ -20,7 +22,8 @@ import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { useAppState } from "../state/AppState";
 import { repository } from "../services/repositories";
 import { copyText } from "../services/svg";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuthState } from "../state/AuthState";
 
 function Toggle({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (value: boolean) => void; label: string; disabled?: boolean }) {
   return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} className={checked ? "settings-toggle active" : "settings-toggle"} onClick={() => onChange(!checked)}><span /></button>;
@@ -37,8 +40,13 @@ const integrationDetails: Record<IntegrationName, { label: string; description: 
 };
 
 export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (value: boolean) => void }) {
-  const { state, updateSetting, role } = useAppState();
+  const { state, updateSetting, role, project } = useAppState();
+  const { user, signOut } = useAuthState();
   const { projectSlug = "core" } = useParams();
+  const navigate = useNavigate();
+  const [accountCopyState, setAccountCopyState] = useState<"idle" | "email" | "id" | "error">("idle");
+  const [signingOut, setSigningOut] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
   const [mcpCopyState, setMcpCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [tokens, setTokens] = useState<ProjectTokenSummary[]>([]);
   const [tokenName, setTokenName] = useState("Codex draft handoff");
@@ -48,6 +56,27 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
   const publicOrigin = import.meta.env.DEV ? "https://formaglyph.com" : window.location.origin;
   const publicApiEndpoint = `${publicOrigin}/api/v1`;
   const publicMcpEndpoint = `${publicOrigin}/mcp`;
+  const signedInEmail = user?.email ?? "Email unavailable";
+  const copyAccountValue = async (value: string, field: "email" | "id") => {
+    try {
+      await copyText(value);
+      setAccountCopyState(field);
+    } catch {
+      setAccountCopyState("error");
+    }
+    window.setTimeout(() => setAccountCopyState("idle"), 1800);
+  };
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    setAccountError(null);
+    try {
+      await signOut();
+      navigate("/sign-in", { replace: true });
+    } catch (error) {
+      setAccountError(error instanceof Error ? error.message : "Could not sign out.");
+      setSigningOut(false);
+    }
+  };
   const copyMcpEndpoint = async () => {
     try {
       await copyText(publicMcpEndpoint);
@@ -103,18 +132,38 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
   return (
     <main className="page-shell settings-page">
       <PageIntro number="01" title="Configure Formaglyph." aside={<div className="settings-scope"><span>Storage boundary</span><strong>{repository.mode === "supabase" ? "Supabase project" : "Local browser"}</strong><p>{repository.mode === "supabase" ? "Project records use RLS-backed PostgreSQL; appearance remains on this device." : "Preferences and demo connection states stay on this device."}</p></div>}>
-        Set appearance, generation policy, agent access, integrations, and privacy defaults for this workspace.
+        Manage your account, appearance, generation policy, agent access, integrations, and privacy defaults for this workspace.
       </PageIntro>
 
       <div className="settings-layout">
         <nav className="settings-index" aria-label="Settings sections">
-          <a href="#appearance">Appearance</a><a href="#generation">Generation</a><a href="#agents">Agents and API</a><a href="#integrations">Integrations</a><a href="#data">Data and privacy</a>
+          <a href="#account">Account</a><a href="#appearance">Appearance</a><a href="#generation">Generation</a><a href="#agents">Agents and API</a><a href="#integrations">Integrations</a><a href="#data">Data and privacy</a>
         </nav>
 
         <div className="settings-panels">
+          <Panel className="settings-panel account-panel">
+            <div id="account" className="settings-anchor" />
+            <PanelHeader number="02" title="Account and access" meta={repository.mode === "supabase" ? "AUTHENTICATED" : "LOCAL DEMO"} accent />
+            <div className="account-profile">
+              <div className="account-avatar"><UserCircle size={30} weight="thin" /></div>
+              <div className="account-identity"><span>Signed in as</span><strong>{signedInEmail}</strong><p>{repository.mode === "supabase" ? "Your secure email magic-link session is active." : "This address identifies the local demonstration session."}</p></div>
+              <div className="account-actions">
+                <button type="button" onClick={() => void copyAccountValue(signedInEmail, "email")} disabled={!user?.email}><Copy size={15} />{accountCopyState === "email" ? "Email copied" : "Copy email"}</button>
+                <button type="button" className="account-sign-out" onClick={() => void handleSignOut()} disabled={repository.mode !== "supabase" || signingOut}><SignOut size={15} />{repository.mode !== "supabase" ? "Demo session" : signingOut ? "Signing out…" : "Sign out"}</button>
+              </div>
+            </div>
+            <dl className="account-access-grid">
+              <div><dt>User ID</dt><dd><code>{user?.id ?? "Unavailable"}</code>{user?.id && <button type="button" onClick={() => void copyAccountValue(user.id, "id")}><Copy size={13} />{accountCopyState === "id" ? "Copied" : "Copy"}</button>}</dd></div>
+              <div><dt>Project</dt><dd><strong>{project?.name ?? projectSlug}</strong><span>/{project?.slug ?? projectSlug}</span></dd></div>
+              <div><dt>Organization ID</dt><dd><code>{project?.organizationId ?? "Loading project…"}</code></dd></div>
+              <div><dt>Project role</dt><dd><span className={`account-role ${role}`}>{role}</span></dd></div>
+            </dl>
+            <p className="account-session-note" role="status" aria-live="polite">{accountCopyState === "error" ? "Clipboard access is unavailable." : accountError ?? "Your email comes from the authenticated Supabase session and cannot be changed from project settings."}</p>
+          </Panel>
+
           <Panel className="settings-panel" >
             <div id="appearance" className="settings-anchor" />
-            <PanelHeader number="02" title="Appearance and defaults" meta="SAVED LOCALLY" />
+            <PanelHeader number="03" title="Appearance and defaults" meta="SAVED LOCALLY" />
             <SettingRow icon={<Palette size={19} />} title="Interface theme" description="Switch the complete application between its light and inverse modes.">
               <div className="segmented-control"><button className={!dark ? "active" : ""} onClick={() => onSetDark(false)}>Light</button><button className={dark ? "active" : ""} onClick={() => onSetDark(true)}>Dark</button></div>
             </SettingRow>
@@ -128,7 +177,7 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="generation" className="settings-anchor" />
-            <PanelHeader number="03" title="Generation policy" meta="LOCAL ADAPTER LIVE" accent />
+            <PanelHeader number="04" title="Generation policy" meta="LOCAL ADAPTER LIVE" accent />
             <div className="adapter-options">
               <button className={state.settings.generationAdapter === "local" ? "active" : ""} onClick={() => updateSetting("generationAdapter", "local")}><HardDrives size={22} /><span><strong>Local Geometry</strong><small>Deterministic, open, and processed in this browser.</small></span><i /></button>
               <button disabled className={state.settings.generationAdapter === "hosted" ? "active" : ""}><Robot size={22} /><span><strong>OmniSVG worker</strong><small>Requires a separately deployed GPU worker and project opt-in.</small></span><i /></button>
@@ -140,7 +189,7 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="agents" className="settings-anchor" />
-            <PanelHeader number="04" title="Agents and API" meta="MCP + API LIVE" accent />
+            <PanelHeader number="05" title="Agents and API" meta="MCP + API LIVE" accent />
             <div className="connection-field"><label>Public REST endpoint</label><div><code>{publicApiEndpoint}</code><button onClick={() => window.open(publicApiEndpoint, "_blank", "noopener,noreferrer")}>Open</button></div><p>Read-only Formaglyph Core search, manifests, metadata, OpenAPI, and immutable SVG delivery. No key required.</p></div>
             <SettingRow icon={<PlugsConnected size={19} />} title="Public MCP server" description="Live read-only tools, resources, and prompts for agent clients."><Toggle disabled checked onChange={() => undefined} label="Public MCP server enabled" /></SettingRow>
             <div className="connection-field"><label>Streamable HTTP MCP endpoint</label><div><code>{publicMcpEndpoint}</code><button onClick={() => void copyMcpEndpoint()}>{mcpCopyState === "copied" ? <><Check size={13} />Copied</> : <><Copy size={13} />{mcpCopyState === "error" ? "Copy failed" : "Copy"}</>}</button></div><p>Connect an MCP client directly. Search, inspect, and retrieve public Core SVGs without a key; project data is never exposed.</p></div>
@@ -170,7 +219,7 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="integrations" className="settings-anchor" />
-            <PanelHeader number="05" title="Design handoff" meta="COPY/EXPORT LIVE" accent />
+            <PanelHeader number="06" title="Design handoff" meta="COPY/EXPORT LIVE" accent />
             {(Object.keys(integrationDetails) as IntegrationName[]).map((name) => {
               const detail = integrationDetails[name];
               return <SettingRow key={name} icon={detail.icon} title={detail.label} description={detail.description}>{detail.available ? <a className="connection-button" href="/explore"><Copy size={15} />Open Explore</a> : <button disabled className="connection-button"><PlugsConnected size={15} />Planned</button>}</SettingRow>;
@@ -179,7 +228,7 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="data" className="settings-anchor" />
-            <PanelHeader number="06" title="Data and privacy" meta="DEVICE ONLY" />
+            <PanelHeader number="07" title="Data and privacy" meta="DEVICE ONLY" />
             <SettingRow icon={<HardDrives size={19} />} title="Local backups" description="Keep a recoverable browser copy of drafts, reviews, and settings."><Toggle checked={state.settings.localBackups} onChange={(value) => updateSetting("localBackups", value)} label="Enable local backups" /></SettingRow>
             <SettingRow icon={<Database size={19} />} title="Anonymous diagnostics" description="Share non-content performance and error signals when a backend is connected."><Toggle checked={state.settings.anonymousDiagnostics} onChange={(value) => updateSetting("anonymousDiagnostics", value)} label="Share anonymous diagnostics" /></SettingRow>
             <div className="privacy-note"><ShieldCheck size={21} /><div><strong>Private by default</strong><p>{repository.mode === "supabase" ? "Private project data is protected by membership-scoped RLS. The public MCP server can read only the published Core catalog." : "This demo stores data in local browser storage. Public MCP access reads the published Core catalog, never browser drafts."}</p></div></div>

@@ -7,6 +7,7 @@ import { repository } from "../services/repositories";
 import { generationPrompt, importSvgCandidate, LocalGeometryAdapter, sha256Text } from "../services/generation";
 import { useLocation } from "react-router-dom";
 import { useAuthState } from "./AuthState";
+import type { ProjectAccess } from "../services/repositories/types";
 
 type NoticeTone = "success" | "error" | "info";
 
@@ -20,6 +21,7 @@ interface AppStateValue {
   reviewQueue: ReviewQueueItem[];
   backendLoading: boolean;
   backendError: string | null;
+  project: ProjectAccess | null;
   role: "contributor" | "reviewer" | "admin";
   notice: Notice | null;
   updateDraft: (field: keyof Pick<DraftBrief, "name" | "description" | "keywords">, value: string) => void;
@@ -65,6 +67,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [backendLoading, setBackendLoading] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [project, setProject] = useState<ProjectAccess | null>(null);
   const [role, setRole] = useState<"contributor" | "reviewer" | "admin">("admin");
   const generationController = useRef<AbortController | null>(null);
   const { user } = useAuthState();
@@ -80,7 +83,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (repository.mode !== "local" || !location.pathname.startsWith("/projects/")) return;
     void repository.loadWorkspace(projectSlug, requestedDraftId, requestedProposalId)
-      .then((workspace) => setReviewQueue(workspace?.reviewQueue ?? []));
+      .then((workspace) => {
+        setProject(workspace?.project ?? null);
+        if (workspace) setRole(workspace.project.role);
+        setReviewQueue(workspace?.reviewQueue ?? []);
+      });
   }, [location.pathname, projectSlug, requestedDraftId, requestedProposalId]);
 
   useEffect(() => {
@@ -92,6 +99,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     void repository.loadWorkspace(projectSlug, requestedDraftId, requestedProposalId).then((workspace) => {
       if (!active) return;
       if (!workspace) throw new Error("Project not found or you do not have access.");
+      setProject(workspace.project);
       setRole(workspace.project.role);
       setReviewQueue(workspace.reviewQueue ?? []);
       setState((current) => ({
@@ -119,6 +127,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     if (repository.mode !== "supabase") return null;
     const workspace = await repository.loadWorkspace(projectSlug, requestedDraftId, requestedProposalId);
     if (!workspace) throw new Error("Project not found or you do not have access.");
+    setProject(workspace.project);
     setRole(workspace.project.role);
     setReviewQueue(workspace.reviewQueue ?? []);
     setState((current) => ({
@@ -538,6 +547,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     reviewQueue,
     backendLoading,
     backendError,
+    project,
     role,
     notice,
     refreshWorkspace: async () => { await refreshWorkspace(); },
@@ -560,7 +570,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     toggleIntegration,
     markApiKeyCreated,
     clearNotice: () => setNotice(null),
-  }), [state, reviewQueue, backendLoading, backendError, role, notice, refreshWorkspace, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, rejectProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
+  }), [state, reviewQueue, backendLoading, backendError, project, role, notice, refreshWorkspace, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview, addComment, toggleComment, requestChanges, approveProposal, rejectProposal, openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon, updateSetting, toggleIntegration, markApiKeyCreated]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }
