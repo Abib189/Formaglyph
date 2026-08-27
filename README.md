@@ -2,12 +2,13 @@
 
 Formaglyph is an open-source, AI-native system for finding, creating, validating, reviewing, and shipping coherent icon families.
 
-The current repository contains Milestone 1 of the production core workflow:
+The current repository contains the production core workflow through agent handoff and governance:
 
 1. **Explore** — search and compare catalog icons by intent.
 2. **Create** — generate or import candidates, validate them, and submit a proposal.
-3. **Review** — inspect validation and provenance, comment, and approve through a guarded workflow.
-4. **Publish** — allow an administrator to release an immutable, content-hashed version with an audit record.
+3. **Review** — inspect validation and provenance, add or resolve notes, and record approval, change, or rejection decisions.
+4. **Govern** — allow an administrator to publish or deprecate an immutable, content-hashed version with a release and audit record.
+5. **Handoff** — let a scoped agent search the public catalog or create a text-only project draft for human completion.
 
 AI-generated candidates are always drafts. Publishing, deprecating, syncing, and overwriting remain human-approved operations.
 
@@ -16,19 +17,26 @@ AI-generated candidates are always drafts. Publishing, deprecating, syncing, and
 This is an early production foundation, not yet the complete hosted platform or the full 100-concept Formaglyph V1 family. It includes:
 
 - A strict TypeScript React application with responsive light and dark modes.
-- Search, filtering, SVG copy/export, proposal validation, review comments, and approval flows.
+- Search, filtering, SVG copy/export, proposal validation, review comments, rejection, approval, publication, and deprecation flows.
 - Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
 - An original Formaglyph Core starter release: 12 concepts, 24 validated Regular/Solid SVG assets, and a content-hashed build manifest.
 - Ranked core-catalog search with reviewed aliases, intent phrases, typo tolerance, category and weight filters, and true sibling-variant comparison.
-- A versioned, read-only public REST API for search, metadata, OpenAPI discovery, manifests, and immutable SVG delivery.
+- A versioned public REST API for catalog reads plus one scoped, text-only project draft endpoint.
 - A self-contained npm-ready `@formaglyph/icons` release artifact with typed catalog and per-asset exports.
+- An npm-ready `@formaglyph/cli` with human and JSON output, guarded SVG export, local stdio MCP, and a hosted Streamable HTTP MCP server.
+- Four read-only MCP tools, one non-destructive draft handoff tool, catalog resources, and an icon-selection prompt for AI agents.
+- Admin-issued, SHA-256-hashed project tokens with a 30-day default lifetime, immediate revocation, `drafts:write` scope, and transactional audit records.
+- Figma and Penpot clipboard handoff with stable ID, version, variant, licence, and content-hash metadata embedded in the copied SVG.
+- A browser-local, deterministic geometry adapter that creates three sanitized Regular/Solid candidate pairs without sending prompts to a model provider.
+- Safe SVG import, generation job cancellation and retry, prompt-hash provenance, optional prompt retention, and audited Supabase job transitions.
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
 - Invite-only magic-link authentication, route guards, session restoration, and transactional onboarding.
 - PostgreSQL tables, explicit Data API grants, RLS, private/public Storage policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
+- A permission-aware release changelog and audit trail with deprecation reasons and immutable content hashes.
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
 
-Generation workers, vector semantic search, authenticated/private API scopes, CLI, MCP server, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). Their Settings controls remain deliberately unavailable.
+GPU-backed OmniSVG and StarVector workers, hosted generation, vector semantic search, full private read APIs, OAuth-based MCP authorization, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). The local creation adapter, public CLI, public MCP reads, and scoped project draft handoff are live.
 
 ## Repository layout
 
@@ -38,6 +46,7 @@ docs/                   Product requirements and architecture direction
 packages/schema/        Canonical contracts shared across every product surface
 packages/validators/    Reusable SVG sanitizer and deterministic validation rules
 packages/icons/         Original geometry, generated SVG assets, hashes, and metadata
+packages/cli/           Public CLI, catalog client, and stdio/HTTP MCP server
 supabase/               Local config, migration, seed data, and database tests
 ```
 
@@ -93,26 +102,40 @@ VITE_SUPABASE_PUBLISHABLE_KEY=<current Formaglyph Staging publishable key>
 
 The Dockerfile declares all three as build arguments because Vite embeds publishable configuration during the build. Do not add a Supabase secret or service-role key. Railway uses `/health` for deployment health checks and the server falls back to `index.html` for client-side routes.
 
-The current production preview is [formaglyph-web-production.up.railway.app](https://formaglyph-web-production.up.railway.app/explore). In the hosted Supabase Auth URL configuration, set the site URL to `https://formaglyph-web-production.up.railway.app` and allow the exact redirect URL `https://formaglyph-web-production.up.railway.app/auth/callback` before testing magic-link sign-in.
+The production app is [formaglyph.com](https://formaglyph.com/explore). The Railway-provided hostname remains available as a rollback path. Hosted Supabase Auth uses `https://formaglyph.com` as its site URL and allows exact callbacks for the canonical domain, `www`, local development, and the Railway fallback.
 
 ## Use the public catalog API
 
-The versioned public API is available at [`/api/v1`](https://formaglyph-web-production.up.railway.app/api/v1). It exposes only the source-controlled, MIT-licensed Formaglyph Core release and accepts only `GET`, `HEAD`, and CORS preflight requests. Private project data and privileged Supabase access are not proxied through this API.
+The versioned API is available at [`/api/v1`](https://formaglyph.com/api/v1). Public catalog routes expose only the source-controlled, MIT-licensed Formaglyph Core release. `/agent/drafts` accepts a scoped project token and creates only a text brief with a human handoff URL.
 
 ```bash
-curl "https://formaglyph-web-production.up.railway.app/api/v1/icons?q=payment%20successful&variant=regular"
+curl "https://formaglyph.com/api/v1/icons?q=payment%20successful&variant=regular"
 ```
 
 See [Public API v1](./docs/api-v1.md) for endpoints and caching behavior.
+
+## Use the CLI and MCP server
+
+The npm-ready CLI can search, inspect, and export public Core icons. The production MCP endpoint is `https://formaglyph.com/mcp`. Public reads need no key; `propose_icon_draft` requires a project token issued in Settings.
+
+```bash
+pnpm --filter @formaglyph/cli build
+node packages/cli/dist/formaglyph.mjs search "payment successful"
+```
+
+See [Formaglyph CLI and MCP](./docs/mcp-cli.md) for remote agent configuration, local stdio setup, tools, and the security boundary. Registry publication remains a separately approved release action.
 
 ## Security model
 
 - Every exposed table has RLS and explicit grants.
 - Authorization comes from immutable membership rows, never editable user metadata.
-- Contributors own drafts; reviewers and administrators may review only proposals authored by somebody else; only administrators publish.
-- Submit, review, publish, and onboarding operations write their audit event in the same database transaction.
+- Contributors own drafts; reviewers and administrators may review only proposals authored by somebody else; only administrators publish or deprecate.
+- Submit, review, comment resolution, publish, deprecate, generation, and onboarding operations write their audit event in the same database transaction.
+- Project-token secrets are shown once, stored only as SHA-256 hashes, expire within 90 days, and can create text-only drafts only.
 - Published Storage objects use immutable ID/version paths and cannot be updated or deleted through the Data API.
 - Public anonymous reads are limited to published icons in public projects and the matching public assets.
+
+See [Review and governance](./docs/governance.md) for the lifecycle, permission matrix, release history, and audit boundary.
 
 ## Catalog assets
 
@@ -124,7 +147,7 @@ SVG safety and structural checks live in `@formaglyph/validators`. The package p
 
 Original geometry and release metadata live in `@formaglyph/icons`. `pnpm --filter @formaglyph/icons assets` deterministically rebuilds the committed SVG tree and SHA-256 manifest; tests require every stable concept to have both Regular and Solid variants and pass the publication validator.
 
-`pnpm --filter @formaglyph/icons pack:check` builds and inspects the npm-ready package without publishing it. Actual registry publication requires a separately approved release action and registry credentials.
+The `pack:check` scripts build and inspect both npm-ready packages without publishing them. Actual registry publication requires a separately approved release action and registry credentials.
 
 ## Licensing and trademark
 

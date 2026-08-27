@@ -6,12 +6,22 @@ import { fileURLToPath } from "node:url";
 import { createGzip } from "node:zlib";
 import { createCatalogApi } from "./catalog-api.mjs";
 
+const mcpModule = process.env.FORMAGLYPH_MCP_MODULE ?? new URL("../../packages/cli/dist/http.mjs", import.meta.url).href;
+const { handleFormaglyphMcpHttp } = await import(mcpModule);
+
 const root = resolve(fileURLToPath(new URL("./dist", import.meta.url)));
 const configuredPort = Number.parseInt(process.env.PORT ?? "3000", 10);
 const port = Number.isFinite(configuredPort) ? configuredPort : 3000;
 const host = "0.0.0.0";
+const canonicalHost = process.env.FORMAGLYPH_CANONICAL_HOST ?? "formaglyph.com";
 const catalogRoot = process.env.FORMAGLYPH_CATALOG_ROOT ?? resolve(fileURLToPath(new URL("../../packages/icons/assets", import.meta.url)));
-const handleCatalogApi = await createCatalogApi({ catalogRoot });
+const handleCatalogApi = await createCatalogApi({
+  catalogRoot,
+  agentDraft: {
+    supabaseUrl: process.env.VITE_SUPABASE_URL,
+    publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  },
+});
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -66,9 +76,25 @@ function sendJson(response, status, body) {
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  const forwardedHost = request.headers["x-forwarded-host"] ?? request.headers.host ?? "";
+  const requestHost = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost).split(",")[0].trim().toLowerCase();
+
+  if (requestHost === `www.${canonicalHost}` || requestHost.startsWith(`www.${canonicalHost}:`)) {
+    response.writeHead(308, {
+      "location": `https://${canonicalHost}${request.url ?? "/"}`,
+      "cache-control": "public, max-age=3600",
+      "x-content-type-options": "nosniff",
+    });
+    response.end();
+    return;
+  }
 
   if (url.pathname === "/health") {
     sendJson(response, 200, { status: "ok" });
+    return;
+  }
+  if (url.pathname === "/mcp") {
+    await handleFormaglyphMcpHttp(request, response);
     return;
   }
   if (await handleCatalogApi(request, response, url)) return;

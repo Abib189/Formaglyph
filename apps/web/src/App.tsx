@@ -31,13 +31,13 @@ function FormaglyphApp() {
   const route = useMemo<RouteName>(() => {
     if (location.pathname.includes("/workspace")) return "workspace";
     if (location.pathname.includes("/create")) return "create";
-    if (location.pathname.includes("/review/")) return "review";
+    if (location.pathname.includes("/review")) return "review";
     if (location.pathname.includes("/settings")) return "settings";
     return "explore";
   }, [location.pathname]);
   const projectSlug = location.pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? "core";
   const navigate = (nextRoute: RouteName) => {
-    const path = nextRoute === "explore" ? "/explore" : nextRoute === "review" ? `/projects/${projectSlug}/review/current` : `/projects/${projectSlug}/${nextRoute}`;
+    const path = nextRoute === "explore" ? "/explore" : nextRoute === "review" ? `/projects/${projectSlug}/review` : `/projects/${projectSlug}/${nextRoute}`;
     routerNavigate(path);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -53,7 +53,7 @@ function FormaglyphApp() {
     routerNavigate("/sign-in", { replace: true });
   };
 
-  return <div className="app-frame"><a className="skip-link" href="#main-content">Skip to content</a><AppHeader route={route} onNavigate={navigate} dark={dark} onToggleTheme={() => setDark((current) => !current)} signedIn={Boolean(user)} onSignOut={() => void handleSignOut()} /><div id="main-content"><Suspense fallback={<RouteLoading />}><Routes><Route path="/" element={<Navigate to="/explore" replace />} /><Route path="/explore" element={<ExplorePage />} /><Route path="/sign-in" element={<SignInPage />} /><Route path="/auth/callback" element={<AuthCallbackPage />} /><Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} /><Route path="/projects/:projectSlug/workspace" element={<RequireAuth><WorkspacePage onNavigate={navigate} dark={dark} /></RequireAuth>} /><Route path="/projects/:projectSlug/create" element={<RequireAuth><CreatePage onNavigate={navigate} dark={dark} /></RequireAuth>} /><Route path="/projects/:projectSlug/review/:proposalId" element={<RequireAuth><ReviewPage /></RequireAuth>} /><Route path="/projects/:projectSlug/settings" element={<RequireAuth><SettingsPage dark={dark} onSetDark={setDark} /></RequireAuth>} /><Route path="*" element={<Navigate to="/explore" replace />} /></Routes></Suspense></div><Toast /></div>;
+  return <div className="app-frame"><a className="skip-link" href="#main-content">Skip to content</a><AppHeader route={route} onNavigate={navigate} dark={dark} onToggleTheme={() => setDark((current) => !current)} signedIn={Boolean(user)} onSignOut={() => void handleSignOut()} /><div id="main-content"><Suspense fallback={<RouteLoading />}><Routes><Route path="/" element={<Navigate to="/explore" replace />} /><Route path="/explore" element={<ExplorePage />} /><Route path="/sign-in" element={<SignInPage />} /><Route path="/auth/callback" element={<AuthCallbackPage />} /><Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} /><Route path="/projects/:projectSlug/workspace" element={<RequireAuth><WorkspacePage onNavigate={navigate} dark={dark} /></RequireAuth>} /><Route path="/projects/:projectSlug/create" element={<RequireAuth><CreatePage onNavigate={navigate} dark={dark} /></RequireAuth>} /><Route path="/projects/:projectSlug/review" element={<RequireAuth><ReviewPage /></RequireAuth>} /><Route path="/projects/:projectSlug/review/:proposalId" element={<RequireAuth><ReviewPage /></RequireAuth>} /><Route path="/projects/:projectSlug/settings" element={<RequireAuth><SettingsPage dark={dark} onSetDark={setDark} /></RequireAuth>} /><Route path="*" element={<Navigate to="/explore" replace />} /></Routes></Suspense></div><Toast /></div>;
 }
 
 export function App() {

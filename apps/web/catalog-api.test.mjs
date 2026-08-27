@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { createCatalogApi } from "./catalog-api.mjs";
 
 let handleApi;
@@ -33,9 +33,16 @@ class ResponseRecorder {
   }
 }
 
-async function request(path, { method = "GET", headers = {}, baseUrl = origin } = {}) {
+async function request(path, { method = "GET", headers = {}, baseUrl = origin, body } = {}, handler = handleApi) {
   const response = new ResponseRecorder();
-  await handleApi({ method, headers }, response, new URL(path, baseUrl));
+  const incoming = {
+    method,
+    headers,
+    async *[Symbol.asyncIterator]() {
+      if (body !== undefined) yield Buffer.from(typeof body === "string" ? body : JSON.stringify(body));
+    },
+  };
+  await handler(incoming, response, new URL(path, baseUrl));
   return response;
 }
 
@@ -51,6 +58,7 @@ describe("Formaglyph public API v1", () => {
     expect(response.headers.get("access-control-allow-origin")).toBe("*");
     expect(response.headers.get("x-formaglyph-api-version")).toBe("1");
     expect(body.catalogue).toMatchObject({ concepts: 12, assets: 24, licence: "MIT" });
+    expect(body.links.mcp.toString()).toBe("https://api.formaglyph.test/mcp");
   });
 
   it("ranks intent search and paginates with opaque cursors", async () => {
@@ -101,7 +109,8 @@ describe("Formaglyph public API v1", () => {
     ]);
     expect(manifest).toMatchObject({ schemaVersion: 2, conceptCount: 12, assetCount: 24 });
     expect(manifest.assets).toHaveLength(24);
-    expect(specification).toMatchObject({ openapi: "3.1.0", info: { title: "Formaglyph Public API" } });
+    expect(specification).toMatchObject({ openapi: "3.1.0", info: { title: "Formaglyph API" } });
+    expect(specification.paths["/agent/drafts"].post.security).toEqual([{ projectToken: [] }]);
   });
 
   it("rejects invalid inputs and every write method", async () => {
@@ -112,5 +121,37 @@ describe("Formaglyph public API v1", () => {
       request("/api/v1/icons", { method: "POST" }),
     ]);
     expect([badLimit.status, badCursor.status, badVariant.status, write.status]).toEqual([400, 400, 400, 405]);
+  });
+
+  it("requires a project token and returns a deterministic human handoff URL", async () => {
+    const protectedApi = await createCatalogApi({
+      catalogRoot: resolve(process.cwd(), "../../packages/icons/assets"),
+      agentDraft: { supabaseUrl: "https://project.supabase.co", publishableKey: "sb_publishable_test" },
+    });
+    const missing = await request("/api/v1/agent/drafts", {
+      method: "POST",
+      body: { name: "payment-retry", description: "Retry a recoverable payment." },
+    }, protectedApi);
+    expect(missing.status).toBe(401);
+
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(JSON.stringify([{
+      draft_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      project_slug: "core",
+      draft_name: "payment-retry",
+      status: "draft",
+      create_path: "/projects/core/create?draft=dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    }]), { status: 200, headers: { "content-type": "application/json" } }));
+    const created = await request("/api/v1/agent/drafts", {
+      method: "POST",
+      headers: { authorization: `Bearer fgp_${"a".repeat(48)}` },
+      body: { name: "payment-retry", description: "Retry a recoverable payment.", keywords: ["payment"] },
+    }, protectedApi);
+    expect(created.status).toBe(201);
+    expect(created.json().data).toMatchObject({
+      status: "draft",
+      handoffUrl: "https://api.formaglyph.test/projects/core/create?draft=dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    });
+    expect(fetcher.mock.calls[0][1]?.headers).not.toHaveProperty("authorization");
+    fetcher.mockRestore();
   });
 });

@@ -1,4 +1,4 @@
-import { CloudArrowUp, CloudCheck, CurrencyCircleDollar, DownloadSimple, FolderSimple, LockKey, MagnifyingGlass, UploadSimple } from "@phosphor-icons/react";
+import { CloudArrowUp, CurrencyCircleDollar, DownloadSimple, FolderSimple, LockKey, MagnifyingGlass } from "@phosphor-icons/react";
 import { formaglyphAssets } from "@formaglyph/icons";
 import type { Candidate, CatalogIcon, PersistedAppState } from "../domain/types";
 
@@ -7,10 +7,32 @@ export const iconResults: CatalogIcon[] = formaglyphAssets.map((asset) => ({
   previewWeight: asset.variant === "solid" ? "fill" : "regular",
 }));
 
+function referenceCandidate(id: string, stableId: string, name: string, description: string): Candidate {
+  const regular = formaglyphAssets.find((asset) => asset.stableId === stableId && asset.variant === "regular");
+  const solid = formaglyphAssets.find((asset) => asset.stableId === stableId && asset.variant === "solid");
+  if (!regular || !solid) throw new Error(`Missing Formaglyph reference pair: ${stableId}`);
+  return {
+    id,
+    name,
+    description,
+    variants: { regular: regular.svg, solid: solid.svg },
+    issue: null,
+    provenance: {
+      kind: "reference",
+      adapter: "local_geometry",
+      model: "Formaglyph Core reference geometry",
+      promptHash: null,
+      generationJobId: null,
+      disclosed: true,
+    },
+    createdAt: "2026-07-20T14:47:00.000Z",
+  };
+}
+
 export const candidates: Candidate[] = [
-  { id: "candidate-01", name: "Balanced", description: "Rounded cloud, centred arrow, and consistent live-area padding.", Icon: CloudArrowUp, issue: null },
-  { id: "candidate-02", name: "Open base", description: "A wider base aperture gives the upload action more lift.", Icon: UploadSimple, issue: "Base opening breaks the family’s optical balance at 16px." },
-  { id: "candidate-03", name: "Confirmed upload", description: "Adds a completion cue for verified transfer states.", Icon: CloudCheck, issue: null },
+  referenceCandidate("candidate-01", "ico_fg_004_cloud_upload", "Balanced", "Rounded cloud, centred arrow, and consistent live-area padding."),
+  referenceCandidate("candidate-02", "ico_fg_005_cloud_sync", "Synchronous", "Keeps the cloud profile while testing a compact bidirectional action."),
+  referenceCandidate("candidate-03", "ico_fg_006_download_tray", "Transfer", "Tests the same transfer intent against the tray construction family."),
 ];
 
 export const workspaceIconLibrary = {
@@ -23,7 +45,7 @@ export const workspaceIconLibrary = {
 } as const;
 
 export const initialAppState: PersistedAppState = {
-  schemaVersion: 2,
+  schemaVersion: 4,
   draft: {
     workspaceIconId: "wrk-cloud-upload",
     name: "cloud-upload",
@@ -68,4 +90,14 @@ export const initialAppState: PersistedAppState = {
     anonymousDiagnostics: false,
     apiKeyCreatedAt: null,
   },
+  candidates,
+  generationJob: null,
+  auditEvents: [
+    { id: "evt-local-3", action: "proposal.submitted", actorId: "local-contributor", targetType: "proposal", targetId: "PRP-028", source: "local", occurredAt: "2026-07-20T14:48:00.000Z", metadata: { candidate: "candidate-01" } },
+    { id: "evt-local-2", action: "icon.published", actorId: "local-admin", targetType: "icon_version", targetId: "rel-secure-file-101", source: "local", occurredAt: "2026-07-19T16:10:00.000Z", metadata: { version: "1.0.1" } },
+    { id: "evt-local-1", action: "review.comment_added", actorId: "local-reviewer", targetType: "review", targetId: "R2", source: "local", occurredAt: "2026-07-19T09:42:00.000Z", metadata: { title: "Shoulder balance" } },
+  ],
+  releaseEntries: [
+    { id: "rel-secure-file-101", iconId: "wrk-secure-file", iconName: "secure-file", version: "1.0.1", variant: "regular", status: "published", contentHash: "5ee61b90d2a0d4f4b3107756ee7c26f4399a895f25f7bfcf152f4a947aae64d1", occurredAt: "2026-07-19T16:10:00.000Z", reason: null },
+  ],
 };

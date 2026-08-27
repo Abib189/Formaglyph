@@ -113,6 +113,52 @@ export type Database = {
           },
         ]
       }
+      candidate_variant_assets: {
+        Row: {
+          asset_id: string
+          candidate_id: string
+          created_at: string
+          validation_run_id: string
+          variant: string
+        }
+        Insert: {
+          asset_id: string
+          candidate_id: string
+          created_at?: string
+          validation_run_id: string
+          variant: string
+        }
+        Update: {
+          asset_id?: string
+          candidate_id?: string
+          created_at?: string
+          validation_run_id?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_variant_assets_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: true
+            referencedRelation: "asset_blobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_variant_assets_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_variant_assets_validation_run_id_fkey"
+            columns: ["validation_run_id"]
+            isOneToOne: false
+            referencedRelation: "validation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidates: {
         Row: {
           asset_id: string
@@ -120,9 +166,12 @@ export type Database = {
           created_by: string
           description: string
           draft_id: string
+          generation_job_id: string | null
           id: string
           issue: string | null
           name: string
+          prompt_sha256: string | null
+          provenance: Json
           validation_run_id: string | null
           variant: string
         }
@@ -132,9 +181,12 @@ export type Database = {
           created_by: string
           description?: string
           draft_id: string
+          generation_job_id?: string | null
           id?: string
           issue?: string | null
           name: string
+          prompt_sha256?: string | null
+          provenance?: Json
           validation_run_id?: string | null
           variant?: string
         }
@@ -144,9 +196,12 @@ export type Database = {
           created_by?: string
           description?: string
           draft_id?: string
+          generation_job_id?: string | null
           id?: string
           issue?: string | null
           name?: string
+          prompt_sha256?: string | null
+          provenance?: Json
           validation_run_id?: string | null
           variant?: string
         }
@@ -163,6 +218,13 @@ export type Database = {
             columns: ["draft_id"]
             isOneToOne: false
             referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidates_generation_job_id_fkey"
+            columns: ["generation_job_id"]
+            isOneToOne: false
+            referencedRelation: "generation_jobs"
             referencedColumns: ["id"]
           },
           {
@@ -234,6 +296,84 @@ export type Database = {
             columns: ["selected_candidate_id"]
             isOneToOne: false
             referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generation_jobs: {
+        Row: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          adapter: string
+          candidate_count: number
+          completed_at?: string | null
+          created_at?: string
+          draft_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          progress?: number
+          project_id: string
+          prompt?: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary?: Json
+          retain_prompt?: boolean
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          adapter?: string
+          candidate_count?: number
+          completed_at?: string | null
+          created_at?: string
+          draft_id?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          progress?: number
+          project_id?: string
+          prompt?: string | null
+          prompt_sha256?: string
+          requested_by?: string
+          result_summary?: Json
+          retain_prompt?: boolean
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generation_jobs_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generation_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -804,6 +944,187 @@ export type Database = {
           project_slug: string
         }[]
       }
+      cancel_generation_job: {
+        Args: { p_job_id: string }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      comment_proposal: {
+        Args: { p_body: string; p_proposal_id: string; p_title: string }
+        Returns: {
+          body: string
+          created_at: string
+          decision: string
+          id: string
+          proposal_id: string
+          resolved: boolean
+          reviewer_id: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_generation_job: {
+        Args: { p_job_id: string; p_result_summary?: Json }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_agent_draft: {
+        Args: {
+          p_description?: string
+          p_keywords?: string[]
+          p_name: string
+          p_token: string
+        }
+        Returns: {
+          create_path: string
+          draft_id: string
+          draft_name: string
+          project_slug: string
+          status: string
+        }[]
+      }
+      deprecate_icon: {
+        Args: { p_icon_id: string; p_reason: string }
+        Returns: {
+          canonical_name: string
+          category: string
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          description: string
+          directionality: string
+          id: string
+          label: string
+          licence: string
+          project_id: string
+          stable_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "icons"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fail_generation_job: {
+        Args: {
+          p_error_code: string
+          p_error_message: string
+          p_job_id: string
+        }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      issue_project_token: {
+        Args: {
+          p_expires_in_days?: number
+          p_name: string
+          p_project_id: string
+        }
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_used_at: string
+          name: string
+          revoked_at: string
+          scopes: string[]
+          token: string
+          token_prefix: string
+        }[]
+      }
+      list_project_tokens: {
+        Args: { p_project_id: string }
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_used_at: string
+          name: string
+          revoked_at: string
+          scopes: string[]
+          token_prefix: string
+        }[]
+      }
       publish_proposal: {
         Args: { p_proposal_id: string }
         Returns: {
@@ -823,6 +1144,25 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "icon_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolve_review: {
+        Args: { p_resolved: boolean; p_review_id: string }
+        Returns: {
+          body: string
+          created_at: string
+          decision: string
+          id: string
+          proposal_id: string
+          resolved: boolean
+          reviewer_id: string
+          title: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reviews"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -847,6 +1187,56 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revoke_project_token: {
+        Args: { p_token_id: string }
+        Returns: {
+          created_at: string
+          expires_at: string
+          id: string
+          last_used_at: string
+          name: string
+          revoked_at: string
+          scopes: string[]
+          token_prefix: string
+        }[]
+      }
+      start_generation_job: {
+        Args: {
+          p_adapter: string
+          p_candidate_count?: number
+          p_draft_id: string
+          p_project_id: string
+          p_prompt: string
+          p_prompt_sha256: string
+          p_retain_prompt?: boolean
+        }
+        Returns: {
+          adapter: string
+          candidate_count: number
+          completed_at: string | null
+          created_at: string
+          draft_id: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          prompt: string | null
+          prompt_sha256: string
+          requested_by: string
+          result_summary: Json
+          retain_prompt: boolean
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "generation_jobs"
           isOneToOne: true
           isSetofReturn: false
         }
