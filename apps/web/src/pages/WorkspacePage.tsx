@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Archive } from "@phosphor-icons/react/Archive";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { Copy } from "@phosphor-icons/react/Copy";
@@ -16,6 +17,8 @@ import type { RouteName, WorkspaceIcon, WorkspaceStatus } from "../domain/types"
 import { PageFooter, PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { downloadSvg, renderIconSvg } from "../services/svg";
 import { useAppState } from "../state/AppState";
+import { useAuthState } from "../state/AuthState";
+import { isSupabaseMode } from "../services/dataMode";
 
 type WorkspaceFilter = "all" | WorkspaceStatus;
 
@@ -36,12 +39,23 @@ function formatUpdated(value: string) {
 }
 
 function WorkspaceRow({ icon, onNavigate, role }: { icon: WorkspaceIcon; onNavigate: (route: RouteName) => void; role: "contributor" | "reviewer" | "admin" }) {
-  const { openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon } = useAppState();
+  const { reviewQueue, openWorkspaceIcon, updateWorkspaceStatus, reopenApprovedProposal, duplicateWorkspaceIcon } = useAppState();
+  const { user } = useAuthState();
+  const navigate = useNavigate();
+  const { projectSlug = "core" } = useParams();
+  const canEdit = !isSupabaseMode || icon.creatorId === user?.id;
+  const approvedItem = reviewQueue.find((item) => item.draft.workspaceIconId === icon.id && item.proposal.status === "approved");
+  const approvedCandidate = approvedItem?.revisions.find((revision) => revision.candidate.id === approvedItem.proposal.candidateId)?.candidate;
+  const hasPair = !isSupabaseMode || Boolean(approvedCandidate?.variants.regular && approvedCandidate.variants.solid);
   const [deprecating, setDeprecating] = useState(false);
   const [deprecationReason, setDeprecationReason] = useState("");
   const Icon = workspaceIconLibrary[icon.visualKey as keyof typeof workspaceIconLibrary] ?? CloudArrowUp;
 
   const open = (route: RouteName) => {
+    if (route === "create" && isSupabaseMode) {
+      navigate(`/projects/${encodeURIComponent(projectSlug)}/create?draft=${encodeURIComponent(icon.id)}`);
+      return;
+    }
     openWorkspaceIcon(icon.id);
     onNavigate(route);
   };
@@ -55,10 +69,12 @@ function WorkspaceRow({ icon, onNavigate, role }: { icon: WorkspaceIcon; onNavig
       <div className="workspace-status"><span className={`status-label status-${icon.status}`}>{statusLabels[icon.status]}</span><small>{icon.validation === "passed" ? "Validation passed" : "Validation issue"}</small></div>
       <div className="workspace-meta"><span>{icon.variant}</span><span>{icon.creator}</span><span>{formatUpdated(icon.updatedAt)}</span></div>
       <div className="workspace-actions">
-        {(icon.status === "draft" || icon.status === "changes_requested") && <button onClick={() => open("create")}><NotePencil size={15} /> Edit</button>}
+        {(icon.status === "draft" || icon.status === "changes_requested") && canEdit && <button onClick={() => open("create")}><NotePencil size={15} /> Edit</button>}
+        {(icon.status === "draft" || icon.status === "changes_requested") && !canEdit && <span className="permission-note">Author edit</span>}
         {icon.status === "in_review" && <button onClick={() => open("review")}><ArrowRight size={15} /> Review</button>}
-        {icon.status === "approved" && role === "admin" && <button className="workspace-publish" onClick={() => void updateWorkspaceStatus(icon.id, "published")}><RocketLaunch size={15} /> Publish</button>}
-        {icon.status === "approved" && role !== "admin" && <span className="permission-note">Admin publish</span>}
+        {icon.status === "approved" && role === "admin" && hasPair && <button className="workspace-publish" onClick={() => void updateWorkspaceStatus(icon.id, "published", "", approvedItem?.proposal.id)}><RocketLaunch size={15} /> Publish pair</button>}
+        {icon.status === "approved" && role === "admin" && !hasPair && approvedItem && <button onClick={() => void reopenApprovedProposal(approvedItem.proposal.id)}><NotePencil size={15} /> Return for pair</button>}
+        {icon.status === "approved" && role !== "admin" && <span className="permission-note">{hasPair ? "Admin publish" : "Pair required"}</span>}
         {icon.status === "published" && <button onClick={() => { window.location.assign(`/explore?q=${encodeURIComponent(icon.name)}`); }}><ArrowRight size={15} /> Explore</button>}
         {icon.status === "published" && role === "admin" && <button className="workspace-deprecate" onClick={() => setDeprecating((current) => !current)}><Prohibit size={15} /> Deprecate</button>}
         {icon.status === "deprecated" && <span className="permission-note">Immutable release retained</span>}

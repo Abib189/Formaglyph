@@ -66,6 +66,7 @@ export interface FormaglyphRepository {
   submitProposal(draftId: string, candidateId: string, targetVersion: string): Promise<Proposal>;
   reviewProposal(proposalId: string, decision: "approve" | "request_changes" | "reject", body?: string): Promise<Proposal>;
   publishProposal(proposalId: string): Promise<void>;
+  reopenApprovedProposal(proposalId: string): Promise<Proposal>;
   commentProposal(proposalId: string, title: string, body: string): Promise<ReviewComment>;
   resolveReview(reviewId: string, resolved: boolean): Promise<ReviewComment>;
   deprecateIcon(iconId: string, reason: string): Promise<void>;

@@ -3,7 +3,7 @@ import type { AuditEvent, Candidate, CatalogIcon, DraftBrief, GenerationJob, Pro
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
-import { hydratePersistedCandidate } from "../candidateAsset";
+import { hydratePersistedCandidate, persistedProvenance } from "../candidateAsset";
 import { sortReviewQueue } from "../reviewQueue";
 import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
 import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
@@ -103,47 +103,69 @@ async function loadCandidateFromStorage(candidateId: string): Promise<Candidate>
   const client = requireSupabaseClient();
   const { data: candidate, error: candidateError } = await client.from("candidates").select("*").eq("id", candidateId).single();
   if (candidateError) throw new Error(`Could not load the submitted candidate: ${candidateError.message}`);
-  const { data: storedVariants, error: variantError } = await client
-    .from("candidate_variant_assets")
-    .select("*")
-    .eq("candidate_id", candidateId)
-    .order("variant");
-  if (variantError) throw new Error(`Could not load the submitted variants: ${variantError.message}`);
-  const variantLinks = storedVariants.length
-    ? storedVariants
-    : [{
-        candidate_id: candidate.id,
-        variant: candidate.variant,
-        asset_id: candidate.asset_id,
-        validation_run_id: candidate.validation_run_id,
-        created_at: candidate.created_at,
-      }];
-  const assetIds = variantLinks.map((link) => link.asset_id);
-  const { data: assets, error: assetError } = await client.from("asset_blobs").select("*").in("id", assetIds);
-  if (assetError) throw new Error(`Could not load the submitted asset records: ${assetError.message}`);
-  const hydratedVariants = await Promise.all(variantLinks.map(async (link) => {
-    const asset = assets.find((item) => item.id === link.asset_id);
-    if (!asset) throw new Error(`The submitted ${link.variant} asset record is missing.`);
-    const { data: blob, error: downloadError } = await client.storage.from(asset.storage_bucket).download(asset.storage_path);
-    if (downloadError) throw new Error(`Could not download the submitted ${link.variant} SVG: ${downloadError.message}`);
-    return {
-      variant: link.variant === "solid" ? "solid" as const : "regular" as const,
-      svg: await blob.text(),
-      expectedSha256: asset.sha256,
-    };
-  }));
+  try {
+    const { data: storedVariants, error: variantError } = await client
+      .from("candidate_variant_assets")
+      .select("*")
+      .eq("candidate_id", candidateId)
+      .order("variant");
+    if (variantError) throw new Error(`Could not load the submitted variants: ${variantError.message}`);
+    const variantLinks = storedVariants.length
+      ? storedVariants
+      : [{
+          candidate_id: candidate.id,
+          variant: candidate.variant,
+          asset_id: candidate.asset_id,
+          validation_run_id: candidate.validation_run_id,
+          created_at: candidate.created_at,
+        }];
+    const assetIds = variantLinks.map((link) => link.asset_id);
+    const { data: assets, error: assetError } = await client.from("asset_blobs").select("*").in("id", assetIds);
+    if (assetError) throw new Error(`Could not load the submitted asset records: ${assetError.message}`);
+    const hydratedVariants = await Promise.all(variantLinks.map(async (link) => {
+      const asset = assets.find((item) => item.id === link.asset_id);
+      if (!asset) throw new Error(`The submitted ${link.variant} asset record is missing.`);
+      const { data: blob, error: downloadError } = await client.storage.from(asset.storage_bucket).download(asset.storage_path);
+      if (downloadError) throw new Error(`Could not download the submitted ${link.variant} SVG: ${downloadError.message}`);
+      return {
+        variant: link.variant === "solid" ? "solid" as const : "regular" as const,
+        svg: await blob.text(),
+        expectedSha256: asset.sha256,
+      };
+    }));
 
-  return hydratePersistedCandidate({
-    id: candidate.id,
-    name: candidate.name,
-    description: candidate.description,
-    variant: candidate.variant,
-    issue: candidate.issue,
-    provenance: candidate.provenance,
-    generationJobId: candidate.generation_job_id,
-    promptSha256: candidate.prompt_sha256,
-    createdAt: candidate.created_at,
-  }, hydratedVariants);
+    return hydratePersistedCandidate({
+      id: candidate.id,
+      name: candidate.name,
+      description: candidate.description,
+      variant: candidate.variant,
+      issue: candidate.issue,
+      provenance: candidate.provenance,
+      generationJobId: candidate.generation_job_id,
+      promptSha256: candidate.prompt_sha256,
+      createdAt: candidate.created_at,
+    }, hydratedVariants);
+  } catch (error) {
+    return {
+      id: candidate.id,
+      name: candidate.name,
+      description: candidate.description,
+      variants: { regular: null, solid: null },
+      issue: error instanceof Error ? error.message : "The stored SVG is unavailable.",
+      provenance: persistedProvenance({
+        id: candidate.id,
+        name: candidate.name,
+        description: candidate.description,
+        variant: candidate.variant,
+        issue: candidate.issue,
+        provenance: candidate.provenance,
+        generationJobId: candidate.generation_job_id,
+        promptSha256: candidate.prompt_sha256,
+        createdAt: candidate.created_at,
+      }),
+      createdAt: candidate.created_at,
+    };
+  }
 }
 
 export class SupabaseRepository implements FormaglyphRepository {
@@ -153,9 +175,8 @@ export class SupabaseRepository implements FormaglyphRepository {
     const client = requireSupabaseClient();
     const { data: icons, error } = await client.from("icons").select("*").eq("status", "published").order("canonical_name");
     if (error) throw error;
-    const versionIds = icons.map((icon) => icon.current_version_id).filter((id): id is string => Boolean(id));
     const iconIds = icons.map((icon) => icon.id);
-    const { data: versions, error: versionError } = versionIds.length ? await client.from("icon_versions").select("*").in("id", versionIds) : { data: [], error: null };
+    const { data: versions, error: versionError } = iconIds.length ? await client.from("icon_versions").select("*").in("icon_id", iconIds) : { data: [], error: null };
     if (versionError) throw versionError;
     const assetIds = versions.map((version) => version.optimized_asset_id ?? version.source_asset_id);
     const { data: assets, error: assetError } = assetIds.length ? await client.from("asset_blobs").select("*").in("id", assetIds) : { data: [], error: null };
@@ -163,30 +184,33 @@ export class SupabaseRepository implements FormaglyphRepository {
     const { data: aliases, error: aliasError } = iconIds.length ? await client.from("icon_aliases").select("*").in("icon_id", iconIds) : { data: [], error: null };
     if (aliasError) throw aliasError;
 
-    return icons.map((icon) => {
-      const version = versions.find((item) => item.id === icon.current_version_id);
-      const asset = assets.find((item) => item.id === (version?.optimized_asset_id ?? version?.source_asset_id));
-      const assetUrl = asset ? client.storage.from(asset.storage_bucket).getPublicUrl(asset.storage_path).data.publicUrl : undefined;
-      return {
-        id: icon.id,
-        stableId: icon.stable_id,
-        name: icon.canonical_name,
-        label: icon.label,
-        category: icon.category,
-        description: icon.description,
-        Icon: CloudArrowUp,
-        tags: aliases.filter((item) => item.icon_id === icon.id).map((item) => item.alias),
-        aliases: aliases.filter((item) => item.icon_id === icon.id).map((item) => ({ locale: item.locale, value: item.alias, reviewed: item.reviewed })),
-        version: version?.version ?? "0.0.0",
-        variant: version?.variant === "solid" ? "solid" : "regular",
-        previewWeight: version?.variant === "solid" ? "fill" : "regular",
-        directionality: icon.directionality === "ltr" ? "ltr-specific" : icon.directionality === "rtl" ? "rtl-specific" : icon.directionality === "mirrored" ? "mirrored-safe" : "neutral",
-        licence: "MIT",
-        status: "published",
-        provenance: { kind: "original", source: "Formaglyph", disclosed: true },
-        assetUrl,
-        contentHash: version?.content_hash,
-      };
+    return icons.flatMap((icon) => {
+      const current = versions.find((item) => item.id === icon.current_version_id);
+      if (!current) return [];
+      return versions.filter((item) => item.icon_id === icon.id && item.version === current.version).map((version) => {
+        const asset = assets.find((item) => item.id === (version.optimized_asset_id ?? version.source_asset_id));
+        const assetUrl = asset ? client.storage.from(asset.storage_bucket).getPublicUrl(asset.storage_path).data.publicUrl : undefined;
+        return {
+          id: version.id,
+          stableId: icon.stable_id,
+          name: icon.canonical_name,
+          label: icon.label,
+          category: icon.category,
+          description: icon.description,
+          Icon: CloudArrowUp,
+          tags: aliases.filter((item) => item.icon_id === icon.id).map((item) => item.alias),
+          aliases: aliases.filter((item) => item.icon_id === icon.id).map((item) => ({ locale: item.locale, value: item.alias, reviewed: item.reviewed })),
+          version: version.version,
+          variant: version.variant === "solid" ? "solid" as const : "regular" as const,
+          previewWeight: version.variant === "solid" ? "fill" as const : "regular" as const,
+          directionality: icon.directionality === "ltr" ? "ltr-specific" : icon.directionality === "rtl" ? "rtl-specific" : icon.directionality === "mirrored" ? "mirrored-safe" : "neutral",
+          licence: "MIT",
+          status: "published",
+          provenance: { kind: "original", source: "Formaglyph", disclosed: true },
+          assetUrl,
+          contentHash: version.content_hash,
+        };
+      });
     });
   }
 
@@ -216,6 +240,7 @@ export class SupabaseRepository implements FormaglyphRepository {
           variant: "regular" as const,
           visualKey: "cloud-upload",
           creator: "Team member",
+          creatorId: draft.created_by,
           updatedAt: linkedIcon?.status === "deprecated" ? linkedIcon.updated_at : draft.updated_at,
           validation: "passed" as const,
           version: proposals.find((item) => item.draft_id === draft.id)?.target_version ?? "1.0.0",
@@ -225,7 +250,7 @@ export class SupabaseRepository implements FormaglyphRepository {
       ...icons.filter((icon) => !drafts.some((draft) => draft.icon_id === icon.id)).map((icon) => ({
         id: icon.id, stableId: icon.stable_id, name: icon.canonical_name, label: icon.label, description: icon.description,
         category: icon.category, tags: [], project: project.name, status: icon.status as WorkspaceIcon["status"], variant: "regular" as const,
-        visualKey: "cloud-upload", creator: "Team member", updatedAt: icon.updated_at, validation: "passed" as const, version: "1.0.0",
+        visualKey: "cloud-upload", creator: "Team member", creatorId: icon.created_by, updatedAt: icon.updated_at, validation: "passed" as const, version: "1.0.0",
         databaseIconId: icon.id,
       })),
     ];
@@ -256,7 +281,11 @@ export class SupabaseRepository implements FormaglyphRepository {
       const candidateId = event.metadata.candidate_id;
       return typeof candidateId === "string" ? [candidateId] : [];
     });
-    const candidateIds = [...new Set([...proposals.map((proposal) => proposal.candidate_id), ...revisionCandidateIds])];
+    const candidateIds = [...new Set([
+      ...proposals.map((proposal) => proposal.candidate_id),
+      ...drafts.map((draft) => draft.selected_candidate_id).filter((id): id is string => Boolean(id)),
+      ...revisionCandidateIds,
+    ])];
     const hydratedCandidates = await Promise.all(candidateIds.map(async (candidateId) => [candidateId, await loadCandidateFromStorage(candidateId)] as const));
     const candidateMap = new Map(hydratedCandidates);
     const reviewQueue = sortReviewQueue(proposals.flatMap<ReviewQueueItem>((proposal) => {
@@ -319,18 +348,23 @@ export class SupabaseRepository implements FormaglyphRepository {
       ? proposals.find((item) => item.id === proposalId || item.public_id === proposalId)
       : undefined;
     const requestedProposalDraft = requestedProposal ? drafts.find((draft) => draft.id === requestedProposal.draft_id) : undefined;
-    const activeDraft = requestedProposalDraft ?? (draftId ? drafts.find((draft) => draft.id === draftId) : undefined) ?? drafts[0];
+    const requestedDraft = draftId ? drafts.find((draft) => draft.id === draftId) : undefined;
+    if (draftId && !requestedDraft) throw new Error("Draft not found in this project.");
+    const activeDraft = requestedProposalDraft ?? requestedDraft ?? drafts[0];
     const activeProposal = requestedProposal ?? proposals.find((item) => (
       item.draft_id === activeDraft?.id && item.status === "in_review"
     )) ?? proposals.find((item) => (
       item.draft_id === activeDraft?.id && item.status !== "published" && item.status !== "rejected"
-    )) ?? proposals.find((item) => item.draft_id === activeDraft?.id) ?? proposals[0];
+    )) ?? proposals.find((item) => item.draft_id === activeDraft?.id);
     const activeQueueItem = reviewQueue.find((item) => item.databaseProposalId === activeProposal?.id);
-    const activeCandidateId = activeProposal?.candidate_id ?? activeDraft?.selected_candidate_id;
+    const activeCandidateId = draftId && !proposalId
+      ? activeDraft?.selected_candidate_id ?? activeProposal?.candidate_id
+      : activeProposal?.candidate_id ?? activeDraft?.selected_candidate_id;
     const candidates = activeQueueItem
       ? [...new Map([
           ...(activeQueueItem.baselineCandidate ? [[activeQueueItem.baselineCandidate.id, activeQueueItem.baselineCandidate] as const] : []),
           ...activeQueueItem.revisions.map((revision) => [revision.candidate.id, revision.candidate] as const),
+          ...(activeCandidateId && candidateMap.has(activeCandidateId) ? [[activeCandidateId, candidateMap.get(activeCandidateId)!] as const] : []),
         ]).values()]
       : activeCandidateId && candidateMap.has(activeCandidateId) ? [candidateMap.get(activeCandidateId)!] : [];
     const comments = activeQueueItem?.proposal.comments ?? [];
@@ -374,8 +408,9 @@ export class SupabaseRepository implements FormaglyphRepository {
     const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(draft.workspaceIconId);
     let draftId = looksLikeUuid ? draft.workspaceIconId : crypto.randomUUID();
     if (looksLikeUuid) {
-      const { error } = await client.from("drafts").update({ name: draft.name, description: draft.description, keywords: draft.keywords.split(",").map((item) => item.trim()).filter(Boolean), updated_at: new Date().toISOString() }).eq("id", draftId);
+      const { data, error } = await client.from("drafts").update({ name: draft.name, description: draft.description, keywords: draft.keywords.split(",").map((item) => item.trim()).filter(Boolean), updated_at: new Date().toISOString() }).eq("id", draftId).select("id").maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Draft not found or not owned. Open one of your drafts or start a new icon.");
     } else {
       const { data, error } = await client.from("drafts").insert({ id: draftId, project_id: project.id, name: draft.name, description: draft.description, keywords: draft.keywords.split(",").map((item) => item.trim()).filter(Boolean), created_by: authData.user.id }).select("id").single();
       if (error) throw error;
@@ -466,25 +501,64 @@ export class SupabaseRepository implements FormaglyphRepository {
   async publishProposal(proposalId: string) {
     const client = requireSupabaseClient();
     const proposal = await findProposal(proposalId);
-    const { data: candidate, error: candidateError } = await client.from("candidates").select("*").eq("id", proposal.candidate_id).single();
-    if (candidateError) throw candidateError;
-    const { data: source, error: sourceError } = await client.from("asset_blobs").select("*").eq("id", candidate.asset_id).single();
-    if (sourceError) throw sourceError;
-    if (source.storage_bucket !== "published-assets") {
-      const project = await currentProject((await client.from("projects").select("slug").eq("id", proposal.project_id).single()).data?.slug ?? "");
-      const { data: sourceBlob, error: downloadError } = await client.storage.from(source.storage_bucket).download(source.storage_path);
-      if (downloadError) throw downloadError;
-      const publishedAssetId = crypto.randomUUID();
-      const publishedPath = `${project.organizationId}/${project.id}/${proposal.draft_id}/${proposal.id}/${proposal.target_version}/${candidate.variant}.svg`;
-      const { error: uploadError } = await client.storage.from("published-assets").upload(publishedPath, sourceBlob, { contentType: "image/svg+xml", upsert: false });
-      if (uploadError) throw uploadError;
-      const { error: assetError } = await client.from("asset_blobs").insert({ id: publishedAssetId, project_id: project.id, storage_bucket: "published-assets", storage_path: publishedPath, byte_size: sourceBlob.size, sha256: await sha256(sourceBlob), sanitization_status: "passed", created_by: (await client.auth.getUser()).data.user?.id });
-      if (assetError) throw assetError;
-      const { error: updateError } = await client.from("candidates").update({ asset_id: publishedAssetId }).eq("id", candidate.id);
-      if (updateError) throw updateError;
+    const { data: variants, error: variantError } = await client.from("candidate_variant_assets").select("*").eq("candidate_id", proposal.candidate_id);
+    if (variantError) throw new Error(variantError.message);
+    if (!variants || variants.length !== 2 || !variants.some((item) => item.variant === "regular") || !variants.some((item) => item.variant === "solid")) {
+      throw new Error("Regular and Solid are required before publication. Return this proposal for edits.");
+    }
+    const { data: projectRow, error: projectError } = await client.from("projects").select("slug").eq("id", proposal.project_id).single();
+    if (projectError) throw new Error(projectError.message);
+    const project = await currentProject(projectRow.slug);
+    const { data: authData, error: authError } = await client.auth.getUser();
+    if (authError || !authData.user) throw new Error(authError?.message ?? "Sign in before publishing.");
+
+    for (const variant of variants) {
+      const { data: source, error: sourceError } = await client.from("asset_blobs").select("*").eq("id", variant.asset_id).single();
+      if (sourceError) throw new Error(sourceError.message);
+      if (source.storage_bucket !== "source-assets" || source.sanitization_status !== "passed") throw new Error(`A validated ${variant.variant} source asset is required.`);
+      const { data: sourceBlob, error: downloadError } = await client.storage.from("source-assets").download(source.storage_path);
+      if (downloadError) throw new Error(downloadError.message);
+      const sourceHash = await sha256(sourceBlob);
+      if (sourceHash !== source.sha256) throw new Error(`The ${variant.variant} source asset failed its content-hash check.`);
+
+      const publishedPath = `${project.organizationId}/${project.id}/${proposal.draft_id}/${proposal.id}/${proposal.candidate_id}/${variant.variant}.svg`;
+      const publishedBucket = client.storage.from("published-assets");
+      const { data: recorded, error: lookupError } = await client.from("asset_blobs").select("*").eq("storage_path", publishedPath).maybeSingle();
+      if (lookupError) throw new Error(lookupError.message);
+      if (recorded && (recorded.sha256 !== sourceHash || recorded.storage_bucket !== "published-assets")) throw new Error(`The published ${variant.variant} path contains a different asset.`);
+      if (!recorded) {
+        const { error: uploadError } = await publishedBucket.upload(publishedPath, sourceBlob, { contentType: "image/svg+xml", upsert: false });
+        if (uploadError) {
+          const { data: existingBlob, error: existingError } = await publishedBucket.download(publishedPath);
+          if (existingError || !existingBlob || await sha256(existingBlob) !== sourceHash) throw new Error(uploadError.message);
+        }
+        const { error: assetError } = await client.from("asset_blobs").insert({
+          id: crypto.randomUUID(),
+          project_id: project.id,
+          storage_bucket: "published-assets",
+          storage_path: publishedPath,
+          byte_size: sourceBlob.size,
+          sha256: sourceHash,
+          sanitization_status: "passed",
+          created_by: authData.user.id,
+        });
+        if (assetError) {
+          const { data: raced } = await client.from("asset_blobs").select("sha256").eq("storage_path", publishedPath).maybeSingle();
+          if (raced?.sha256 !== sourceHash) throw new Error(assetError.message);
+        }
+      }
+      const { data: publishedBlob, error: publishedError } = await publishedBucket.download(publishedPath);
+      if (publishedError || !publishedBlob || await sha256(publishedBlob) !== sourceHash) throw new Error(`Published ${variant.variant} asset could not be verified.`);
     }
     const { error } = await client.rpc("publish_proposal", { p_proposal_id: proposal.id });
-    if (error) throw error;
+    if (error) throw new Error(error.message);
+  }
+
+  async reopenApprovedProposal(proposalId: string) {
+    const row = await findProposal(proposalId);
+    const { data, error } = await requireSupabaseClient().rpc("reopen_approved_proposal", { p_proposal_id: row.id });
+    if (error) throw new Error(error.message);
+    return rowToProposal(data);
   }
 
   async commentProposal(proposalId: string, title: string, body: string) {

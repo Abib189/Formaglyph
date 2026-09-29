@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(60);
+select plan(66);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
@@ -203,12 +203,37 @@ select extensions.is(
 );
 reset role;
 
+insert into public.asset_blobs (id, project_id, storage_bucket, storage_path, byte_size, sha256, sanitization_status, created_by)
+select case cva.variant
+    when 'regular' then '19191919-1919-4919-8919-191919191919'::uuid
+    else '20202020-2020-4020-8020-202020202020'::uuid
+  end,
+  p.project_id, 'published-assets',
+  pr.organization_id::text || '/' || p.project_id::text || '/' || p.draft_id::text || '/' || p.id::text || '/' || p.candidate_id::text || '/' || cva.variant || '.svg',
+  source.byte_size, source.sha256, 'passed', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+from public.proposals p
+join public.projects pr on pr.id = p.project_id
+join public.candidate_variant_assets cva on cva.candidate_id = p.candidate_id
+join public.asset_blobs source on source.id = cva.asset_id
+where p.draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
+select extensions.throws_ok(
+  $$select public.reopen_approved_proposal((select id from public.proposals where draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'))$$,
+  '22023',
+  'approved proposal already has both variants',
+  'paired approved proposals cannot be returned as legacy single-weight repairs'
+);
 select extensions.is(
   (select version from public.publish_proposal((select id from public.proposals where draft_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'))),
   '1.0.0',
   'an admin can publish an approved proposal'
+);
+select extensions.is(
+  (select count(*)::integer from public.icon_versions where version = '1.0.0' and icon_id = (select icon_id from public.drafts where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd')),
+  2,
+  'publication stores immutable Regular and Solid versions together'
 );
 select extensions.is((select count(*)::integer from public.icons where status = 'published'), 2, 'published icon is visible in the catalog');
 select extensions.is(
@@ -341,6 +366,53 @@ select extensions.throws_ok(
   '28000',
   'invalid or expired project token',
   'revoked project tokens stop working immediately'
+);
+reset role;
+
+-- A pre-pair approved proposal cannot be published. An admin must return it
+-- to its author at the next available version, with an audit record.
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+insert into public.drafts (id, project_id, icon_id, name, status, created_by) values
+  ('21212121-2121-4212-8212-212121212121', '22222222-2222-4222-8222-222222222222',
+    (select icon_id from public.drafts where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'),
+    'legacy-regular-only', 'approved', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+insert into public.asset_blobs (id, project_id, storage_bucket, storage_path, byte_size, sha256, sanitization_status, created_by) values
+  ('25252525-2525-4252-8252-252525252525', '22222222-2222-4222-8222-222222222222', 'source-assets',
+    '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/21212121-2121-4212-8212-212121212121/25252525-2525-4252-8252-252525252525/regular.svg',
+    128, repeat('b', 64), 'passed', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+insert into public.validation_runs (id, project_id, target_type, target_id, validator_version, status, created_by) values
+  ('24242424-2424-4242-8242-242424242424', '22222222-2222-4222-8222-222222222222', 'candidate',
+    '23232323-2323-4232-8232-232323232323', 'formaglyph-svg/0.1.0', 'passed', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+insert into public.candidates (id, draft_id, name, asset_id, validation_run_id, created_by) values
+  ('23232323-2323-4232-8232-232323232323', '21212121-2121-4212-8212-212121212121', 'Legacy Regular',
+    '25252525-2525-4252-8252-252525252525', '24242424-2424-4242-8242-242424242424', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+insert into public.candidate_variant_assets (candidate_id, variant, asset_id, validation_run_id) values
+  ('23232323-2323-4232-8232-232323232323', 'regular', '25252525-2525-4252-8252-252525252525', '24242424-2424-4242-8242-242424242424');
+update public.drafts set selected_candidate_id = '23232323-2323-4232-8232-232323232323' where id = '21212121-2121-4212-8212-212121212121';
+insert into public.proposals (id, project_id, draft_id, candidate_id, status, target_version, author_id) values
+  ('26262626-2626-4262-8262-262626262626', '22222222-2222-4222-8222-222222222222',
+    '21212121-2121-4212-8212-212121212121', '23232323-2323-4232-8232-232323232323',
+    'approved', '1.0.0', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+
+set local role authenticated;
+select extensions.throws_ok(
+  $$select public.reopen_approved_proposal('26262626-2626-4262-8262-262626262626')$$,
+  '42501', 'admin permission required', 'a contributor cannot return an approved legacy proposal'
+);
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
+select extensions.is(
+  (select status from public.reopen_approved_proposal('26262626-2626-4262-8262-262626262626')),
+  'changes_requested', 'an admin returns a Regular-only proposal for a complete pair'
+);
+select extensions.is(
+  (select target_version from public.proposals where id = '26262626-2626-4262-8262-262626262626'),
+  '1.0.1', 'returned legacy proposal advances past the existing published version'
+);
+select extensions.is(
+  (select count(*)::integer from public.audit_events where action = 'proposal.pair_requested' and target_id = '26262626-2626-4262-8262-262626262626'),
+  1, 'returning a legacy proposal writes an audit event'
 );
 reset role;
 

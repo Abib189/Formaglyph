@@ -1148,6 +1148,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reopen_approved_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: {
+          author_id: string
+          candidate_id: string
+          created_at: string
+          decided_at: string | null
+          draft_id: string
+          id: string
+          project_id: string
+          public_id: string
+          published_at: string | null
+          status: string
+          submitted_at: string | null
+          target_version: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "proposals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       resolve_review: {
         Args: { p_resolved: boolean; p_review_id: string }
         Returns: {

@@ -26,7 +26,7 @@ const allowedTransitions: Readonly<Record<ProposalStatus, readonly ProposalStatu
   draft: ["in_review"],
   in_review: ["changes_requested", "approved", "rejected"],
   changes_requested: ["in_review", "rejected"],
-  approved: ["published"],
+  approved: ["changes_requested", "published"],
   rejected: [],
   published: [],
 };

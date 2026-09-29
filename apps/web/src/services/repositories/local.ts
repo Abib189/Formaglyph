@@ -48,6 +48,7 @@ export class LocalRepository implements FormaglyphRepository {
     return (typeof window === "undefined" ? initialAppState : loadAppState()).proposal;
   }
   async publishProposal() { return; }
+  async reopenApprovedProposal(): Promise<Proposal> { throw new Error("Paired-release repair requires the Supabase data mode."); }
   async commentProposal(_proposalId: string, title: string, body: string): Promise<ReviewComment> {
     return { id: `local-review-${crypto.randomUUID()}`, title, author: "You", time: new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date()), text: body, resolved: false };
   }

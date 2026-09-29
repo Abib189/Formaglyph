@@ -33,7 +33,7 @@ function objectValue(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function persistedProvenance(candidate: PersistedCandidateAsset): CandidateProvenance {
+export function persistedProvenance(candidate: PersistedCandidateAsset): CandidateProvenance {
   const value = objectValue(candidate.provenance);
   const rawKind = typeof value.kind === "string" ? value.kind : "";
   const kind: CandidateProvenance["kind"] = rawKind === "generated"

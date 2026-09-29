@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowClockwise } from "@phosphor-icons/react/ArrowClockwise";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { CaretDown } from "@phosphor-icons/react/CaretDown";
@@ -12,8 +13,9 @@ import { WarningCircle } from "@phosphor-icons/react/WarningCircle";
 import { X } from "@phosphor-icons/react/X";
 import type { RouteName } from "../domain/types";
 import { SvgIcon } from "../components/IconPreview";
-import { PageFooter, PageIntro, Panel, PanelHeader } from "../components/Layout";
+import { PageFooter, PageIntro, Panel, PanelHeader, RouteLoading } from "../components/Layout";
 import { downloadSvg } from "../services/svg";
+import { isSupabaseMode } from "../services/dataMode";
 import { useAppState } from "../state/AppState";
 
 function WorkflowSteps({ active }: { active: number }) {
@@ -31,7 +33,9 @@ function CandidatePreview({ svg, label }: { svg: string | null; label: string })
 }
 
 export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName) => void; dark: boolean }) {
-  const { state, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview } = useAppState();
+  const { state, backendLoading, backendError, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview } = useAppState();
+  const navigate = useNavigate();
+  const { projectSlug = "core" } = useParams();
   const [submitting, setSubmitting] = useState(false);
   const [importing, setImporting] = useState(false);
   const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
@@ -61,6 +65,15 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
     if (selectedSvg) downloadSvg(`${state.draft.name || "formaglyph-draft"}-${state.settings.defaultVariant}.svg`, selectedSvg);
   };
 
+  const save = async () => {
+    try {
+      const draftId = await saveDraft();
+      if (isSupabaseMode) navigate(`/projects/${encodeURIComponent(projectSlug)}/create?draft=${encodeURIComponent(draftId)}`, { replace: true });
+    } catch {
+      // The shared state displays the repository error as a notice.
+    }
+  };
+
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -75,6 +88,9 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
 
   const promptRetained = state.settings.retainPrompts ? "Prompt retained in project history" : "Only a SHA-256 prompt hash is retained";
   const adapterLabel = selected?.provenance.adapter === "manual_import" ? "Manual import" : selected?.provenance.model ?? "Local geometry";
+
+  if (backendLoading) return <RouteLoading label="Loading icon draft" />;
+  if (backendError) return <main className="page-shell create-page"><PageIntro number="01" title="Draft unavailable.">{backendError}</PageIntro></main>;
 
   return (
     <main className="page-shell create-page">
@@ -119,7 +135,7 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
         </Panel>
       </div>
 
-      <div className="sticky-actions"><span>Draft ID: {state.proposal.draftId}</span><span>Updated: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(state.draft.updatedAt))} UTC</span><div><button className="secondary-action" onClick={() => void saveDraft()} disabled={!selectedSvg || generationRunning}><FloppyDisk size={18} />Save draft</button><button className="primary-action" onClick={() => void submit()} disabled={submitting || !hasRequiredVariants || generationRunning || submissionLocked}>{submitting ? <Check size={19} /> : null}{submitting ? "Submitting" : submissionLabel}<ArrowRight size={18} /></button></div></div>
+      <div className="sticky-actions"><span>Draft ID: {state.proposal.draftId || "NEW"}</span><span>Updated: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(state.draft.updatedAt))} UTC</span><div><button className="secondary-action" onClick={() => void save()} disabled={!selectedSvg || generationRunning}><FloppyDisk size={18} />Save draft</button><button className="primary-action" onClick={() => void submit()} disabled={submitting || !hasRequiredVariants || generationRunning || submissionLocked}>{submitting ? <Check size={19} /> : null}{submitting ? "Submitting" : submissionLabel}<ArrowRight size={18} /></button></div></div>
       <PageFooter dark={dark} />
     </main>
   );

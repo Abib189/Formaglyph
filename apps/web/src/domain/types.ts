@@ -78,6 +78,7 @@ export interface WorkspaceIcon {
   variant: "regular" | "solid";
   visualKey: string;
   creator: string;
+  creatorId?: string;
   updatedAt: string;
   validation: WorkspaceValidation;
   version: string;
