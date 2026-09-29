@@ -35,6 +35,8 @@ Authors cannot review their own proposal, regardless of their project role. Chan
 
 Review comments, comment resolution, decisions, publication, deprecation, and project visibility changes are authenticated database functions. Each function validates `auth.uid()`, locks the affected record where necessary, changes state, and writes its audit event in the same transaction. A project cannot become public while any published icon lacks a validated, MIT-licensed Regular/Solid pair.
 
+When an approved draft uses the canonical name of an existing published icon, publication links that draft to the existing stable icon ID and creates its next immutable version. The identity link and its audit event commit only if the paired publication succeeds; a separate same-name icon is never created.
+
 The Workspace governance panel exposes two related views to reviewers and administrators:
 
 - The release changelog lists immutable version IDs, variants, hashes, status, dates, and any deprecation reason.
