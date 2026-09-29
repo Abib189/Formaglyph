@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { Check } from "@phosphor-icons/react/Check";
 import { Copy } from "@phosphor-icons/react/Copy";
+import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
 import { FigmaLogo } from "@phosphor-icons/react/FigmaLogo";
 import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
 import { SlidersHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
@@ -11,11 +12,13 @@ import { iconResults, workspaceIconLibrary } from "../data/catalog";
 import { ConstructionIcon, SvgIcon, WeightIcon } from "../components/IconPreview";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { searchIcons } from "../services/search";
-import { copyDesignSvg, copyText, renderIconSvg } from "../services/svg";
+import { copyDesignSvg, copyText, downloadSvg, renderIconSvg } from "../services/svg";
 import { useAppState } from "../state/AppState";
 import { repository } from "../services/repositories";
 import { useSearchParams } from "react-router-dom";
 import type { CatalogIcon } from "../domain/types";
+
+const coreConceptCount = new Set(iconResults.map((icon) => icon.stableId)).size;
 
 function CatalogGlyph({ icon, size = 25, weight = icon.previewWeight }: { icon: CatalogIcon; size?: number; weight?: "regular" | "fill" }) {
   const [assetFailed, setAssetFailed] = useState(false);
@@ -27,12 +30,13 @@ function CatalogGlyph({ icon, size = 25, weight = icon.previewWeight }: { icon: 
 export function ExplorePage() {
   const { state } = useAppState();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") ?? "payment successful");
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [category, setCategory] = useState(searchParams.get("category") ?? "all");
   const [variantFilter, setVariantFilter] = useState((searchParams.get("weight") ?? "all") as "all" | "regular" | "solid");
   const [selectedId, setSelectedId] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [designCopyState, setDesignCopyState] = useState<"idle" | "figma" | "penpot" | "error">("idle");
+  const [downloadError, setDownloadError] = useState(false);
   const [repositoryCatalog, setRepositoryCatalog] = useState<CatalogIcon[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(repository.mode === "supabase");
@@ -105,6 +109,15 @@ export function ExplorePage() {
     window.setTimeout(() => setCopyState("idle"), 1800);
   };
 
+  const handleDownload = async () => {
+    setDownloadError(false);
+    try {
+      downloadSvg(`formaglyph-${selected.name}-${selected.variant}-${selected.version}.svg`, await selectedSvg());
+    } catch {
+      setDownloadError(true);
+    }
+  };
+
   const handleDesignCopy = async (target: "figma" | "penpot") => {
     try {
       await copyDesignSvg(await selectedSvg(), {
@@ -134,9 +147,10 @@ export function ExplorePage() {
       <div className="explore-grid">
         <Panel className="result-panel">
           <PanelHeader number="02" title={`Results (${filtered.length})`} meta={catalogLoading ? "SYNCING" : catalogError ? "CORE ONLY" : query ? "RANKED" : "ALL ICONS"} accent={Boolean(query || catalogError)} />
+          <div className="catalog-summary"><span>{coreConceptCount} Core concepts · {iconResults.length} SVGs · MIT</span>{(query || category !== "all" || variantFilter !== "all") && <button onClick={() => { setQuery(""); setCategory("all"); setVariantFilter("all"); }}>Browse all icons <ArrowRight size={14} /></button>}</div>
           <div className="result-filters">
-            <label><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item === "all" ? "All categories" : item}</option>)}</select></label>
-            <label><span>Weight</span><select value={variantFilter} onChange={(event) => setVariantFilter(event.target.value as "all" | "regular" | "solid")}><option value="all">All weights</option><option value="regular">Regular</option><option value="solid">Solid</option></select></label>
+            <label><span>Category</span><select aria-label="Category" value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item === "all" ? "All categories" : item}</option>)}</select></label>
+            <label><span>Weight</span><select aria-label="Weight" value={variantFilter} onChange={(event) => setVariantFilter(event.target.value as "all" | "regular" | "solid")}><option value="all">All weights</option><option value="regular">Regular</option><option value="solid">Solid</option></select></label>
           </div>
           <div className="result-columns" aria-hidden="true"><span>Icon</span><span>Name</span></div>
           <div className="result-list">
@@ -164,8 +178,10 @@ export function ExplorePage() {
             <div><dt>Stable ID</dt><dd>{selected.stableId}</dd></div><div><dt>Name</dt><dd>{selected.name}</dd></div><div><dt>Version</dt><dd>{selected.version}</dd></div><div><dt>Category</dt><dd>{selected.category}</dd></div><div><dt>Direction</dt><dd>{selected.directionality}</dd></div><div><dt>Grid</dt><dd>24 × 24</dd></div><div><dt>Licence</dt><dd>{selected.licence}</dd></div><div><dt>Validation</dt><dd><span className="status-dot" /> Valid</dd></div>
           </dl>
           <div className="inspector-copy">
-            <p>{selected.description} Pairs with the matching error or inactive state.</p>
+            <p>{selected.description}</p>
             <button className="primary-action" onClick={handleCopy}>{copyState === "copied" ? <Check size={20} /> : <Copy size={20} />}{copyState === "copied" ? "SVG copied" : copyState === "error" ? "Copy failed" : "Copy SVG"}</button>
+            <button className="secondary-action catalog-download" onClick={() => void handleDownload()}><DownloadSimple size={20} />Download {selected.variant === "solid" ? "Solid" : "Regular"} SVG</button>
+            {downloadError && <p className="microcopy" role="alert">Download failed. Please try again.</p>}
             <div className="design-handoff-actions" aria-label="Design tool handoff">
               <button className="secondary-action" onClick={() => void handleDesignCopy("figma")}>{designCopyState === "figma" ? <Check size={17} /> : <FigmaLogo size={17} />}{designCopyState === "figma" ? "Copied" : "For Figma"}</button>
               <button className="secondary-action" onClick={() => void handleDesignCopy("penpot")}>{designCopyState === "penpot" ? <Check size={17} /> : <SlidersHorizontal size={17} />}{designCopyState === "penpot" ? "Copied" : "For Penpot"}</button>

@@ -57,7 +57,7 @@ describe("Formaglyph public API v1", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("access-control-allow-origin")).toBe("*");
     expect(response.headers.get("x-formaglyph-api-version")).toBe("1");
-    expect(body.catalogue).toMatchObject({ concepts: 12, assets: 24, licence: "MIT" });
+    expect(body.catalogue).toMatchObject({ concepts: 48, assets: 96, licence: "MIT" });
     expect(body.links.mcp.toString()).toBe("https://api.formaglyph.test/mcp");
   });
 
@@ -107,10 +107,23 @@ describe("Formaglyph public API v1", () => {
       request("/api/v1/manifest").then((response) => response.json()),
       request("/api/v1/openapi.json").then((response) => response.json()),
     ]);
-    expect(manifest).toMatchObject({ schemaVersion: 2, conceptCount: 12, assetCount: 24 });
-    expect(manifest.assets).toHaveLength(24);
+    expect(manifest).toMatchObject({ schemaVersion: 2, conceptCount: 48, assetCount: 96 });
+    expect(manifest.assets).toHaveLength(96);
     expect(specification).toMatchObject({ openapi: "3.1.0", info: { title: "Formaglyph API" } });
     expect(specification.paths["/agent/drafts"].post.security).toEqual([{ projectToken: [] }]);
+  });
+
+  it("searches new original concepts and serves their versioned SVG pairs", async () => {
+    const result = (await request("/api/v1/icons?q=change%20language&variant=solid")).json();
+    expect(result.data[0]).toMatchObject({ name: "globe", version: "0.2.0", variant: "solid" });
+    const concept = (await request("/api/v1/icons/ico_fg_048_globe")).json();
+    expect(concept.variants.map((asset) => asset.variant)).toEqual(["regular", "solid"]);
+    for (const asset of concept.variants) {
+      const response = await request(new URL(asset.assetUrl).pathname);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("etag")).toBe(`"${asset.sha256}"`);
+      expect(response.text()).toContain('viewBox="0 0 24 24"');
+    }
   });
 
   it("rejects invalid inputs and every write method", async () => {

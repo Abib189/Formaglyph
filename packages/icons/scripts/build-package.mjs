@@ -1,5 +1,5 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -9,7 +9,19 @@ const packageSource = JSON.parse(await readFile(resolve(packageRoot, "package.js
 
 await rm(releaseRoot, { recursive: true, force: true });
 await mkdir(releaseRoot, { recursive: true });
-await cp(resolve(packageRoot, "assets"), resolve(releaseRoot, "svg"), { recursive: true });
+// Ship only declared SVGs, never workspace backups or unrelated files in assets/.
+const manifest = JSON.parse(await readFile(resolve(packageRoot, "assets/manifest.json"), "utf8"));
+const assetsRoot = resolve(packageRoot, "assets");
+for (const asset of manifest.assets) {
+  if (typeof asset.path !== "string" || !/^assets\/[a-z0-9-]+\/(regular|solid)\.svg$/.test(asset.path)) {
+    throw new Error("Invalid release asset path.");
+  }
+  const source = resolve(packageRoot, asset.path);
+  if (!source.startsWith(`${assetsRoot}${sep}`)) throw new Error("Release asset is outside assets/.");
+  const destination = resolve(releaseRoot, "svg", asset.path.slice("assets/".length));
+  await mkdir(dirname(destination), { recursive: true });
+  await cp(source, destination);
+}
 await cp(resolve(packageRoot, "src/catalog.mjs"), resolve(releaseRoot, "catalog.mjs"));
 await cp(resolve(packageRoot, "README.md"), resolve(releaseRoot, "README.md"));
 await cp(resolve(repositoryRoot, "LICENSE-ASSETS"), resolve(releaseRoot, "LICENSE"));

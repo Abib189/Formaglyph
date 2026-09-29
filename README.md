@@ -19,7 +19,7 @@ This is an early production foundation, not yet the complete hosted platform or 
 - A strict TypeScript React application with responsive light and dark modes.
 - Search, filtering, SVG copy/export, proposal validation, review comments, rejection, approval, publication, and deprecation flows.
 - Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
-- An original Formaglyph Core starter release: 12 concepts, 24 validated Regular/Solid SVG assets, and a content-hashed build manifest.
+- An original Formaglyph Core 0.2 release: 48 concepts, 96 validated Regular/Solid SVG assets, and a content-hashed build manifest. Explore supports the full library, intent/category/weight search, paired previews, copy, and version-labelled SVG downloads.
 - Ranked core-catalog search with reviewed aliases, intent phrases, typo tolerance, category and weight filters, and true sibling-variant comparison.
 - A versioned public REST API for catalog reads plus one scoped, text-only project draft endpoint.
 - A self-contained npm-ready `@formaglyph/icons` release artifact with typed catalog and per-asset exports.

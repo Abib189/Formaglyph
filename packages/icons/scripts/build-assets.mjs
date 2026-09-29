@@ -7,6 +7,7 @@ import { formaglyphAssets } from "../src/catalog.mjs";
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assetsRoot = resolve(packageRoot, "assets");
 const manifestPath = resolve(assetsRoot, "manifest.json");
+const packageSource = JSON.parse(await readFile(resolve(packageRoot, "package.json"), "utf8"));
 let previousAssets = [];
 try {
   previousAssets = JSON.parse(await readFile(manifestPath, "utf8")).assets;
@@ -52,7 +53,7 @@ const concepts = new Set(manifest.map((asset) => asset.stableId)).size;
 await writeFile(manifestPath, `${JSON.stringify({
   schemaVersion: 2,
   name: "Formaglyph Core",
-  version: "0.1.0",
+  version: packageSource.version,
   grid: 24,
   licence: "MIT",
   conceptCount: concepts,

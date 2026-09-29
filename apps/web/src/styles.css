@@ -713,6 +713,37 @@ select:focus-visible {
   width: 100%;
 }
 
+.catalog-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--line);
+  font: 11px/1.5 "JetBrains Mono", monospace;
+  color: var(--muted);
+}
+
+.catalog-summary button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.catalog-download {
+  width: 100%;
+  margin-top: 8px;
+}
+
 .design-handoff-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
