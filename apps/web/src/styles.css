@@ -843,6 +843,21 @@ select:focus-visible {
   min-height: 72px;
 }
 
+.brief-fields .field-help,
+.brief-fields .field-error {
+  font: 400 10px/1.35 "JetBrains Mono", monospace;
+  color: var(--muted);
+}
+
+.brief-fields .field-error,
+.validation-group li.failed {
+  color: var(--accent);
+}
+
+.brief-fields input[aria-invalid="true"] {
+  border-color: var(--accent);
+}
+
 .brief-static span,
 .reference-set > span {
   font-weight: 600;

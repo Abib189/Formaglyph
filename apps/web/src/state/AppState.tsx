@@ -8,6 +8,8 @@ import { generationPrompt, importSvgCandidate, LocalGeometryAdapter, sha256Text 
 import { useLocation } from "react-router-dom";
 import { useAuthState } from "./AuthState";
 import { emptyCreateSession } from "../services/createSession";
+import { iconNameError } from "../services/iconName";
+import { errorMessage } from "../services/errorMessage";
 import type { ProjectAccess } from "../services/repositories/types";
 
 type NoticeTone = "success" | "error" | "info";
@@ -251,6 +253,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [state.generationJob]);
 
   const persistDraft = useCallback(async () => {
+    const nameError = iconNameError(state.draft.name);
+    if (nameError) throw new Error(nameError);
     const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
     if (!selected) throw new Error("Generate or import a candidate before saving this draft.");
     const primaryVariant = selected.variants[state.settings.defaultVariant]
@@ -288,7 +292,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       });
       return saved.draftId;
     } catch (error) {
-      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not save draft." });
+      setNotice({ tone: "error", message: errorMessage(error, "Could not save draft.") });
       throw error;
     }
   }, [persistDraft]);
@@ -305,6 +309,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
     if (!state.draft.name.trim() || !state.draft.description.trim()) {
       setNotice({ tone: "error", message: "Name and description are required." });
+      return false;
+    }
+    const nameError = iconNameError(state.draft.name);
+    if (nameError) {
+      setNotice({ tone: "error", message: nameError });
       return false;
     }
     if (selected?.issue) {
@@ -338,7 +347,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setNotice({ tone: "success", message: "Proposal submitted for human review." });
       return true;
     } catch (error) {
-      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Could not submit proposal." });
+      setNotice({ tone: "error", message: errorMessage(error, "Could not submit proposal.") });
       return false;
     }
   }, [persistDraft, state.candidates, state.draft, state.proposal.status, state.proposal.targetVersion]);

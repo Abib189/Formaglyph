@@ -16,6 +16,7 @@ import { SvgIcon } from "../components/IconPreview";
 import { PageFooter, PageIntro, Panel, PanelHeader, RouteLoading } from "../components/Layout";
 import { downloadSvg } from "../services/svg";
 import { isSupabaseMode } from "../services/dataMode";
+import { iconNameError } from "../services/iconName";
 import { useAppState } from "../state/AppState";
 
 function WorkflowSteps({ active }: { active: number }) {
@@ -23,9 +24,9 @@ function WorkflowSteps({ active }: { active: number }) {
   return <ol className="workflow-steps">{steps.map((step, index) => <li key={step} className={index + 1 === active ? "active" : index + 1 < active ? "complete" : ""}><span>{index + 1 < active ? <Check size={15} /> : index + 1}</span><strong>{step}</strong>{index < steps.length - 1 && <i />}</li>)}</ol>;
 }
 
-function ValidationGroup({ title, checks, defaultOpen = true }: { title: string; checks: string[]; defaultOpen?: boolean }) {
+function ValidationGroup({ title, checks, defaultOpen = true, failedChecks = [] }: { title: string; checks: string[]; defaultOpen?: boolean; failedChecks?: string[] }) {
   const [open, setOpen] = useState(defaultOpen);
-  return <div className="validation-group"><button onClick={() => setOpen(!open)} aria-expanded={open}><strong>{title}</strong><span>{checks.length} checks <CaretDown size={14} className={open ? "rotated" : ""} /></span></button>{open && <ul>{checks.map((check) => <li key={check}><Check size={14} />{check}</li>)}</ul>}</div>;
+  return <div className="validation-group"><button onClick={() => setOpen(!open)} aria-expanded={open}><strong>{title}</strong><span>{checks.length} checks <CaretDown size={14} className={open ? "rotated" : ""} /></span></button>{open && <ul>{checks.map((check) => <li key={check} className={failedChecks.includes(check) ? "failed" : ""}>{failedChecks.includes(check) ? <X size={14} /> : <Check size={14} />}{check}</li>)}</ul>}</div>;
 }
 
 function CandidatePreview({ svg, label }: { svg: string | null; label: string }) {
@@ -43,6 +44,7 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
   const activeStep = state.proposal.status === "in_review" || state.proposal.status === "approved" ? 4 : state.proposal.status === "changes_requested" ? 2 : state.candidates.length ? 3 : 1;
   const selectedSvg = selected?.variants[state.settings.defaultVariant] ?? selected?.variants.regular ?? selected?.variants.solid ?? null;
   const hasRequiredVariants = Boolean(selected?.variants.regular && selected.variants.solid);
+  const nameError = iconNameError(state.draft.name);
   const submissionLocked = state.proposal.status === "in_review" || state.proposal.status === "approved";
   const submissionLabel = state.proposal.status === "in_review"
     ? "Awaiting review"
@@ -100,7 +102,7 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
         <Panel className="brief-panel">
           <PanelHeader number="01" title="Brief" meta="PERSISTED" />
           <div className="brief-fields">
-            <label>Icon name<input value={state.draft.name} onChange={(event) => updateDraft("name", event.target.value)} required /></label>
+            <label>Icon name<input value={state.draft.name} onChange={(event) => updateDraft("name", event.target.value)} aria-invalid={Boolean(state.draft.name && nameError)} aria-describedby="icon-name-help" required /><small id="icon-name-help" className={state.draft.name && nameError ? "field-error" : "field-help"}>{state.draft.name && nameError ? nameError : "Use kebab-case. To revise an existing icon, open its draft from Workspace."}</small></label>
             <label>Description<textarea value={state.draft.description} onChange={(event) => updateDraft("description", event.target.value)} required /></label>
             <label>Keywords<input value={state.draft.keywords} onChange={(event) => updateDraft("keywords", event.target.value)} /></label>
             <div className="brief-static"><span>Style alignment</span><p>24px grid, rounded joins, currentColor only.</p></div>
@@ -126,12 +128,12 @@ export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName
         </Panel>
 
         <Panel className="validation-panel">
-          <PanelHeader number="03" title="Validation" meta={!selected ? "WAITING" : selected.issue ? "1 ISSUE" : "PASSED"} accent={Boolean(selected?.issue)} />
+          <PanelHeader number="03" title="Validation" meta={!selected ? "WAITING" : selected.issue || nameError || !hasRequiredVariants ? "1 ISSUE" : "PASSED"} accent={Boolean(selected?.issue || (state.draft.name && nameError))} />
           <ValidationGroup title="Geometry" checks={["24 × 24 canvas", "Safe SVG elements", "currentColor paint", "Complexity limits"]} />
-          <ValidationGroup title="Naming" checks={["Kebab-case", "Project uniqueness", "Semantic keywords present"]} />
+          <ValidationGroup title="Naming" checks={["Kebab-case", "Project uniqueness", "Semantic keywords present"]} failedChecks={nameError ? ["Kebab-case"] : []} />
           <ValidationGroup title="Provenance" checks={[adapterLabel, selected?.provenance.promptHash ? "Prompt hash recorded" : "Source import recorded", "Human review required"]} defaultOpen={false} />
           <ValidationGroup title="Licence" checks={["Project asset licence", "Attribution metadata retained"]} defaultOpen={false} />
-          <div className={!selected || selected.issue || !hasRequiredVariants ? "issue-box" : "issue-box passed"}>{!selected || selected.issue || !hasRequiredVariants ? <WarningCircle size={18} /> : <CheckCircle size={18} />}<div><strong>{!selected ? "Candidate required" : selected.issue ? "Review required" : !hasRequiredVariants ? "Both variants required" : "All checks passed"}</strong><p>{!selected ? "Generate or import a candidate before saving." : selected.issue ?? (!hasRequiredVariants ? "Regular and Solid must both be present before review." : "Regular and Solid are ready to submit together for human review.")}</p></div></div>
+          <div className={!selected || nameError || selected.issue || !hasRequiredVariants ? "issue-box" : "issue-box passed"}>{!selected || nameError || selected.issue || !hasRequiredVariants ? <WarningCircle size={18} /> : <CheckCircle size={18} />}<div><strong>{!selected ? "Candidate required" : nameError ? "Icon name invalid" : selected.issue ? "Review required" : !hasRequiredVariants ? "Both variants required" : "All checks passed"}</strong><p>{!selected ? "Generate or import a candidate before saving." : nameError ?? selected.issue ?? (!hasRequiredVariants ? "Regular and Solid must both be present before review." : "Regular and Solid are ready to submit together for human review.")}</p></div></div>
         </Panel>
       </div>
 
