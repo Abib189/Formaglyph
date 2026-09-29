@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(82);
+select plan(84);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
@@ -298,6 +298,14 @@ reset role;
 select extensions.ok(
   not has_function_privilege('anon', 'public.set_project_visibility(uuid,text)', 'execute'),
   'anonymous callers cannot change project visibility'
+);
+select extensions.ok(
+  not has_function_privilege('anon', 'private.set_project_visibility_impl(uuid,text)', 'execute'),
+  'anonymous callers cannot invoke the privileged visibility implementation'
+);
+select extensions.ok(
+  not (select prosecdef from pg_proc where oid = 'public.set_project_visibility(uuid,text)'::regprocedure),
+  'the exposed visibility RPC executes as the caller'
 );
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
