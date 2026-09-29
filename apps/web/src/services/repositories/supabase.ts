@@ -3,7 +3,7 @@ import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
 import { hydratePersistedCandidate, persistedProvenance } from "../candidateAsset";
-import { sortReviewQueue } from "../reviewQueue";
+import { publishedBaselineForReview, sortReviewQueue } from "../reviewQueue";
 import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
 import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
 
@@ -234,6 +234,19 @@ export class SupabaseRepository implements FormaglyphRepository {
       client.from("proposals").select("*").eq("project_id", project.id).order("updated_at", { ascending: false }),
     ]);
     if (iconError || draftError || proposalError) throw iconError ?? draftError ?? proposalError;
+    const currentVersionIds = icons.map((icon) => icon.current_version_id).filter((id): id is string => Boolean(id));
+    const { data: currentVersions, error: currentVersionError } = currentVersionIds.length
+      ? await client.from("icon_versions").select("id, provenance").in("id", currentVersionIds)
+      : { data: [], error: null };
+    if (currentVersionError) throw currentVersionError;
+    const releasedProposalIds = currentVersions.map((version) => {
+      const provenance = version.provenance;
+      return {
+        id: version.id,
+        proposalPublicId: provenance && typeof provenance === "object" && !Array.isArray(provenance)
+          && typeof provenance.proposal_id === "string" ? provenance.proposal_id : null,
+      };
+    });
     const workspace: WorkspaceIcon[] = [
       ...drafts.map((draft) => {
         const linkedIcon = icons.find((icon) => icon.id === draft.icon_id);
@@ -298,6 +311,8 @@ export class SupabaseRepository implements FormaglyphRepository {
     ])];
     const hydratedCandidates = await Promise.all(candidateIds.map(async (candidateId) => [candidateId, await loadCandidateFromStorage(candidateId)] as const));
     const candidateMap = new Map(hydratedCandidates);
+    const baselineIcons = icons.map((icon) => ({ id: icon.id, canonicalName: icon.canonical_name, currentVersionId: icon.current_version_id }));
+    const baselineProposals = proposals.map((proposal) => ({ publicId: proposal.public_id, candidateId: proposal.candidate_id }));
     const reviewQueue = sortReviewQueue(proposals.flatMap<ReviewQueueItem>((proposal) => {
       const draft = drafts.find((item) => item.id === proposal.draft_id);
       const currentCandidate = candidateMap.get(proposal.candidate_id);
@@ -344,7 +359,17 @@ export class SupabaseRepository implements FormaglyphRepository {
         authorId: proposal.author_id,
         updatedAt: proposal.updated_at,
         revisions,
-        baselineCandidate: previousPublished ? candidateMap.get(previousPublished.candidate_id) ?? null : null,
+        baselineCandidate: (previousPublished ? candidateMap.get(previousPublished.candidate_id) ?? null : null)
+          ?? publishedBaselineForReview({
+            draftIconId: draft.icon_id,
+            draftName: draft.name,
+            proposalPublicId: proposal.public_id,
+            proposalStatus: proposal.status as ReviewQueueItem["proposal"]["status"],
+            icons: baselineIcons,
+            currentVersions: releasedProposalIds,
+            proposals: baselineProposals,
+            candidates: candidateMap,
+          }),
         decisions: proposalReviews.flatMap((review) => review.decision === "comment" ? [] : [{
           id: review.id,
           decision: review.decision as "approve" | "request_changes" | "reject",

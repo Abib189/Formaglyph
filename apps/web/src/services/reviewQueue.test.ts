@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Candidate, ReviewQueueItem } from "../domain/types";
-import { reviewFeedbackForRevision, selectReviewComparison, sortReviewQueue } from "./reviewQueue";
+import { publishedBaselineForReview, reviewFeedbackForRevision, selectReviewComparison, sortReviewQueue } from "./reviewQueue";
 
 function candidate(id: string): Candidate {
   return {
@@ -64,6 +64,34 @@ describe("review queue", () => {
       previous: { id: "published" },
       proposed: { id: "new" },
     });
+  });
+
+  it("finds the current release for a separately created same-name draft", () => {
+    const baseline = publishedBaselineForReview({
+      draftIconId: null,
+      draftName: "cloud-upload",
+      proposalPublicId: "PRP-NEW",
+      proposalStatus: "approved",
+      icons: [{ id: "icon-1", canonicalName: "cloud-upload", currentVersionId: "version-1" }],
+      currentVersions: [{ id: "version-1", proposalPublicId: "PRP-OLD" }],
+      proposals: [{ publicId: "PRP-OLD", candidateId: "published-candidate" }],
+      candidates: new Map([["published-candidate", candidate("published-candidate")]]),
+    });
+    expect(baseline?.id).toBe("published-candidate");
+  });
+
+  it("does not compare a published proposal against its own current release", () => {
+    const baseline = publishedBaselineForReview({
+      draftIconId: "icon-1",
+      draftName: "cloud-upload",
+      proposalPublicId: "PRP-OLD",
+      proposalStatus: "published",
+      icons: [{ id: "icon-1", canonicalName: "cloud-upload", currentVersionId: "version-1" }],
+      currentVersions: [{ id: "version-1", proposalPublicId: "PRP-OLD" }],
+      proposals: [{ publicId: "PRP-OLD", candidateId: "published-candidate" }],
+      candidates: new Map([["published-candidate", candidate("published-candidate")]]),
+    });
+    expect(baseline).toBeNull();
   });
 
   it("attaches request-changes feedback to the revision it followed", () => {

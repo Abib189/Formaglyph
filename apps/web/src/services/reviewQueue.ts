@@ -17,6 +17,26 @@ export function sortReviewQueue(items: ReviewQueueItem[]) {
   });
 }
 
+export function publishedBaselineForReview(input: {
+  draftIconId: string | null;
+  draftName: string;
+  proposalPublicId: string;
+  proposalStatus: ReviewQueueItem["proposal"]["status"];
+  icons: ReadonlyArray<{ id: string; canonicalName: string; currentVersionId: string | null }>;
+  currentVersions: ReadonlyArray<{ id: string; proposalPublicId: string | null }>;
+  proposals: ReadonlyArray<{ publicId: string; candidateId: string }>;
+  candidates: ReadonlyMap<string, Candidate | null>;
+}): Candidate | null {
+  if (input.proposalStatus === "published") return null;
+  const icon = input.icons.find((item) => item.id === input.draftIconId)
+    ?? input.icons.find((item) => item.canonicalName === input.draftName);
+  if (!icon?.currentVersionId) return null;
+  const release = input.currentVersions.find((item) => item.id === icon.currentVersionId);
+  if (!release?.proposalPublicId || release.proposalPublicId === input.proposalPublicId) return null;
+  const proposal = input.proposals.find((item) => item.publicId === release.proposalPublicId);
+  return proposal ? input.candidates.get(proposal.candidateId) ?? null : null;
+}
+
 export function selectReviewComparison(item: ReviewQueueItem): {
   previous: Candidate | null;
   proposed: Candidate | null;
