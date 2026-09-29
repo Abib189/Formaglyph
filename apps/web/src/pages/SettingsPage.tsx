@@ -1,21 +1,19 @@
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  Check,
-  Copy,
-  Database,
-  FigmaLogo,
-  GithubLogo,
-  HardDrives,
-  Key,
-  Palette,
-  PlugsConnected,
-  Robot,
-  ShieldCheck,
-  SignOut,
-  SlidersHorizontal,
-  Trash,
-  UserCircle,
-} from "@phosphor-icons/react";
+import { Check } from "@phosphor-icons/react/Check";
+import { Copy } from "@phosphor-icons/react/Copy";
+import { Database } from "@phosphor-icons/react/Database";
+import { FigmaLogo } from "@phosphor-icons/react/FigmaLogo";
+import { GithubLogo } from "@phosphor-icons/react/GithubLogo";
+import { HardDrives } from "@phosphor-icons/react/HardDrives";
+import { Key } from "@phosphor-icons/react/Key";
+import { Palette } from "@phosphor-icons/react/Palette";
+import { PlugsConnected } from "@phosphor-icons/react/PlugsConnected";
+import { Robot } from "@phosphor-icons/react/Robot";
+import { ShieldCheck } from "@phosphor-icons/react/ShieldCheck";
+import { SignOut } from "@phosphor-icons/react/SignOut";
+import { SlidersHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
+import { Trash } from "@phosphor-icons/react/Trash";
+import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import type { IntegrationName } from "../domain/types";
 import type { IssuedProjectToken, ProjectTokenSummary } from "../services/repositories/types";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
@@ -146,7 +144,7 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
             <PanelHeader number="02" title="Account and access" meta={repository.mode === "supabase" ? "AUTHENTICATED" : "LOCAL DEMO"} accent />
             <div className="account-profile">
               <div className="account-avatar"><UserCircle size={30} weight="thin" /></div>
-              <div className="account-identity"><span>Signed in as</span><strong>{signedInEmail}</strong><p>{repository.mode === "supabase" ? "Your secure email magic-link session is active." : "This address identifies the local demonstration session."}</p></div>
+              <div className="account-identity"><span>{repository.mode === "supabase" ? "Signed in as" : "Demo account"}</span><strong>{signedInEmail}</strong><p>{repository.mode === "supabase" ? "Your secure email magic-link session is active." : "This address identifies the local demonstration session."}</p></div>
               <div className="account-actions">
                 <button type="button" onClick={() => void copyAccountValue(signedInEmail, "email")} disabled={!user?.email}><Copy size={15} />{accountCopyState === "email" ? "Email copied" : "Copy email"}</button>
                 <button type="button" className="account-sign-out" onClick={() => void handleSignOut()} disabled={repository.mode !== "supabase" || signingOut}><SignOut size={15} />{repository.mode !== "supabase" ? "Demo session" : signingOut ? "Signing out…" : "Sign out"}</button>
@@ -158,7 +156,7 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
               <div><dt>Organization ID</dt><dd><code>{project?.organizationId ?? "Loading project…"}</code></dd></div>
               <div><dt>Project role</dt><dd><span className={`account-role ${role}`}>{role}</span></dd></div>
             </dl>
-            <p className="account-session-note" role="status" aria-live="polite">{accountCopyState === "error" ? "Clipboard access is unavailable." : accountError ?? "Your email comes from the authenticated Supabase session and cannot be changed from project settings."}</p>
+            <p className="account-session-note" role="status" aria-live="polite">{accountCopyState === "error" ? "Clipboard access is unavailable." : accountError ?? (repository.mode === "supabase" ? "Your email comes from the authenticated Supabase session and cannot be changed from project settings." : "This demo account is local to your browser.")}</p>
           </Panel>
 
           <Panel className="settings-panel" >

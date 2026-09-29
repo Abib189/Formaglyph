@@ -1,4 +1,5 @@
-import { GridFour, type Icon } from "@phosphor-icons/react";
+import { GridFour } from "@phosphor-icons/react/GridFour";
+import type { Icon } from "@phosphor-icons/react/lib";
 import type { PreviewWeight } from "../domain/types";
 
 export function WeightIcon({ Icon: IconComponent, weight = "regular", size = 44, className = "" }: { Icon: Icon; weight?: PreviewWeight; size?: number; className?: string }) {

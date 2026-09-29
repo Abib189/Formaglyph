@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight, EnvelopeSimple } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { EnvelopeSimple } from "@phosphor-icons/react/EnvelopeSimple";
 import { Navigate, useLocation } from "react-router-dom";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { useAuthState } from "../state/AuthState";

@@ -1,5 +1,15 @@
 import { useState, type ChangeEvent } from "react";
-import { ArrowClockwise, ArrowRight, CaretDown, Check, CheckCircle, DownloadSimple, FloppyDisk, HardDrives, UploadSimple, WarningCircle, X } from "@phosphor-icons/react";
+import { ArrowClockwise } from "@phosphor-icons/react/ArrowClockwise";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { CaretDown } from "@phosphor-icons/react/CaretDown";
+import { Check } from "@phosphor-icons/react/Check";
+import { CheckCircle } from "@phosphor-icons/react/CheckCircle";
+import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
+import { FloppyDisk } from "@phosphor-icons/react/FloppyDisk";
+import { HardDrives } from "@phosphor-icons/react/HardDrives";
+import { UploadSimple } from "@phosphor-icons/react/UploadSimple";
+import { WarningCircle } from "@phosphor-icons/react/WarningCircle";
+import { X } from "@phosphor-icons/react/X";
 import type { RouteName } from "../domain/types";
 import { SvgIcon } from "../components/IconPreview";
 import { PageFooter, PageIntro, Panel, PanelHeader } from "../components/Layout";

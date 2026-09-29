@@ -1,4 +1,9 @@
-import { CloudArrowUp, CurrencyCircleDollar, DownloadSimple, FolderSimple, LockKey, MagnifyingGlass } from "@phosphor-icons/react";
+import { CloudArrowUp } from "@phosphor-icons/react/CloudArrowUp";
+import { CurrencyCircleDollar } from "@phosphor-icons/react/CurrencyCircleDollar";
+import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
+import { FolderSimple } from "@phosphor-icons/react/FolderSimple";
+import { LockKey } from "@phosphor-icons/react/LockKey";
+import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
 import { formaglyphAssets } from "@formaglyph/icons";
 import type { Candidate, CatalogIcon, PersistedAppState } from "../domain/types";
 

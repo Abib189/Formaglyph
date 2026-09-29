@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, Copy, FigmaLogo, MagnifyingGlass, SlidersHorizontal, X } from "@phosphor-icons/react";
-import { CloudArrowUp } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { Check } from "@phosphor-icons/react/Check";
+import { Copy } from "@phosphor-icons/react/Copy";
+import { FigmaLogo } from "@phosphor-icons/react/FigmaLogo";
+import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
+import { SlidersHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
+import { X } from "@phosphor-icons/react/X";
+import { CloudArrowUp } from "@phosphor-icons/react/CloudArrowUp";
 import { iconResults, workspaceIconLibrary } from "../data/catalog";
 import { ConstructionIcon, SvgIcon, WeightIcon } from "../components/IconPreview";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";

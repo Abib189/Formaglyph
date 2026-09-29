@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
 import { useNavigate } from "react-router-dom";
 import { PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { repository } from "../services/repositories";

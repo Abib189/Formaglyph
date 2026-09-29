@@ -1,18 +1,16 @@
 import { useMemo, useState } from "react";
-import {
-  Archive,
-  ArrowRight,
-  Copy,
-  DownloadSimple,
-  MagnifyingGlass,
-  NotePencil,
-  Prohibit,
-  Plus,
-  RocketLaunch,
-  ShieldCheck,
-  X,
-} from "@phosphor-icons/react";
-import { CloudArrowUp } from "@phosphor-icons/react";
+import { Archive } from "@phosphor-icons/react/Archive";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { Copy } from "@phosphor-icons/react/Copy";
+import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
+import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
+import { NotePencil } from "@phosphor-icons/react/NotePencil";
+import { Prohibit } from "@phosphor-icons/react/Prohibit";
+import { Plus } from "@phosphor-icons/react/Plus";
+import { RocketLaunch } from "@phosphor-icons/react/RocketLaunch";
+import { ShieldCheck } from "@phosphor-icons/react/ShieldCheck";
+import { X } from "@phosphor-icons/react/X";
+import { CloudArrowUp } from "@phosphor-icons/react/CloudArrowUp";
 import { workspaceIconLibrary } from "../data/catalog";
 import type { RouteName, WorkspaceIcon, WorkspaceStatus } from "../domain/types";
 import { PageFooter, PageIntro, Panel, PanelHeader } from "../components/Layout";

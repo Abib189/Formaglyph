@@ -1,4 +1,4 @@
-import { CloudArrowUp } from "@phosphor-icons/react";
+import { CloudArrowUp } from "@phosphor-icons/react/CloudArrowUp";
 import type { AuditEvent, Candidate, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, ReviewQueueItem, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";

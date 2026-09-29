@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArrowClockwise, ArrowRight, Check, Clock, GridFour, Package, Plus, XCircle } from "@phosphor-icons/react";
+import { ArrowClockwise } from "@phosphor-icons/react/ArrowClockwise";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { Check } from "@phosphor-icons/react/Check";
+import { Clock } from "@phosphor-icons/react/Clock";
+import { GridFour } from "@phosphor-icons/react/GridFour";
+import { Package } from "@phosphor-icons/react/Package";
+import { Plus } from "@phosphor-icons/react/Plus";
+import { XCircle } from "@phosphor-icons/react/XCircle";
 import { useNavigate, useParams } from "react-router-dom";
 import type { Candidate, PreviewWeight, ReviewQueueItem } from "../domain/types";
 import { SvgIcon } from "../components/IconPreview";

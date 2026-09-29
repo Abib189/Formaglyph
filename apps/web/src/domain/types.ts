@@ -1,4 +1,4 @@
-import type { Icon } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react/lib";
 import type { IconRecord, Proposal, ReviewComment } from "@formaglyph/schema";
 
 export type { Proposal, ProposalStatus, ReviewComment } from "@formaglyph/schema";

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Play } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { Play } from "@phosphor-icons/react/Play";
 import { MorphIcon, type MorphHandle } from "morphicons/react";
 import type { Candidate } from "../domain/types";
 import { prepareMorphIcon, svgStrokeWidth } from "../services/morphicons";

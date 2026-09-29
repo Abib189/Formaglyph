@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { Icon } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react/lib";
 import type { PreviewWeight } from "../domain/types";
 
 export function renderIconSvg(IconComponent: Icon, weight: PreviewWeight = "regular") {
@@ -17,8 +17,12 @@ export function renderIconSvg(IconComponent: Icon, weight: PreviewWeight = "regu
 
 export async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Some browsers expose the Clipboard API while denying writes in this context.
+    }
   }
   const textarea = document.createElement("textarea");
   textarea.value = text;
