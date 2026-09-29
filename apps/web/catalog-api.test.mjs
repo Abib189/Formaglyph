@@ -123,6 +123,61 @@ describe("Formaglyph public API v1", () => {
     expect([badLimit.status, badCursor.status, badVariant.status, write.status]).toEqual([400, 400, 400, 405]);
   });
 
+  it("serves only paired live public releases through the private bucket and stops on visibility revocation", async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg>';
+    const sha256 = createHash("sha256").update(svg).digest("hex");
+    const asset = {
+      stable_id: "ico_live_cloud_upload", canonical_name: "cloud-upload", label: "Cloud upload",
+      category: "Files", description: "Upload a file to cloud storage.", directionality: "neutral",
+      licence: "MIT", version: "1.0.0", is_current: true,
+      byte_size: Buffer.byteLength(svg), sha256, storage_path: "org/project/release/regular.svg",
+      tags: ["cloud", "upload"], aliases: [{ locale: "en", value: "upload", reviewed: true }],
+    };
+    let rows = [{ ...asset, variant: "regular" }, { ...asset, variant: "solid", storage_path: "org/project/release/solid.svg" }];
+    let tamperAsset = false;
+    let upstreamFails = false;
+    const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (String(url).endsWith("/rest/v1/rpc/list_public_catalog_assets")) return new Response(JSON.stringify(rows), { status: upstreamFails ? 500 : 200 });
+      if (String(url).includes("/storage/v1/object/authenticated/published-assets/")) return new Response(tamperAsset ? `${svg} ` : svg, { status: 200 });
+      throw new Error(`unexpected URL ${url}`);
+    });
+    try {
+      const liveApi = await createCatalogApi({
+        catalogRoot: resolve(process.cwd(), "../../packages/icons/assets"),
+        publicCatalog: { supabaseUrl: "https://project.supabase.co", publishableKey: "sb_publishable_test" },
+      });
+      const listed = await request("/api/v1/icons?q=cloud%20upload&variant=regular", {}, liveApi);
+      expect(listed.status).toBe(200);
+      expect(listed.headers.get("cache-control")).toBe("no-store");
+      expect(listed.json().data.some((item) => item.stableId === asset.stable_id)).toBe(true);
+      const detail = await request(`/api/v1/icons/${asset.stable_id}`, {}, liveApi);
+      expect(detail.json().variants.map((item) => item.variant)).toEqual(["regular", "solid"]);
+      expect(detail.text()).not.toContain("storagePath");
+      const delivered = await request(`/api/v1/icons/${asset.stable_id}/1.0.0/regular.svg`, {}, liveApi);
+      expect(delivered.status).toBe(200);
+      expect(delivered.text()).toBe(svg);
+      expect(delivered.headers.get("cache-control")).toBe("no-store");
+      expect(fetcher.mock.calls.some(([url]) => String(url).includes("/object/public/"))).toBe(false);
+
+      tamperAsset = true;
+      const tampered = await request(`/api/v1/icons/${asset.stable_id}/1.0.0/regular.svg`, {}, liveApi);
+      expect(tampered.status).toBe(502);
+      tamperAsset = false;
+
+      rows = [{ ...asset, variant: "regular" }];
+      const incomplete = await request("/api/v1/icons?q=cloud%20upload", {}, liveApi);
+      expect(incomplete.json().data.some((item) => item.stableId === asset.stable_id)).toBe(false);
+      rows = [];
+      const revoked = await request(`/api/v1/icons/${asset.stable_id}/1.0.0/regular.svg`, {}, liveApi);
+      expect(revoked.status).toBe(404);
+      upstreamFails = true;
+      const unavailable = await request("/api/v1/icons", {}, liveApi);
+      expect(unavailable.status).toBe(503);
+    } finally {
+      fetcher.mockRestore();
+    }
+  });
+
   it("requires a project token and returns a deterministic human handoff URL", async () => {
     const protectedApi = await createCatalogApi({
       catalogRoot: resolve(process.cwd(), "../../packages/icons/assets"),

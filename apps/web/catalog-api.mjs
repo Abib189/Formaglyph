@@ -105,14 +105,67 @@ function publicOrigin(request, url) {
 }
 
 function serializeAsset(asset, origin) {
-  const { path: _path, ...metadata } = asset;
+  const { path: _path, storagePath: _storagePath, ...metadata } = asset;
   return { ...metadata, assetUrl: new URL(assetPath(asset), origin).toString() };
+}
+
+function publicCatalogAsset(row) {
+  if (!row || typeof row !== "object"
+    || !/^ico_[a-z0-9_]+$/.test(row.stable_id)
+    || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.canonical_name)
+    || !["regular", "solid"].includes(row.variant)
+    || !/^\d+\.\d+\.\d+$/.test(row.version)
+    || !/^[a-f0-9]{64}$/.test(row.sha256)
+    || !Number.isSafeInteger(row.byte_size) || row.byte_size < 1 || row.byte_size > 1_048_576
+    || typeof row.storage_path !== "string"
+    || !row.storage_path.split("/").every((segment) => segment && segment !== "." && segment !== "..")
+    || row.licence !== "MIT" || typeof row.is_current !== "boolean") {
+    throw new Error("invalid_public_catalog_asset");
+  }
+  const directionality = { neutral: "neutral", ltr: "ltr-specific", rtl: "rtl-specific", mirrored: "mirrored-safe" }[row.directionality];
+  if (!directionality) throw new Error("invalid_public_catalog_directionality");
+  return {
+    stableId: row.stable_id,
+    name: row.canonical_name,
+    label: row.label,
+    category: row.category,
+    description: row.description,
+    tags: Array.isArray(row.tags) ? row.tags.filter((tag) => typeof tag === "string") : [],
+    aliases: Array.isArray(row.aliases) ? row.aliases.filter((alias) => alias?.reviewed === true && typeof alias.value === "string").map((alias) => ({ locale: alias.locale, value: alias.value, reviewed: true })) : [],
+    directionality,
+    licence: "MIT",
+    provenance: { kind: "human-reviewed", source: "Formaglyph project release", disclosed: true },
+    variant: row.variant,
+    version: row.version,
+    isCurrent: row.is_current,
+    bytes: row.byte_size,
+    sha256: row.sha256,
+    storagePath: row.storage_path,
+  };
+}
+
+function pairedPublicAssets(rows, bundledAssets) {
+  if (!Array.isArray(rows) || rows.length > 10_000) throw new Error("invalid_public_catalog_response");
+  const bundledIds = new Set(bundledAssets.map((asset) => asset.stableId));
+  const groups = new Map();
+  for (const row of rows) {
+    const asset = publicCatalogAsset(row);
+    if (bundledIds.has(asset.stableId)) throw new Error("public_catalog_id_collision");
+    const key = `${asset.stableId}/${asset.version}`;
+    const group = groups.get(key) ?? new Map();
+    if (group.has(asset.variant)) throw new Error("duplicate_public_catalog_variant");
+    group.set(asset.variant, asset);
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .filter((group) => group.has("regular") && group.has("solid"))
+    .flatMap((group) => [group.get("regular"), group.get("solid")]);
 }
 
 function openApi(origin) {
   return {
     openapi: "3.1.0",
-    info: { title: "Formaglyph API", version: "1.1.0", description: "Public access to the MIT-licensed Formaglyph Core catalog plus scoped project draft handoff." },
+    info: { title: "Formaglyph API", version: "1.1.0", description: "Public access to the MIT-licensed Formaglyph Core and reviewed public project releases, plus scoped project draft handoff." },
     servers: [{ url: new URL("/api/v1", origin).toString().replace(/\/$/, "") }],
     components: {
       securitySchemes: {
@@ -160,11 +213,32 @@ function openApi(origin) {
   };
 }
 
-export async function createCatalogApi({ catalogRoot, agentDraft }) {
+export async function createCatalogApi({ catalogRoot, agentDraft, publicCatalog }) {
   const canonicalRoot = resolve(catalogRoot);
   const rawManifest = await readFile(resolve(canonicalRoot, "manifest.json"), "utf8");
   const manifest = JSON.parse(rawManifest);
   const manifestEtag = `"${createHash("sha256").update(rawManifest).digest("hex")}"`;
+  const catalogUrl = publicCatalog?.supabaseUrl?.replace(/\/$/, "");
+  const catalogKey = publicCatalog?.publishableKey;
+
+  async function loadPublicAssets() {
+    if (!catalogUrl || !catalogKey) return [];
+    const upstream = await fetch(`${catalogUrl}/rest/v1/rpc/list_public_catalog_assets`, {
+      headers: { apikey: catalogKey, authorization: `Bearer ${catalogKey}`, accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!upstream.ok) throw new Error(`public_catalog_upstream_${upstream.status}`);
+    return pairedPublicAssets(await upstream.json(), manifest.assets);
+  }
+
+  async function loadAssets(request, response) {
+    try {
+      return [...manifest.assets, ...await loadPublicAssets()];
+    } catch {
+      sendError(request, response, 503, "public_catalog_unavailable", "The public catalog is temporarily unavailable.");
+      return null;
+    }
+  }
 
   return async function handleCatalogApi(request, response, url) {
     if (!url.pathname.startsWith("/api/v1")) return false;
@@ -271,13 +345,15 @@ export async function createCatalogApi({ catalogRoot, agentDraft }) {
 
     const origin = publicOrigin(request, url);
     if (url.pathname === "/api/v1" || url.pathname === "/api/v1/") {
+      const assets = await loadAssets(request, response);
+      if (!assets) return true;
       sendJson(request, response, 200, {
         name: "Formaglyph API",
         version: API_VERSION,
         access: "public-catalog-with-scoped-draft-handoff",
-        catalogue: { name: manifest.name, version: manifest.version, concepts: manifest.conceptCount, assets: manifest.assetCount, licence: manifest.licence },
+        catalogue: { name: "Formaglyph public catalog", version: manifest.version, concepts: new Set(assets.map((asset) => asset.stableId)).size, assets: assets.length, licence: manifest.licence },
         links: { icons: new URL("/api/v1/icons", origin), manifest: new URL("/api/v1/manifest", origin), openapi: new URL("/api/v1/openapi.json", origin), mcp: new URL("/mcp", origin), agentDrafts: new URL("/api/v1/agent/drafts", origin) },
-      }, JSON_CACHE);
+      }, catalogUrl ? "no-store" : JSON_CACHE);
       return true;
     }
 
@@ -287,11 +363,15 @@ export async function createCatalogApi({ catalogRoot, agentDraft }) {
     }
 
     if (url.pathname === "/api/v1/manifest") {
-      if (request.headers["if-none-match"] === manifestEtag) {
-        response.writeHead(304, { ...apiHeaders(JSON_CACHE), etag: manifestEtag });
+      const assets = await loadAssets(request, response);
+      if (!assets) return true;
+      const cacheControl = catalogUrl ? "no-store" : JSON_CACHE;
+      const etag = catalogUrl ? `"${createHash("sha256").update(JSON.stringify(assets)).digest("hex")}"` : manifestEtag;
+      if (request.headers["if-none-match"] === etag) {
+        response.writeHead(304, { ...apiHeaders(cacheControl), etag });
         response.end();
       } else {
-        sendJson(request, response, 200, { ...manifest, assets: manifest.assets.map((asset) => serializeAsset(asset, origin)) }, JSON_CACHE, { etag: manifestEtag });
+        sendJson(request, response, 200, { ...manifest, name: "Formaglyph public catalog", conceptCount: new Set(assets.map((asset) => asset.stableId)).size, assetCount: assets.length, assets: assets.map((asset) => serializeAsset(asset, origin)) }, cacheControl, { etag });
       }
       return true;
     }
@@ -308,7 +388,10 @@ export async function createCatalogApi({ catalogRoot, agentDraft }) {
       if (offset === null) return sendError(request, response, 400, "invalid_cursor", "cursor is not valid for API v1."), true;
       if (variant && !["regular", "solid"].includes(variant)) return sendError(request, response, 400, "invalid_variant", "variant must be regular or solid."), true;
 
-      const matches = manifest.assets
+      const assets = await loadAssets(request, response);
+      if (!assets) return true;
+      const matches = assets
+        .filter((asset) => asset.isCurrent !== false)
         .filter((asset) => !category || normalize(asset.category) === normalize(category))
         .filter((asset) => !variant || asset.variant === variant)
         .map((asset) => ({ asset, score: scoreAsset(query, asset) }))
@@ -320,27 +403,52 @@ export async function createCatalogApi({ catalogRoot, agentDraft }) {
         data: page.map(({ asset, score }) => ({ ...serializeAsset(asset, origin), relevance: score })),
         page: { total: matches.length, limit, nextCursor: nextOffset < matches.length ? encodeCursor(nextOffset) : null },
         query: { q: query, category, variant },
-      }, JSON_CACHE);
+      }, catalogUrl ? "no-store" : JSON_CACHE);
       return true;
     }
 
     const svgMatch = url.pathname.match(/^\/api\/v1\/icons\/(ico_[a-z0-9_]+)\/([0-9]+\.[0-9]+\.[0-9]+)\/(regular|solid)\.svg$/);
     if (svgMatch) {
       const [, stableId, version, variant] = svgMatch;
-      const asset = manifest.assets.find((item) => item.stableId === stableId && item.version === version && item.variant === variant);
+      let asset = manifest.assets.find((item) => item.stableId === stableId && item.version === version && item.variant === variant);
+      if (!asset) {
+        const assets = await loadAssets(request, response);
+        if (!assets) return true;
+        asset = assets.find((item) => item.stableId === stableId && item.version === version && item.variant === variant);
+      }
       if (!asset) return sendError(request, response, 404, "asset_not_found", "No published asset matches that stable ID, version, and variant."), true;
-      const relativePath = asset.path.replace(/^assets\//, "");
-      const filePath = resolve(canonicalRoot, relativePath);
-      if (!filePath.startsWith(`${canonicalRoot}${sep}`)) return sendError(request, response, 500, "invalid_manifest_path", "The release manifest contains an invalid asset path."), true;
       const etag = `"${asset.sha256}"`;
+      const cacheControl = asset.storagePath ? "no-store" : IMMUTABLE_CACHE;
       if (request.headers["if-none-match"] === etag) {
-        response.writeHead(304, { ...apiHeaders(IMMUTABLE_CACHE), etag });
+        response.writeHead(304, { ...apiHeaders(cacheControl), etag });
         response.end();
         return true;
       }
-      const svg = await readFile(filePath);
+      let svg;
+      if (asset.storagePath) {
+        try {
+          const objectUrl = `${catalogUrl}/storage/v1/object/authenticated/published-assets/${asset.storagePath.split("/").map(encodeURIComponent).join("/")}`;
+          const upstream = await fetch(objectUrl, {
+            headers: { apikey: catalogKey, authorization: `Bearer ${catalogKey}` },
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!upstream.ok) throw new Error("public_asset_download_failed");
+          svg = Buffer.from(await upstream.arrayBuffer());
+          if (svg.byteLength !== asset.bytes || createHash("sha256").update(svg).digest("hex") !== asset.sha256) {
+            throw new Error("public_asset_hash_mismatch");
+          }
+        } catch {
+          sendError(request, response, 502, "public_asset_unavailable", "The published SVG could not be verified.");
+          return true;
+        }
+      } else {
+        const relativePath = asset.path.replace(/^assets\//, "");
+        const filePath = resolve(canonicalRoot, relativePath);
+        if (!filePath.startsWith(`${canonicalRoot}${sep}`)) return sendError(request, response, 500, "invalid_manifest_path", "The release manifest contains an invalid asset path."), true;
+        svg = await readFile(filePath);
+      }
       response.writeHead(200, {
-        ...apiHeaders(IMMUTABLE_CACHE),
+        ...apiHeaders(cacheControl),
         "content-type": "image/svg+xml; charset=utf-8",
         "content-length": svg.byteLength,
         "content-security-policy": "default-src 'none'; sandbox",
@@ -353,7 +461,11 @@ export async function createCatalogApi({ catalogRoot, agentDraft }) {
 
     const detailMatch = url.pathname.match(/^\/api\/v1\/icons\/(ico_[a-z0-9_]+)$/);
     if (detailMatch) {
-      const variants = manifest.assets.filter((asset) => asset.stableId === detailMatch[1]);
+      const assets = manifest.assets.some((asset) => asset.stableId === detailMatch[1])
+        ? manifest.assets : await loadAssets(request, response);
+      if (!assets) return true;
+      const variants = assets.filter((asset) => asset.stableId === detailMatch[1])
+        .sort((a, b) => Number(b.isCurrent === true) - Number(a.isCurrent === true) || b.version.localeCompare(a.version) || a.variant.localeCompare(b.variant));
       if (!variants.length) return sendError(request, response, 404, "icon_not_found", "No published icon uses that stable ID."), true;
       sendJson(request, response, 200, {
         stableId: variants[0].stableId,
@@ -366,7 +478,7 @@ export async function createCatalogApi({ catalogRoot, agentDraft }) {
         directionality: variants[0].directionality,
         licence: variants[0].licence,
         variants: variants.map((asset) => serializeAsset(asset, origin)),
-      }, JSON_CACHE);
+      }, catalogUrl ? "no-store" : JSON_CACHE);
       return true;
     }
 

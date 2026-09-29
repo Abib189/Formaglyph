@@ -1,4 +1,3 @@
-import { CloudArrowUp } from "@phosphor-icons/react/CloudArrowUp";
 import type { AuditEvent, Candidate, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, ReviewQueueItem, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
@@ -184,34 +183,45 @@ export class SupabaseRepository implements FormaglyphRepository {
     const { data: aliases, error: aliasError } = iconIds.length ? await client.from("icon_aliases").select("*").in("icon_id", iconIds) : { data: [], error: null };
     if (aliasError) throw aliasError;
 
-    return icons.flatMap((icon) => {
+    const publishedVersions = icons.flatMap((icon) => {
       const current = versions.find((item) => item.id === icon.current_version_id);
-      if (!current) return [];
-      return versions.filter((item) => item.icon_id === icon.id && item.version === current.version).map((version) => {
+      if (!current || icon.licence !== "MIT") return [];
+      const release = versions.filter((item) => item.icon_id === icon.id && item.version === current.version);
+      if (!release.some((item) => item.variant === "regular") || !release.some((item) => item.variant === "solid")) return [];
+      return release.map((version) => ({ icon, version }));
+    });
+
+    return (await Promise.all(publishedVersions.map(async ({ icon, version }) => {
         const asset = assets.find((item) => item.id === (version.optimized_asset_id ?? version.source_asset_id));
-        const assetUrl = asset ? client.storage.from(asset.storage_bucket).getPublicUrl(asset.storage_path).data.publicUrl : undefined;
-        return {
+        if (!asset || asset.storage_bucket !== "published-assets" || asset.sha256 !== version.content_hash) return null;
+        const { data: blob, error: downloadError } = await client.storage.from("published-assets").download(asset.storage_path);
+        if (downloadError) throw new Error(`Could not load ${icon.canonical_name} ${version.variant}: ${downloadError.message}`);
+        const sourceSvg = await blob.text();
+        if (await sha256(sourceSvg) !== version.content_hash) throw new Error(`The published ${icon.canonical_name} ${version.variant} asset failed its content-hash check.`);
+        const validated = validateCandidateAsset({ id: version.id, name: icon.canonical_name, description: icon.description, svg: sourceSvg, issue: null, variant: version.variant as "regular" | "solid" });
+        if (!validated.normalizedSvg) throw new Error(`The published ${icon.canonical_name} ${version.variant} SVG could not be validated.`);
+        const reviewedAliases = aliases.filter((item) => item.icon_id === icon.id && item.reviewed);
+        const catalogIcon: CatalogIcon = {
           id: version.id,
           stableId: icon.stable_id,
           name: icon.canonical_name,
           label: icon.label,
           category: icon.category,
           description: icon.description,
-          Icon: CloudArrowUp,
-          tags: aliases.filter((item) => item.icon_id === icon.id).map((item) => item.alias),
-          aliases: aliases.filter((item) => item.icon_id === icon.id).map((item) => ({ locale: item.locale, value: item.alias, reviewed: item.reviewed })),
+          tags: reviewedAliases.map((item) => item.alias),
+          aliases: reviewedAliases.map((item) => ({ locale: item.locale, value: item.alias, reviewed: true })),
           version: version.version,
           variant: version.variant === "solid" ? "solid" as const : "regular" as const,
           previewWeight: version.variant === "solid" ? "fill" as const : "regular" as const,
           directionality: icon.directionality === "ltr" ? "ltr-specific" : icon.directionality === "rtl" ? "rtl-specific" : icon.directionality === "mirrored" ? "mirrored-safe" : "neutral",
           licence: "MIT",
           status: "published",
-          provenance: { kind: "original", source: "Formaglyph", disclosed: true },
-          assetUrl,
+          provenance: { kind: "human-reviewed", source: "Formaglyph project publication", disclosed: true },
+          svg: validated.normalizedSvg,
           contentHash: version.content_hash,
         };
-      });
-    });
+        return catalogIcon;
+    }))).filter((icon): icon is CatalogIcon => icon !== null);
   }
 
   async loadWorkspace(projectSlug: string, draftId?: string | null, proposalId?: string | null): Promise<WorkspaceData | null> {

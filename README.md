@@ -31,7 +31,7 @@ This is an early production foundation, not yet the complete hosted platform or 
 - Safe SVG import, generation job cancellation and retry, prompt-hash provenance, optional prompt retention, and audited Supabase job transitions.
 - Local-memory and Supabase repository adapters selected with `VITE_DATA_MODE`.
 - Invite-only magic-link authentication, route guards, session restoration, and transactional onboarding.
-- PostgreSQL tables, explicit Data API grants, RLS, private/public Storage policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
+- PostgreSQL tables, explicit Data API grants, RLS, private source and published Storage buckets with scoped download policies, workflow RPCs, immutable audit events, migrations, seed data, and pgTAP tests.
 - A permission-aware release changelog and audit trail with deprecation reasons and immutable content hashes.
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
@@ -106,7 +106,7 @@ The production app is [formaglyph.com](https://formaglyph.com/explore). The Rail
 
 ## Use the public catalog API
 
-The versioned API is available at [`/api/v1`](https://formaglyph.com/api/v1). Public catalog routes expose only the source-controlled, MIT-licensed Formaglyph Core release. `/agent/drafts` accepts a scoped project token and creates only a text brief with a human handoff URL.
+The versioned API is available at [`/api/v1`](https://formaglyph.com/api/v1). Public catalog routes combine the source-controlled, MIT-licensed Formaglyph Core release with complete, reviewed Regular/Solid releases from public Supabase projects. Private and incomplete project releases are excluded. `/agent/drafts` accepts a scoped project token and creates only a text brief with a human handoff URL.
 
 ```bash
 curl "https://formaglyph.com/api/v1/icons?q=payment%20successful&variant=regular"

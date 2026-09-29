@@ -18,9 +18,10 @@ export interface IconAsset {
   aliases: IconAlias[];
   directionality: "neutral" | "ltr-specific" | "rtl-specific" | "mirrored-safe";
   licence: "MIT";
-  provenance: { kind: "original"; source: string; sourceRevision?: string; disclosed: true };
+  provenance: { kind: "original" | "human-reviewed"; source: string; sourceRevision?: string; disclosed: true };
   variant: IconVariant;
   version: string;
+  isCurrent?: boolean;
   bytes: number;
   sha256: string;
   assetUrl: string;

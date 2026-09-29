@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(66);
+select plan(76);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
@@ -29,8 +29,17 @@ select extensions.is(
 );
 select extensions.is(
   (select count(*)::integer from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname like 'published_assets_%' and cmd = 'SELECT'),
-  0,
-  'public asset URLs work without allowing storage object listing'
+  2,
+  'published assets have separate member and public download policies'
+);
+select extensions.is((select public from storage.buckets where id = 'published-assets'), false, 'published storage is private');
+select extensions.ok(
+  (select qual like '%allow_any_operation%' from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'published_assets_member_download'),
+  'member reads are limited to authenticated object downloads'
+);
+select extensions.ok(
+  (select qual like '%allow_any_operation%' from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'published_assets_public_download'),
+  'public reads are limited to authenticated object downloads'
 );
 
 select extensions.throws_ok(
@@ -235,6 +244,59 @@ select extensions.is(
   2,
   'publication stores immutable Regular and Solid versions together'
 );
+select extensions.ok(
+  has_function_privilege('anon', 'public.list_public_catalog_assets()', 'execute'),
+  'anonymous catalog callers can request eligible public assets'
+);
+insert into storage.objects (bucket_id, name)
+select storage_bucket, storage_path from public.asset_blobs
+where id in ('66666666-6666-4666-8666-666666666666', '19191919-1919-4919-8919-191919191919', '20202020-2020-4020-8020-202020202020');
+reset role;
+set local role anon;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', 'anon', true);
+select set_config('storage.operation', 'object.get_authenticated', true);
+select extensions.is(
+  (select count(*)::integer from storage.objects where bucket_id = 'published-assets'),
+  2,
+  'anonymous authenticated-download requests see only paired public published objects'
+);
+select set_config('storage.operation', 'object.list', true);
+select extensions.is(
+  (select count(*)::integer from storage.objects where bucket_id = 'published-assets'),
+  0,
+  'anonymous callers cannot list private-bucket object names'
+);
+select set_config('storage.operation', 'object.get_authenticated', true);
+select extensions.is(
+  (select count(*)::integer from public.list_public_catalog_assets()),
+  2,
+  'a complete public release exposes exactly Regular and Solid while an incomplete legacy release stays out'
+);
+reset role;
+update public.projects set visibility = 'private' where id = '22222222-2222-4222-8222-222222222222';
+set local role anon;
+select extensions.is(
+  (select count(*)::integer from public.list_public_catalog_assets()),
+  0,
+  'changing a project to private removes its assets from anonymous catalog reads'
+);
+select extensions.is(
+  (select count(*)::integer from storage.objects where bucket_id = 'published-assets'),
+  0,
+  'changing a project to private also removes anonymous Storage download access'
+);
+reset role;
+update public.projects set visibility = 'public' where id = '22222222-2222-4222-8222-222222222222';
+set local role anon;
+select extensions.is(
+  (select count(*)::integer from public.list_public_catalog_assets()),
+  2,
+  'restoring public visibility restores only the complete paired release'
+);
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
 select extensions.is((select count(*)::integer from public.icons where status = 'published'), 2, 'published icon is visible in the catalog');
 select extensions.is(
   (select status from public.deprecate_icon(

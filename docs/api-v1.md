@@ -1,6 +1,6 @@
 # Formaglyph API v1
 
-Public routes provide read-only access to the MIT-licensed Formaglyph Core release. One protected route accepts a scoped Formaglyph project token and creates a text-only draft handoff.
+Public routes provide read-only access to the MIT-licensed Formaglyph Core release and complete, reviewed Regular/Solid releases from public projects. Private projects and incomplete releases are never included. One protected route accepts a scoped Formaglyph project token and creates a text-only draft handoff.
 
 Production base URL:
 
@@ -15,12 +15,12 @@ https://formaglyph.com/api/v1
 | `GET` / `HEAD` | `/api/v1` | Service and release discovery |
 | `GET` / `HEAD` | `/api/v1/icons` | Search, filter, and paginate assets |
 | `GET` / `HEAD` | `/api/v1/icons/{stableId}` | Read concept metadata and variants |
-| `GET` / `HEAD` | `/api/v1/icons/{stableId}/{version}/{variant}.svg` | Fetch an immutable SVG |
-| `GET` / `HEAD` | `/api/v1/manifest` | Fetch the content-hashed release manifest |
+| `GET` / `HEAD` | `/api/v1/icons/{stableId}/{version}/{variant}.svg` | Fetch a versioned SVG |
+| `GET` / `HEAD` | `/api/v1/manifest` | Fetch the current public catalog manifest |
 | `GET` / `HEAD` | `/api/v1/openapi.json` | Fetch the OpenAPI 3.1 description |
 | `POST` | `/api/v1/agent/drafts` | Create a text-only draft and human handoff URL |
 
-`/icons` accepts `q`, `category`, `variant=regular|solid`, `limit=1..100`, and an opaque `cursor`. Search uses canonical names, reviewed aliases, tags, and descriptions. Responses expose permissive CORS headers. Immutable SVG responses use their SHA-256 content hash as the ETag and a one-year immutable cache policy.
+`/icons` accepts `q`, `category`, `variant=regular|solid`, `limit=1..100`, and an opaque `cursor`. Search uses canonical names, reviewed aliases, tags, and descriptions. Responses expose permissive CORS headers. The bundled Core SVGs use their SHA-256 ETag and a one-year immutable cache policy. Database-backed project SVGs are fetched through a private Storage bucket, verified against their published SHA-256 hash, and served with `no-store` so changing project visibility revokes public API access immediately. The combined manifest and catalog responses also use `no-store`.
 
 Example:
 

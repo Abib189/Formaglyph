@@ -1,6 +1,6 @@
 # Formaglyph CLI and MCP
 
-Formaglyph exposes the original, MIT-licensed Core catalog to people, scripts, and AI agents. Public catalog reads stay keyless. A separate scoped token can create a text-only project draft for human completion.
+Formaglyph exposes its original, MIT-licensed Core catalog and complete releases from public projects to people, scripts, and AI agents. Public catalog reads stay keyless. A separate scoped token can create a text-only project draft for human completion.
 
 ## Hosted MCP
 
@@ -10,7 +10,7 @@ The production Streamable HTTP endpoint is:
 https://formaglyph.com/mcp
 ```
 
-Use that URL in clients that accept a remote MCP server URL. No key is required for the public Core catalog. The endpoint accepts stateless MCP `POST` requests, rejects unapproved browser origins, and does not support legacy SSE access.
+Use that URL in clients that accept a remote MCP server URL. No key is required for the public catalog. The endpoint accepts stateless MCP `POST` requests, rejects unapproved browser origins, and does not support legacy SSE access.
 
 Generic remote client configuration:
 
@@ -27,7 +27,7 @@ Generic remote client configuration:
 ### Tools
 
 - `search_icons`: intent, alias, tag, category, and variant search with cursor pagination.
-- `get_icon`: provenance, licence, directionality, variants, hashes, and immutable URLs for one stable ID.
+- `get_icon`: provenance, licence, directionality, variants, hashes, and versioned URLs for one stable ID.
 - `get_icon_svg`: retrieves a selected SVG as an embedded MCP resource.
 - `list_categories`: lists categories in the current release.
 - `propose_icon_draft`: creates a text-only draft and returns a deep link for a human to create or import geometry.
@@ -94,7 +94,7 @@ SVG export refuses to overwrite an existing file unless `--force` is explicit. U
 
 ## Security boundary
 
-- MCP and CLI catalog tools read only the source-controlled public Core release.
+- MCP and CLI catalog tools read only the Core release and complete, reviewed releases from public projects. Private or incomplete releases are excluded.
 - A project token authorizes only a new text brief in its single project. It does not expose existing drafts, reviews, audit records, or unpublished assets.
 - Project tokens are stored hashed, expire in 1-90 days, can be revoked immediately, and write a transactional audit event when issued, used, or revoked.
 - The hosted endpoint validates browser `Origin` headers and uses HTTPS.

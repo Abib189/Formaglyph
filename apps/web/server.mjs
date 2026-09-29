@@ -21,6 +21,10 @@ const handleCatalogApi = await createCatalogApi({
     supabaseUrl: process.env.VITE_SUPABASE_URL,
     publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   },
+  publicCatalog: {
+    supabaseUrl: process.env.VITE_SUPABASE_URL,
+    publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  },
 });
 
 const contentTypes = new Map([
