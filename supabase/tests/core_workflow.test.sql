@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(76);
+select plan(82);
 
 select extensions.has_table('public', 'organizations', 'organizations exists');
 select extensions.has_table('public', 'icons', 'icons exists');
@@ -295,9 +295,34 @@ select extensions.is(
   'restoring public visibility restores only the complete paired release'
 );
 reset role;
+select extensions.ok(
+  not has_function_privilege('anon', 'public.set_project_visibility(uuid,text)', 'execute'),
+  'anonymous callers cannot change project visibility'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.sub', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', true);
+select extensions.throws_ok(
+  $$select public.set_project_visibility('22222222-2222-4222-8222-222222222222', 'private')$$,
+  '42501', 'admin permission required', 'contributors cannot change project visibility'
+);
+reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', true);
 select extensions.is((select count(*)::integer from public.icons where status = 'published'), 2, 'published icon is visible in the catalog');
+select extensions.is(
+  (select visibility from public.set_project_visibility('22222222-2222-4222-8222-222222222222', 'private')),
+  'private', 'an admin can make a project private'
+);
+select extensions.is(
+  (select metadata->>'previous' from public.audit_events where action = 'project.visibility_changed' order by created_at desc limit 1),
+  'public', 'visibility changes write a transactional audit record'
+);
+select extensions.throws_ok(
+  $$select public.set_project_visibility('22222222-2222-4222-8222-222222222222', 'public')$$,
+  '22023',
+  'all published icons need a validated MIT-licensed Regular and Solid pair before this project can be public',
+  'an incomplete legacy release blocks public visibility'
+);
 select extensions.is(
   (select status from public.deprecate_icon(
     '99999999-9999-4999-8999-999999999999',
@@ -310,6 +335,10 @@ select extensions.is(
   (select metadata->>'reason' from public.audit_events where action = 'icon.deprecated' order by created_at desc limit 1),
   'Replaced by the reviewed check-circle family.',
   'deprecation audit events retain the required reason'
+);
+select extensions.is(
+  (select visibility from public.set_project_visibility('22222222-2222-4222-8222-222222222222', 'public')),
+  'public', 'an admin can expose the project after incomplete releases are removed'
 );
 reset role;
 

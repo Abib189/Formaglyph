@@ -38,7 +38,7 @@ const integrationDetails: Record<IntegrationName, { label: string; description: 
 };
 
 export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (value: boolean) => void }) {
-  const { state, updateSetting, role, project } = useAppState();
+  const { state, updateSetting, role, project, refreshWorkspace } = useAppState();
   const { user, signOut } = useAuthState();
   const { projectSlug = "core" } = useParams();
   const navigate = useNavigate();
@@ -51,6 +51,9 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
   const [issuedToken, setIssuedToken] = useState<IssuedProjectToken | null>(null);
   const [tokenBusy, setTokenBusy] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [visibilityBusy, setVisibilityBusy] = useState(false);
+  const [visibilityError, setVisibilityError] = useState<string | null>(null);
+  const [visibilitySuccess, setVisibilitySuccess] = useState<string | null>(null);
   const publicOrigin = import.meta.env.DEV ? "https://formaglyph.com" : window.location.origin;
   const publicApiEndpoint = `${publicOrigin}/api/v1`;
   const publicMcpEndpoint = `${publicOrigin}/mcp`;
@@ -127,6 +130,28 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
     }
   };
 
+  const changeVisibility = async () => {
+    if (repository.mode !== "supabase" || role !== "admin" || !project) return;
+    const next = project.visibility === "public" ? "private" : "public";
+    if (next === "public" && !window.confirm("Make this project public? Every complete published Regular/Solid release will become available through Explore, the REST API, and MCP. Drafts and review records remain private.")) return;
+    setVisibilityBusy(true);
+    setVisibilityError(null);
+    setVisibilitySuccess(null);
+    try {
+      await repository.setProjectVisibility(projectSlug, next);
+      try {
+        await refreshWorkspace();
+        setVisibilitySuccess(next === "public" ? "Project is public. Complete published icons are available in the public catalog." : "Project is private. Public access to its releases has been revoked.");
+      } catch {
+        setVisibilitySuccess("Visibility changed, but the workspace could not refresh. Reload this page to see the new status.");
+      }
+    } catch (error) {
+      setVisibilityError(error instanceof Error ? error.message : "Could not change project visibility.");
+    } finally {
+      setVisibilityBusy(false);
+    }
+  };
+
   return (
     <main className="page-shell settings-page">
       <PageIntro number="01" title="Configure Formaglyph." aside={<div className="settings-scope"><span>Storage boundary</span><strong>{repository.mode === "supabase" ? "Supabase project" : "Local browser"}</strong><p>{repository.mode === "supabase" ? "Project records use RLS-backed PostgreSQL; appearance remains on this device." : "Preferences and demo connection states stay on this device."}</p></div>}>
@@ -188,9 +213,9 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
           <Panel className="settings-panel">
             <div id="agents" className="settings-anchor" />
             <PanelHeader number="05" title="Agents and API" meta="MCP + API LIVE" accent />
-            <div className="connection-field"><label>Public REST endpoint</label><div><code>{publicApiEndpoint}</code><button onClick={() => window.open(publicApiEndpoint, "_blank", "noopener,noreferrer")}>Open</button></div><p>Read-only Formaglyph Core search, manifests, metadata, OpenAPI, and immutable SVG delivery. No key required.</p></div>
+            <div className="connection-field"><label>Public REST endpoint</label><div><code>{publicApiEndpoint}</code><button onClick={() => window.open(publicApiEndpoint, "_blank", "noopener,noreferrer")}>Open</button></div><p>Read-only Core and reviewed public-project catalog, metadata, OpenAPI, and versioned SVG delivery. No key required.</p></div>
             <SettingRow icon={<PlugsConnected size={19} />} title="Public MCP server" description="Live read-only tools, resources, and prompts for agent clients."><Toggle disabled checked onChange={() => undefined} label="Public MCP server enabled" /></SettingRow>
-            <div className="connection-field"><label>Streamable HTTP MCP endpoint</label><div><code>{publicMcpEndpoint}</code><button onClick={() => void copyMcpEndpoint()}>{mcpCopyState === "copied" ? <><Check size={13} />Copied</> : <><Copy size={13} />{mcpCopyState === "error" ? "Copy failed" : "Copy"}</>}</button></div><p>Connect an MCP client directly. Search, inspect, and retrieve public Core SVGs without a key; project data is never exposed.</p></div>
+            <div className="connection-field"><label>Streamable HTTP MCP endpoint</label><div><code>{publicMcpEndpoint}</code><button onClick={() => void copyMcpEndpoint()}>{mcpCopyState === "copied" ? <><Check size={13} />Copied</> : <><Copy size={13} />{mcpCopyState === "error" ? "Copy failed" : "Copy"}</>}</button></div><p>Connect an MCP client directly. Search and retrieve Core and complete public-project SVGs without a key; private project records stay protected.</p></div>
             <SettingRow icon={<Key size={19} />} title="Project token scope" description="Tokens can create text-only drafts. They cannot upload SVGs, submit, review, approve, publish, or read private records."><select disabled value="drafts:write"><option value="drafts:write">drafts:write</option></select></SettingRow>
             {repository.mode !== "supabase" ? (
               <div className="api-key-block"><div><strong>Project tokens</strong><p>Switch to the Supabase data mode to issue scoped credentials.</p></div><button className="secondary-action" disabled>Unavailable locally</button></div>
@@ -226,10 +251,14 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="data" className="settings-anchor" />
-            <PanelHeader number="07" title="Data and privacy" meta="DEVICE ONLY" />
+            <PanelHeader number="07" title="Data and privacy" meta={repository.mode === "supabase" ? "RLS BACKED" : "DEVICE ONLY"} />
+            <SettingRow icon={<ShieldCheck size={19} />} title="Project visibility" description={project?.visibility === "public" ? "Complete published releases are discoverable in Explore, the REST API, and MCP." : "Only project members can access published project releases."}>
+              <button className="secondary-action" type="button" disabled={repository.mode !== "supabase" || role !== "admin" || visibilityBusy || !project} onClick={() => void changeVisibility()}>{visibilityBusy ? "Updating…" : repository.mode !== "supabase" ? "Demo only" : role !== "admin" ? "Admin required" : project?.visibility === "public" ? "Make private" : "Make public"}</button>
+            </SettingRow>
+            {(visibilityError || visibilitySuccess) && <p className={visibilityError ? "token-error" : "account-session-note"} role="status" aria-live="polite">{visibilityError ?? visibilitySuccess}</p>}
             <SettingRow icon={<HardDrives size={19} />} title="Local backups" description="Keep a recoverable browser copy of drafts, reviews, and settings."><Toggle checked={state.settings.localBackups} onChange={(value) => updateSetting("localBackups", value)} label="Enable local backups" /></SettingRow>
             <SettingRow icon={<Database size={19} />} title="Anonymous diagnostics" description="Share non-content performance and error signals when a backend is connected."><Toggle checked={state.settings.anonymousDiagnostics} onChange={(value) => updateSetting("anonymousDiagnostics", value)} label="Share anonymous diagnostics" /></SettingRow>
-            <div className="privacy-note"><ShieldCheck size={21} /><div><strong>Private by default</strong><p>{repository.mode === "supabase" ? "Private project data is protected by membership-scoped RLS. The public MCP server can read only the published Core catalog." : "This demo stores data in local browser storage. Public MCP access reads the published Core catalog, never browser drafts."}</p></div></div>
+            <div className="privacy-note"><ShieldCheck size={21} /><div><strong>Private by default</strong><p>{repository.mode === "supabase" ? "Private projects, drafts, and reviews are protected by membership-scoped RLS. Public API and MCP reads include only Core and complete releases in explicitly public projects." : "This demo stores data in local browser storage. Public API and MCP access never reads browser drafts."}</p></div></div>
           </Panel>
         </div>
       </div>

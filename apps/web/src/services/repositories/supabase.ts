@@ -86,7 +86,7 @@ async function currentProject(projectSlug: string): Promise<ProjectAccess> {
   if (projectError) throw projectError;
   const { data: membership, error: membershipError } = await client.from("memberships").select("role").eq("organization_id", project.organization_id).eq("user_id", authData.user.id).single();
   if (membershipError) throw membershipError;
-  return { id: project.id, organizationId: project.organization_id, slug: project.slug, name: project.name, role: membership.role as MembershipRole };
+  return { id: project.id, organizationId: project.organization_id, slug: project.slug, name: project.name, visibility: project.visibility as "private" | "public", role: membership.role as MembershipRole };
 }
 
 async function findProposal(proposalId: string): Promise<ProposalRow> {
@@ -654,11 +654,21 @@ export class SupabaseRepository implements FormaglyphRepository {
     return rowToProjectToken(row);
   }
 
+  async setProjectVisibility(projectSlug: string, visibility: "private" | "public"): Promise<ProjectAccess> {
+    const project = await currentProject(projectSlug);
+    const { data, error } = await requireSupabaseClient().rpc("set_project_visibility", {
+      p_project_id: project.id,
+      p_visibility: visibility,
+    });
+    if (error) throw new Error(error.message);
+    return { ...project, visibility: data.visibility as "private" | "public" };
+  }
+
   async bootstrapWorkspace(input: { organizationName: string; organizationSlug: string; projectName: string; projectSlug: string }) {
     const client = requireSupabaseClient();
     const { data, error } = await client.rpc("bootstrap_workspace", { p_organization_name: input.organizationName, p_organization_slug: input.organizationSlug, p_project_name: input.projectName, p_project_slug: input.projectSlug });
     if (error) throw error;
     const row = data[0];
-    return { id: row.project_id, organizationId: row.organization_id, slug: row.project_slug, name: input.projectName, role: "admin" as const };
+    return { id: row.project_id, organizationId: row.organization_id, slug: row.project_slug, name: input.projectName, visibility: "private" as const, role: "admin" as const };
   }
 }

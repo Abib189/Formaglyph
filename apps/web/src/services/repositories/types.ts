@@ -8,6 +8,7 @@ export interface ProjectAccess {
   organizationId: string;
   slug: string;
   name: string;
+  visibility: "private" | "public";
   role: MembershipRole;
 }
 
@@ -77,5 +78,6 @@ export interface FormaglyphRepository {
   listProjectTokens(projectSlug: string): Promise<ProjectTokenSummary[]>;
   issueProjectToken(projectSlug: string, name: string, expiresInDays?: number): Promise<IssuedProjectToken>;
   revokeProjectToken(tokenId: string): Promise<ProjectTokenSummary>;
+  setProjectVisibility(projectSlug: string, visibility: "private" | "public"): Promise<ProjectAccess>;
   bootstrapWorkspace(input: { organizationName: string; organizationSlug: string; projectName: string; projectSlug: string }): Promise<ProjectAccess>;
 }

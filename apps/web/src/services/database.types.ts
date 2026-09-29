@@ -1125,6 +1125,26 @@ export type Database = {
           token_prefix: string
         }[]
       }
+      list_public_catalog_assets: {
+        Args: never
+        Returns: {
+          aliases: Json
+          byte_size: number
+          canonical_name: string
+          category: string
+          description: string
+          directionality: string
+          is_current: boolean
+          label: string
+          licence: string
+          sha256: string
+          stable_id: string
+          storage_path: string
+          tags: Json
+          variant: string
+          version: string
+        }[]
+      }
       publish_proposal: {
         Args: { p_proposal_id: string }
         Returns: {
@@ -1227,6 +1247,25 @@ export type Database = {
           scopes: string[]
           token_prefix: string
         }[]
+      }
+      set_project_visibility: {
+        Args: { p_project_id: string; p_visibility: string }
+        Returns: {
+          created_at: string
+          created_by: string
+          default_style_profile_id: string | null
+          id: string
+          name: string
+          organization_id: string
+          slug: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       start_generation_job: {
         Args: {

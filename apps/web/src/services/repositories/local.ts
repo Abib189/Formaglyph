@@ -4,7 +4,7 @@ import { loadAppState } from "../storage";
 import { validateCandidateAsset } from "../candidateValidation";
 import type { CandidateAssetInput, FormaglyphRepository, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
 
-const localProject: ProjectAccess = { id: "local-core", organizationId: "local-org", slug: "core", name: "Formaglyph Core", role: "admin" };
+const localProject: ProjectAccess = { id: "local-core", organizationId: "local-org", slug: "core", name: "Formaglyph Core", visibility: "private", role: "admin" };
 
 export class LocalRepository implements FormaglyphRepository {
   readonly mode = "local" as const;
@@ -86,4 +86,5 @@ export class LocalRepository implements FormaglyphRepository {
   async issueProjectToken(): Promise<never> { throw new Error("Project tokens require the Supabase data mode."); }
   async revokeProjectToken(): Promise<never> { throw new Error("Project tokens require the Supabase data mode."); }
   async bootstrapWorkspace() { return localProject; }
+  async setProjectVisibility(): Promise<ProjectAccess> { throw new Error("Project visibility requires the Supabase workspace."); }
 }

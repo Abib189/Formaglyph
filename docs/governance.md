@@ -12,7 +12,7 @@ draft -> in_review -> approved -> published -> deprecated
                    -> rejected
 ```
 
-Rejected proposals and deprecated icons are terminal. A deprecated icon leaves the anonymous public catalog, but its immutable version, asset path, content hash, provenance, reviews, and audit history remain stored.
+Rejected proposals and deprecated icons are terminal. A deprecated icon leaves the anonymous public catalog, but its version, content hash, provenance, reviews, and audit history remain stored. An exceptional Storage path rotation must preserve the hash and leave an audit event.
 
 ## Permissions
 
@@ -25,6 +25,7 @@ Rejected proposals and deprecated icons are terminal. A deprecated icon leaves t
 | Resolve another reviewer's comment | No | No | Yes |
 | Approve, request changes, or reject | No | Yes | Yes |
 | Publish an approved proposal | No | No | Yes |
+| Change project visibility | No | No | Yes |
 | Deprecate a published icon | No | No | Yes |
 | Inspect project audit history | No | Yes | Yes |
 
@@ -32,14 +33,14 @@ Authors cannot review their own proposal, regardless of their project role. Chan
 
 ## Transactional records
 
-Review comments, comment resolution, decisions, publication, and deprecation are authenticated database functions. Each function validates `auth.uid()`, locks the affected record where necessary, changes state, and writes its audit event in the same transaction.
+Review comments, comment resolution, decisions, publication, deprecation, and project visibility changes are authenticated database functions. Each function validates `auth.uid()`, locks the affected record where necessary, changes state, and writes its audit event in the same transaction. A project cannot become public while any published icon lacks a validated, MIT-licensed Regular/Solid pair.
 
 The Workspace governance panel exposes two related views to reviewers and administrators:
 
 - The release changelog lists immutable version IDs, variants, hashes, status, dates, and any deprecation reason.
 - The audit trail lists privileged actions, actors, targets, sources, and timestamps.
 
-Audit rows cannot be updated or deleted. Anonymous catalog policies expose only icons whose current status is `published` in a public project. Authenticated members can inspect the lifecycle states in projects they belong to.
+Audit rows cannot be updated or deleted. Anonymous catalog policies expose only complete published releases in a public project. Authenticated members can inspect the lifecycle states in projects they belong to.
 
 ## Local verification
 
@@ -51,4 +52,4 @@ pnpm db:reset
 pnpm test:db
 ```
 
-The pgTAP suite covers anonymous access, organization isolation, non-author review, decision-note requirements, comment resolution, administrator-only publication and deprecation, immutable audit events, and removal of deprecated icons from the public catalog.
+The pgTAP suite covers anonymous access, organization isolation, non-author review, decision-note requirements, comment resolution, administrator-only publication, deprecation and visibility changes, immutable audit events, and removal of private or deprecated icons from the public catalog.
