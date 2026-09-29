@@ -1,12 +1,28 @@
 import { createHash } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formaglyphAssets } from "../src/catalog.mjs";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assetsRoot = resolve(packageRoot, "assets");
-await rm(assetsRoot, { recursive: true, force: true });
+const manifestPath = resolve(assetsRoot, "manifest.json");
+let previousAssets = [];
+try {
+  previousAssets = JSON.parse(await readFile(manifestPath, "utf8")).assets;
+  if (!Array.isArray(previousAssets)) throw new Error("Existing asset manifest is invalid.");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
+const nextPaths = new Set(formaglyphAssets.map((asset) => resolve(packageRoot, asset.assetPath)));
+for (const asset of previousAssets) {
+  if (typeof asset.path !== "string") throw new Error("Existing asset manifest contains an invalid path.");
+  const oldPath = resolve(packageRoot, asset.path);
+  if (!oldPath.startsWith(`${assetsRoot}${sep}`) || !oldPath.endsWith(".svg")) {
+    throw new Error("Existing asset manifest contains a path outside the generated SVG directory.");
+  }
+  if (!nextPaths.has(oldPath)) await rm(oldPath, { force: true });
+}
 
 const manifest = [];
 for (const asset of formaglyphAssets) {
@@ -33,7 +49,7 @@ for (const asset of formaglyphAssets) {
 }
 
 const concepts = new Set(manifest.map((asset) => asset.stableId)).size;
-await writeFile(resolve(assetsRoot, "manifest.json"), `${JSON.stringify({
+await writeFile(manifestPath, `${JSON.stringify({
   schemaVersion: 2,
   name: "Formaglyph Core",
   version: "0.1.0",
