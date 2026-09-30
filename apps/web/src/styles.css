@@ -836,6 +836,10 @@ select:focus-visible {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.catalog-weight-previews.single-weight {
+  grid-template-columns: 1fr;
+}
+
 .catalog-weight-previews button {
   display: flex;
   flex-direction: column;

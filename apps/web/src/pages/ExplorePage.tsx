@@ -19,6 +19,7 @@ import { useSearchParams } from "react-router-dom";
 import type { CatalogIcon, CatalogLibrary, CatalogVariant } from "../domain/types";
 import { CATALOG_WEIGHTS, fetchCatalogSvg, loadExternalCatalog, weightLabel } from "../services/externalCatalog";
 import { CatalogMotionPreview } from "../components/CatalogMotionPreview";
+import { EXTERNAL_LIBRARY_IDS, LIBRARY_SOURCES, isExternalLibrary, weightsForLibrary, type ExternalLibraryId } from "../data/librarySources";
 
 const coreConceptCount = new Set(iconResults.map((icon) => icon.stableId)).size;
 const PAGE_SIZE = 48;
@@ -36,8 +37,13 @@ export function ExplorePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [category, setCategory] = useState(searchParams.get("category") ?? "all");
-  const [variantFilter, setVariantFilter] = useState<"all" | CatalogVariant>(() => { const weight = searchParams.get("weight"); return weight === "all" || CATALOG_WEIGHTS.includes(weight as CatalogVariant) ? weight as "all" | CatalogVariant : "regular"; });
-  const [library, setLibrary] = useState<"all" | CatalogLibrary>(() => { const value = searchParams.get("library"); return ["core", "projects", "phosphor", "lucide"].includes(value ?? "") ? value as CatalogLibrary : "all"; });
+  const [variantFilter, setVariantFilter] = useState<"all" | CatalogVariant>(() => {
+    const weight = searchParams.get("weight");
+    const source = searchParams.get("library") ?? "all";
+    const supported = source === "all" || (!isExternalLibrary(source) && !["core", "projects"].includes(source)) ? CATALOG_WEIGHTS : weightsForLibrary(source);
+    return weight === "all" || supported.includes(weight as CatalogVariant) ? weight as "all" | CatalogVariant : "regular";
+  });
+  const [library, setLibrary] = useState<"all" | CatalogLibrary>(() => { const value = searchParams.get("library") ?? ""; return ["core", "projects"].includes(value) || isExternalLibrary(value) ? value as CatalogLibrary : "all"; });
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
@@ -46,19 +52,33 @@ export function ExplorePage() {
   const [repositoryCatalog, setRepositoryCatalog] = useState<CatalogIcon[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(repository.mode === "supabase");
-  const [externalCatalog, setExternalCatalog] = useState<CatalogIcon[]>([]);
-  const [externalError, setExternalError] = useState<string | null>(null);
-  const [externalLoading, setExternalLoading] = useState(true);
+  const [libraries, setLibraries] = useState<Partial<Record<ExternalLibraryId, CatalogIcon[]>>>({});
+  const [failedLibraries, setFailedLibraries] = useState<ExternalLibraryId[]>([]);
+  const [pendingLibraries, setPendingLibraries] = useState<ExternalLibraryId[]>(EXTERNAL_LIBRARY_IDS);
   const [retry, setRetry] = useState(0);
   const [loadedSelection, setLoadedSelection] = useState<{ id: string; svg: string } | null>(null);
   const [selectionError, setSelectionError] = useState(false);
   const deferredQuery = useDeferredValue(query);
+  const externalCatalog = useMemo(() => EXTERNAL_LIBRARY_IDS.flatMap((id) => libraries[id] ?? []), [libraries]);
+  const externalConceptCount = useMemo(() => new Set(externalCatalog.map((icon) => icon.stableId)).size, [externalCatalog]);
+  const externalLoading = pendingLibraries.length > 0;
+  const externalError = failedLibraries.length ? `Could not load: ${failedLibraries.map((id) => LIBRARY_SOURCES[id].label).join(", ")}. Other loaded libraries remain available.` : null;
+  const availableWeights = library === "all" ? CATALOG_WEIGHTS : weightsForLibrary(library);
+
+  const changeLibrary = (value: "all" | CatalogLibrary) => {
+    setLibrary(value);
+    setCategory("all");
+    if (variantFilter !== "all" && value !== "all" && !weightsForLibrary(value).includes(variantFilter)) setVariantFilter("regular");
+  };
 
   useEffect(() => {
     let active = true;
-    setExternalLoading(true);
-    setExternalError(null);
-    void loadExternalCatalog("phosphor").then((icons) => { if (active) setExternalCatalog(icons); }).catch(() => { if (active) setExternalError("Phosphor could not load. Formaglyph Core is still available."); }).finally(() => { if (active) setExternalLoading(false); });
+    setPendingLibraries(EXTERNAL_LIBRARY_IDS);
+    setFailedLibraries([]);
+    // Start independent requests together; each catalogue is usable as soon as it arrives.
+    for (const id of EXTERNAL_LIBRARY_IDS) {
+      void loadExternalCatalog(id).then((icons) => { if (active) setLibraries((previous) => ({ ...previous, [id]: icons })); }).catch(() => { if (active) setFailedLibraries((previous) => [...previous, id]); }).finally(() => { if (active) setPendingLibraries((previous) => previous.filter((pending) => pending !== id)); });
+    }
     return () => { active = false; };
   }, [retry]);
 
@@ -149,7 +169,7 @@ export function ExplorePage() {
   const handleDownload = async () => {
     setDownloadError(false);
     try {
-      downloadSvg(`${selected.library === "phosphor" || selected.library === "lucide" ? selected.library : "formaglyph"}-${selected.name}-${selected.variant}-${selected.version}.svg`, await selectedSvg());
+      downloadSvg(`${selected.library && isExternalLibrary(selected.library) ? selected.library : "formaglyph"}-${selected.name}-${selected.variant}-${selected.version}.svg`, await selectedSvg());
     } catch {
       setDownloadError(true);
     }
@@ -163,7 +183,7 @@ export function ExplorePage() {
         label: selected.label,
         version: selected.version,
         variant: selected.variant,
-        licence: selected.licence,
+        licence: selected.licenceLabel ?? selected.licence,
         contentHash: selected.contentHash,
         library: libraryLabel(selected),
         sourceUrl: selected.sourceUrl,
@@ -186,11 +206,11 @@ export function ExplorePage() {
       <div className="explore-grid">
         <Panel className="result-panel">
           <PanelHeader number="02" title={`Results (${filtered.length})`} meta={catalogLoading || externalLoading ? "SYNCING" : query ? "RANKED" : "ALL ICONS"} accent={Boolean(query || catalogError || externalError)} />
-          <div className="catalog-summary"><span>{coreConceptCount} Core + {new Set(externalCatalog.map((icon) => icon.stableId)).size.toLocaleString()} upstream concepts</span>{(query || category !== "all" || library !== "all" || variantFilter !== "regular") && <button onClick={() => { setQuery(""); setCategory("all"); setLibrary("all"); setVariantFilter("regular"); }}>Browse all icons <ArrowRight size={14} /></button>}</div>
-          <div className="catalog-library-filter"><label><span>Library</span><select aria-label="Library" value={library} onChange={(event) => { setLibrary(event.target.value as "all" | CatalogLibrary); setCategory("all"); }}><option value="all">All libraries</option><option value="core">Formaglyph Core</option><option value="projects">Team releases</option><option value="phosphor">Phosphor Icons</option></select></label><a href="/libraries/phosphor/LICENSE.txt" target="_blank" rel="noreferrer">Licence notices</a></div>
+          <div className="catalog-summary"><span>{coreConceptCount} Core + {externalConceptCount.toLocaleString()} upstream concepts</span>{(query || category !== "all" || library !== "all" || variantFilter !== "regular") && <button onClick={() => { setQuery(""); setCategory("all"); setLibrary("all"); setVariantFilter("regular"); }}>Browse all icons <ArrowRight size={14} /></button>}</div>
+          <div className="catalog-library-filter"><label><span>Library</span><select aria-label="Library" value={library} onChange={(event) => changeLibrary(event.target.value as "all" | CatalogLibrary)}><option value="all">All libraries</option><option value="core">Formaglyph Core</option><option value="projects">Team releases</option>{EXTERNAL_LIBRARY_IDS.map((id) => <option key={id} value={id}>{LIBRARY_SOURCES[id].label}</option>)}</select></label><a href="/libraries/NOTICE.txt" target="_blank" rel="noreferrer">Licence notices</a></div>
           <div className="result-filters">
             <label><span>Category</span><select aria-label="Category" value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item === "all" ? "All categories" : item}</option>)}</select></label>
-            <label><span>Weight</span><select aria-label="Weight" value={variantFilter} onChange={(event) => setVariantFilter(event.target.value as "all" | CatalogVariant)}><option value="all">All weights</option>{CATALOG_WEIGHTS.map((weight) => <option key={weight} value={weight}>{weightLabel(weight)}</option>)}</select></label>
+            <label><span>Weight</span><select aria-label="Weight" value={variantFilter} onChange={(event) => setVariantFilter(event.target.value as "all" | CatalogVariant)}><option value="all">All weights</option>{availableWeights.map((weight) => <option key={weight} value={weight}>{weightLabel(weight)}</option>)}</select></label>
           </div>
           <div className="result-columns" aria-hidden="true"><span>Icon</span><span>Name</span></div>
           <div className="result-list">
@@ -209,7 +229,7 @@ export function ExplorePage() {
 
         <Panel className="preview-panel">
           <PanelHeader number="03" title={`Preview: ${selected.name}`} meta="COMPARE" accent />
-          <div className={`catalog-weight-previews ${matchingWeights.length > 2 ? "many-weights" : ""}`} aria-label="Available icon weights">{matchingWeights.map((icon) => <button key={icon.id} aria-pressed={selected.id === icon.id} onClick={() => { setSelectedId(icon.id); setVariantFilter(icon.variant); }}><span>{weightLabel(icon.variant)}</span><CatalogGlyph icon={icon} size={matchingWeights.length > 2 ? 64 : 96} /></button>)}</div>
+          <div className={`catalog-weight-previews ${matchingWeights.length > 4 ? "many-weights" : matchingWeights.length === 1 ? "single-weight" : ""}`} aria-label="Available icon weights">{matchingWeights.map((icon) => <button key={icon.id} aria-pressed={selected.id === icon.id} onClick={() => { setSelectedId(icon.id); setVariantFilter(icon.variant); }}><span>{weightLabel(icon.variant)}</span><CatalogGlyph icon={icon} size={matchingWeights.length > 2 ? 64 : 96} /></button>)}</div>
           <div className="catalog-construction"><ConstructionIcon Icon={selected.Icon} svg={selectedPreview?.svg} assetUrl={selected.assetUrl} weight={selected.previewWeight} /></div>
           <p className="preview-note">{libraryLabel(selected)} · native {selected.gridSize ?? 24}px grid. Weights and source geometry stay with their original library.</p>
           <CatalogMotionPreview svg={selectedPreview?.svg} />
@@ -218,7 +238,7 @@ export function ExplorePage() {
         <Panel className="inspector-panel">
           <PanelHeader number="04" title={`Selected: ${selected.name}`} meta="READY" accent />
           <dl className="metadata-list">
-            <div><dt>Library</dt><dd>{libraryLabel(selected)}</dd></div><div><dt>Stable ID</dt><dd>{selected.stableId}</dd></div><div><dt>Name</dt><dd>{selected.name}</dd></div><div><dt>Version</dt><dd>{selected.version}</dd></div><div><dt>Category</dt><dd>{selected.category}</dd></div><div><dt>Direction</dt><dd>{selected.provenance.kind === "third-party" ? "Not specified upstream" : selected.directionality}</dd></div><div><dt>Grid</dt><dd>{selected.gridSize ?? 24} × {selected.gridSize ?? 24}</dd></div><div><dt>Licence</dt><dd>{selected.licenseUrl ? <a href={selected.licenseUrl} target="_blank" rel="noreferrer">{selected.licence} · notice</a> : selected.licence}</dd></div><div><dt>Safety</dt><dd>{selectionError ? "Asset check failed" : "Validated SVG"}</dd></div>
+            <div><dt>Library</dt><dd>{libraryLabel(selected)}</dd></div><div><dt>Stable ID</dt><dd>{selected.stableId}</dd></div><div><dt>Name</dt><dd>{selected.name}</dd></div><div><dt>{selected.distribution ? "Snapshot" : "Version"}</dt><dd>{selected.version}</dd></div>{selected.upstreamVersion && <div><dt>Upstream</dt><dd>{selected.upstreamVersion}</dd></div>}<div><dt>Category</dt><dd>{selected.category}</dd></div><div><dt>Direction</dt><dd>{selected.provenance.kind === "third-party" ? "Not specified upstream" : selected.directionality}</dd></div><div><dt>Grid</dt><dd>{selected.gridSize ?? 24} × {selected.gridSize ?? 24}</dd></div><div><dt>Licence</dt><dd>{selected.licenseUrl ? <a href={selected.licenseUrl} target="_blank" rel="noreferrer">{selected.licenceLabel ?? selected.licence} · notice</a> : selected.licence}</dd></div><div><dt>Safety</dt><dd>{selectionError ? "Asset check failed" : "Validated SVG"}</dd></div>
           </dl>
           <div className="inspector-copy">
             <p>{selected.description}</p>
@@ -231,6 +251,7 @@ export function ExplorePage() {
             </div>
             <p className="microcopy" aria-live="polite">{designCopyState === "error" ? "Design copy failed. Copy the SVG directly instead." : "Design copies include stable ID, version, variant, licence, and content hash metadata."}</p>
             {selected.sourceUrl && <p className="microcopy">Third-party geometry, not Formaglyph-authored. <a href={selected.sourceUrl} target="_blank" rel="noreferrer">Original source</a>. Upstream licence is embedded in copied and downloaded SVGs.</p>}
+            {selected.distribution && <p className="microcopy">Distribution: {selected.distribution}. Brand symbols may have separate usage requirements; no affiliation is implied.</p>}
           </div>
         </Panel>
       </div>

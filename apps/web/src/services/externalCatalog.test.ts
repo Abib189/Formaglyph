@@ -6,6 +6,7 @@ import { iconResults } from "../data/catalog";
 import { expandExternalManifest, fetchCatalogSvg, CATALOG_WEIGHTS } from "./externalCatalog";
 import { searchIcons } from "./search";
 import { prepareDesignSvg } from "./svg";
+import { LIBRARY_SOURCES, type ExternalLibraryId } from "../data/librarySources";
 
 const manifest = JSON.parse(readFileSync(new URL("../../public/libraries/phosphor/catalog.json", import.meta.url), "utf8"));
 const assets = expandExternalManifest(manifest, "phosphor");
@@ -17,7 +18,7 @@ describe("complete licensed upstream catalog", () => {
   it("contains all 1,512 concepts and six weights without colliding with Core", () => {
     expect(assets).toHaveLength(9072);
     expect(new Set(assets.map((asset) => asset.stableId)).size).toBe(1512);
-    for (const concept of manifest.concepts) expect(concept.assets.map((asset: { variant: string }) => asset.variant)).toEqual(CATALOG_WEIGHTS);
+    for (const concept of manifest.concepts) expect(concept.assets.map((asset: { variant: string }) => asset.variant)).toEqual(LIBRARY_SOURCES.phosphor.weights);
     expect(assets.every((asset) => asset.gridSize === 256 && asset.library === "phosphor" && asset.provenance.kind === "third-party")).toBe(true);
     const cameras = searchIcons([...iconResults, ...assets], "", { variant: "regular" }).filter((asset) => asset.name === "camera");
     expect(cameras).toHaveLength(2);
@@ -81,5 +82,77 @@ describe("complete licensed upstream catalog", () => {
     const unsafe = '<svg viewBox="0 0 256 256"><script>alert(1)</script></svg>';
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(unsafe)));
     await expect(fetchCatalogSvg({ ...asset, contentHash: createHash("sha256").update(unsafe).digest("hex") })).rejects.toThrow("Unsafe");
+  });
+});
+
+const additions = [
+  { id: "lucide", concepts: 1856, count: 1856 },
+  { id: "tabler", concepts: 5166, count: 6220 },
+  { id: "heroicons", concepts: 324, count: 1288 },
+] as const;
+const newManifests = Object.fromEntries(additions.map(({ id }) => [id, JSON.parse(readFileSync(new URL(`../../public/libraries/${id}/catalog.json`, import.meta.url), "utf8"))]));
+const newAssets = additions.flatMap(({ id }) => expandExternalManifest(newManifests[id], id));
+
+describe("additional open-source library snapshots", () => {
+  for (const library of additions) {
+    it(`includes every non-hidden ${library.id} asset with exact attribution, geometry and integrity`, () => {
+      const expanded = expandExternalManifest(newManifests[library.id], library.id);
+      expect(expanded).toHaveLength(library.count);
+      expect(new Set(expanded.map((asset) => asset.stableId)).size).toBe(library.concepts);
+      const notice = readFileSync(new URL(`../../scripts/notices/${library.id}.txt`, import.meta.url), "utf8");
+      const upstream = JSON.parse(readFileSync(new URL(`../../node_modules/@iconify-json/${library.id}/icons.json`, import.meta.url), "utf8"));
+      expect(Object.values(upstream.icons).filter((icon) => !(icon as { hidden?: boolean }).hidden)).toHaveLength(library.count);
+      for (const asset of expanded) {
+        const svg = readAsset(asset.assetUrl!);
+        expect(createHash("sha256").update(svg).digest("hex"), asset.id).toBe(asset.contentHash);
+        expect(svg, asset.id).toContain(notice);
+        expect(svg, asset.id).toContain(`Iconify snapshot: @iconify-json/${library.id}@${asset.version}`);
+        const grid = asset.gridSize!;
+        expect(sanitizeAndValidateSvg(svg, { targetViewBox: [0, 0, grid, grid] }).status, asset.id).toBe("passed");
+      }
+    }, 30000);
+  }
+
+  it("does not collide across five camera concepts or invent unavailable weights", () => {
+    const catalog = [...iconResults, ...assets, ...newAssets];
+    const cameras = searchIcons(catalog, "", { variant: "regular" }).filter((asset) => asset.name === "camera");
+    expect(cameras).toHaveLength(5);
+    expect(new Set(cameras.map((asset) => asset.stableId)).size).toBe(5);
+    expect(searchIcons(catalog, "", { library: "lucide", variant: "solid" })).toHaveLength(0);
+    expect(searchIcons(catalog, "", { library: "tabler", variant: "solid" })).toHaveLength(1054);
+    expect(searchIcons(catalog, "", { library: "heroicons", variant: "micro" })).toHaveLength(316);
+    expect(searchIcons(catalog, "help-circle", { library: "lucide", variant: "regular" })[0]?.name).toBe("circle-question-mark");
+    const names = new Set(newAssets.filter((asset) => asset.library === "lucide").map((asset) => asset.name));
+    const upstream = JSON.parse(readFileSync(new URL("../../node_modules/@iconify-json/lucide/icons.json", import.meta.url), "utf8"));
+    for (const [name, icon] of Object.entries(upstream.icons)) if ((icon as { hidden?: boolean }).hidden) expect(names.has(name), name).toBe(false);
+  });
+
+  it("preserves small-size Heroicons rather than scaling their 24px paths", () => {
+    const camera = newAssets.filter((asset) => asset.name === "camera" && asset.library === "heroicons");
+    expect(camera.map((asset) => [asset.variant, asset.gridSize])).toEqual([["regular", 24], ["solid", 24], ["mini", 20], ["micro", 16]]);
+    expect(new Set(camera.map((asset) => asset.contentHash)).size).toBe(4);
+    const copy = structuredClone(newManifests.heroicons);
+    copy.concepts[0].assets.find((asset: { variant: string }) => asset.variant === "mini").grid = 24;
+    expect(() => expandExternalManifest(copy, "heroicons")).toThrow();
+    expect(CATALOG_WEIGHTS).toContain("micro");
+  });
+
+  it("records snapshot versions separately from upstream release and combined licences", () => {
+    const lucide = newAssets.find((asset) => asset.library === "lucide" && asset.name === "camera")!;
+    expect(lucide).toMatchObject({ licence: "ISC", licenceLabel: "ISC + MIT (Feather)", version: "1.2.137", distribution: "@iconify-json/lucide@1.2.137" });
+    expect(readAsset(lucide.assetUrl!)).toContain("Copyright (c) 2013-present Cole Bemis");
+    expect(newAssets.find((asset) => asset.library === "tabler")?.upstreamVersion).toBe("3.48.0");
+    expect(newAssets.find((asset) => asset.library === "heroicons")?.upstreamVersion).toBe("2.2.0");
+    const design = prepareDesignSvg(readAsset(lucide.assetUrl!), { ...lucide, library: "Lucide", licence: lucide.licenceLabel! }, "penpot");
+    expect(design).toContain('data-formaglyph-licence="ISC + MIT (Feather)"');
+    expect(design).toContain("Copyright (c) 2013-present Cole Bemis");
+  });
+
+  it("rejects a collection/source mismatch or invented Lucide solid variant", () => {
+    for (const id of ["phosphor", "lucide", "tabler"] as ExternalLibraryId[]) expect(() => expandExternalManifest(newManifests.heroicons, id)).toThrow();
+    const copy = structuredClone(newManifests.lucide);
+    copy.concepts[0].assets[0].variant = "solid";
+    copy.concepts[0].assets[0].url = copy.concepts[0].assets[0].url.replace("/regular/", "/fill/");
+    expect(() => expandExternalManifest(copy, "lucide")).toThrow();
   });
 });

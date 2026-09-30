@@ -1,20 +1,21 @@
 import { sanitizeAndValidateSvg } from "@formaglyph/validators";
 import type { CatalogIcon, CatalogVariant } from "../domain/types";
 import { sha256Text } from "./candidateAsset";
+import { LIBRARY_SOURCES, type ExternalLibraryId } from "../data/librarySources";
 
-export const CATALOG_WEIGHTS: readonly CatalogVariant[] = ["thin", "light", "regular", "bold", "solid", "duotone"];
-export const weightLabel = (weight: CatalogVariant) => weight === "solid" ? "Solid / Fill" : weight[0].toUpperCase() + weight.slice(1);
+export const CATALOG_WEIGHTS: readonly CatalogVariant[] = ["thin", "light", "regular", "bold", "solid", "duotone", "mini", "micro"];
+export const weightLabel = (weight: CatalogVariant) => weight === "solid" ? "Solid / Fill" : weight === "mini" ? "Mini · 20px" : weight === "micro" ? "Micro · 16px" : weight[0].toUpperCase() + weight.slice(1);
 
 interface ExternalManifest {
   schemaVersion: number;
-  source: { id: "phosphor" | "lucide"; label: string; version: string; licence: "MIT" | "ISC"; sourceUrl: string; licenseUrl: string; conceptCount: number; assetCount: number; grid: number };
-  concepts: Array<{ stableId: string; name: string; label: string; categories: string[]; tags: string[]; aliases: string[]; assets: Array<{ variant: CatalogVariant; url: string; sha256: string }> }>;
+  source: { id: ExternalLibraryId; label: string; version: string; licence: "MIT" | "ISC"; licenceLabel?: string; sourceUrl: string; licenseUrl: string; conceptCount: number; assetCount: number; grid: number; distribution?: string; upstreamVersion?: string };
+  concepts: Array<{ stableId: string; name: string; label: string; categories: string[]; tags: string[]; aliases: string[]; assets: Array<{ variant: CatalogVariant; grid?: number; url: string; sha256: string }> }>;
 }
 
-export function expandExternalManifest(manifest: ExternalManifest, library: "phosphor" | "lucide"): CatalogIcon[] {
+export function expandExternalManifest(manifest: ExternalManifest, library: ExternalLibraryId): CatalogIcon[] {
   const { source, concepts } = manifest;
-  const sourceUrl = library === "phosphor" ? "https://github.com/phosphor-icons/core" : "https://github.com/lucide-icons/lucide";
-  if (manifest.schemaVersion !== 1 || source.id !== library || !Array.isArray(concepts) || concepts.length !== source.conceptCount || source.grid !== (library === "phosphor" ? 256 : 24) || source.licence !== (library === "phosphor" ? "MIT" : "ISC") || source.sourceUrl !== sourceUrl || source.licenseUrl !== `/libraries/${library}/LICENSE.txt` || !/^\d+\.\d+\.\d+$/.test(source.version)) {
+  const config = LIBRARY_SOURCES[library];
+  if (manifest.schemaVersion !== 1 || source.id !== library || source.label !== config.label || !Array.isArray(concepts) || concepts.length !== source.conceptCount || source.grid !== config.grid || source.licence !== config.licence || source.sourceUrl !== config.sourceUrl || source.licenseUrl !== `/libraries/${library}/LICENSE.txt` || !/^\d+\.\d+\.\d+$/.test(source.version) || (library !== "phosphor" && source.distribution !== `@iconify-json/${library}@${source.version}`)) {
     throw new Error("Invalid external library manifest.");
   }
   const assets: CatalogIcon[] = [];
@@ -24,7 +25,9 @@ export function expandExternalManifest(manifest: ExternalManifest, library: "pho
     for (const asset of concept.assets) {
       const id = `${concept.stableId}:${asset.variant}`;
       const pathWeight = asset.variant === "solid" ? "fill" : asset.variant;
-      if (identities.has(id) || !CATALOG_WEIGHTS.includes(asset.variant) || !/^[a-f0-9]{64}$/.test(asset.sha256) || asset.url !== `/libraries/${library}/${source.version}-fg.1/${pathWeight}/${concept.name}.svg`) {
+      const grid = asset.grid ?? source.grid;
+      const expectedGrid = library === "heroicons" && asset.variant === "mini" ? 20 : library === "heroicons" && asset.variant === "micro" ? 16 : config.grid;
+      if (identities.has(id) || !(config.weights as readonly CatalogVariant[]).includes(asset.variant) || grid !== expectedGrid || !/^[a-f0-9]{64}$/.test(asset.sha256) || asset.url !== `/libraries/${library}/${source.version}-fg.1/${pathWeight}/${concept.name}.svg`) {
         throw new Error("Invalid external icon asset.");
       }
       identities.add(id);
@@ -34,11 +37,12 @@ export function expandExternalManifest(manifest: ExternalManifest, library: "pho
         description: `${concept.label} from ${source.label}.`, tags: concept.tags,
         // These aliases come from the upstream manifest, not Formaglyph review.
         aliases: concept.aliases.map((value) => ({ value, locale: "en", reviewed: false })),
-        version: source.version, variant: asset.variant, previewWeight: asset.variant === "solid" ? "fill" : "regular",
+        version: source.version, variant: asset.variant, previewWeight: ["solid", "mini", "micro"].includes(asset.variant) ? "fill" : "regular",
         directionality: "neutral", licence: source.licence, status: "published",
         provenance: { kind: "third-party", source: source.label, sourceRevision: `${source.version}-fg.1`, disclosed: true },
         library, libraryLabel: source.label, sourceUrl: source.sourceUrl, licenseUrl: source.licenseUrl,
-        gridSize: source.grid, assetUrl: asset.url, contentHash: asset.sha256,
+        licenceLabel: source.licenceLabel, distribution: source.distribution, upstreamVersion: source.upstreamVersion,
+        gridSize: grid, assetUrl: asset.url, contentHash: asset.sha256,
       });
     }
   }
@@ -47,7 +51,7 @@ export function expandExternalManifest(manifest: ExternalManifest, library: "pho
 }
 
 const manifests = new Map<string, Promise<CatalogIcon[]>>();
-export function loadExternalCatalog(library: "phosphor" | "lucide") {
+export function loadExternalCatalog(library: ExternalLibraryId) {
   const cached = manifests.get(library);
   if (cached) return cached;
   const promise = fetch(`/libraries/${library}/catalog.json`).then(async (response) => {

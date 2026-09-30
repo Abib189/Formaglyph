@@ -13,8 +13,8 @@ export type GenerationJobStatus = "queued" | "running" | "completed" | "failed" 
 export type ApiScope = "read" | "read_write";
 export type IntegrationName = "github" | "figma" | "penpot";
 
-export type CatalogVariant = "regular" | "solid" | "thin" | "light" | "bold" | "duotone";
-export type CatalogLibrary = "core" | "projects" | "phosphor" | "lucide";
+export type CatalogVariant = "regular" | "solid" | "thin" | "light" | "bold" | "duotone" | "mini" | "micro";
+export type CatalogLibrary = "core" | "projects" | "phosphor" | "lucide" | "tabler" | "heroicons";
 
 // External catalogue weights never widen the Regular/Solid submission schema.
 export interface CatalogIcon extends Omit<IconRecord, "variant" | "licence"> {
@@ -24,6 +24,9 @@ export interface CatalogIcon extends Omit<IconRecord, "variant" | "licence"> {
   libraryLabel?: string;
   sourceUrl?: string;
   licenseUrl?: string;
+  licenceLabel?: string;
+  distribution?: string;
+  upstreamVersion?: string;
   gridSize?: number;
   categories?: string[];
   Icon?: Icon;

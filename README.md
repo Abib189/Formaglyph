@@ -143,6 +143,18 @@ Explore ships the source-controlled Formaglyph Core starter release from `@forma
 
 Explore also includes the complete pinned Phosphor Icons 2.1.1 release: 1,512 concepts / 9,072 SVGs in Thin, Light, Regular, Bold, Fill (shown as Solid / Fill), and Duotone. These are a separately labelled MIT-licensed upstream library, **not Formaglyph-authored Core assets or reviewed team releases**. Their original 256px grid, names, categories, provenance, and six weights are retained. `pnpm --filter @formaglyph/web libraries` deterministically builds the versioned `/libraries/phosphor/2.1.1-fg.1/` assets and catalogue from the pinned npm package; each asset is safety-checked, SHA-256 hashed, and carries the complete upstream copyright/permission notice. Generated files are ignored by Git and rebuilt in Docker. Copy and download retain the embedded notice, and design copies include library/source metadata. Explore loads catalogue metadata separately, fetches selected SVGs with hash verification, and renders at most 48 result rows at once.
 
+Additional complete non-hidden collections are distributed through pinned Iconify JSON snapshots. Snapshot versions are explicitly labelled separately from upstream release versions:
+
+| Library | Pinned distribution | Concepts | SVGs | Available styles / grid |
+| --- | --- | ---: | ---: | --- |
+| Lucide | `@iconify-json/lucide@1.2.137` | 1,856 | 1,856 | Regular / 24px |
+| Tabler Icons | `@iconify-json/tabler@1.2.41` (upstream 3.48.0) | 5,166 | 6,220 | Outline + available Filled / 24px |
+| Heroicons | `@iconify-json/heroicons@1.2.3` (upstream 2.2.0) | 324 | 1,288 | Outline + Solid / 24px; Mini Solid / 20px; Micro Solid / 16px |
+
+Collections are fetched independently in parallel, so one failure does not hide other libraries. The library picker exposes only that library's actual styles, and previews never invent missing variants: Lucide has no Solid, not every Tabler icon has Filled, and eight Heroicons concepts have no Micro. Current icons are included exactly once per source/style; hidden deprecated geometry is excluded, while eligible upstream aliases remain searchable. Identical names across libraries use distinct IDs (`ico_lucide_camera`, `ico_tabler_camera`, etc.). Mini/Micro do not widen the Regular/Solid project submission schema.
+
+The three new collections use committed upstream notices in `apps/web/scripts/notices/`, embedded intact in each SVG's `<desc>` and served independently as `/libraries/{library}/LICENSE.txt`. Lucide carries both its ISC notice and the inherited Feather MIT attribution. `/libraries/NOTICE.txt` indexes all sources/notices. Brand symbols may have separate usage requirements and imply no affiliation. Three Tabler assets use a narrow build-only local-path expansion before the unchanged SVG validator; user SVGs still cannot contain `<defs>` or `<use>`. All public third-party assets use immutable snapshot-versioned URLs and verified SHA-256 values.
+
 Morphicons 1.6.0 is an MIT-licensed animation engine, **not another icon collection**. Compatible Core stroke previews have an optional menu-to-icon morph that respects reduced motion. Filled outlines (including Phosphor) remain static rather than being converted or misrepresented. Engine notice: `/libraries/morphicons/LICENSE.txt`. The REST API, CLI, MCP, and `@formaglyph/icons` package continue to expose original Core and eligible reviewed project assets; third-party Explore libraries are not repackaged as Formaglyph Core or inserted into private project workflows.
 
 Catalog, style, permission, and proposal contracts live in `@formaglyph/schema`. New APIs, MCP tools, CLI commands, and framework packages should consume those contracts rather than defining parallel models.
