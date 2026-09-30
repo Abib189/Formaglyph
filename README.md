@@ -139,7 +139,11 @@ See [Review and governance](./docs/governance.md) for the lifecycle, permission 
 
 ## Catalog assets
 
-Explore ships the source-controlled Formaglyph Core starter release from `@formaglyph/icons`. The hosted repository overlays approved project icons by stable ID and variant, while the built-in core remains available if the team catalog is offline. Phosphor remains a development-only UI dependency for interface controls and prototype Create/Review candidates; its glyphs are not published as Formaglyph catalog assets.
+Explore ships the source-controlled Formaglyph Core starter release from `@formaglyph/icons`. The hosted repository overlays approved project icons by stable ID and variant, while the built-in core remains available if the team catalog is offline.
+
+Explore also includes the complete pinned Phosphor Icons 2.1.1 release: 1,512 concepts / 9,072 SVGs in Thin, Light, Regular, Bold, Fill (shown as Solid / Fill), and Duotone. These are a separately labelled MIT-licensed upstream library, **not Formaglyph-authored Core assets or reviewed team releases**. Their original 256px grid, names, categories, provenance, and six weights are retained. `pnpm --filter @formaglyph/web libraries` deterministically builds the versioned `/libraries/phosphor/2.1.1-fg.1/` assets and catalogue from the pinned npm package; each asset is safety-checked, SHA-256 hashed, and carries the complete upstream copyright/permission notice. Generated files are ignored by Git and rebuilt in Docker. Copy and download retain the embedded notice, and design copies include library/source metadata. Explore loads catalogue metadata separately, fetches selected SVGs with hash verification, and renders at most 48 result rows at once.
+
+Morphicons 1.6.0 is an MIT-licensed animation engine, **not another icon collection**. Compatible Core stroke previews have an optional menu-to-icon morph that respects reduced motion. Filled outlines (including Phosphor) remain static rather than being converted or misrepresented. Engine notice: `/libraries/morphicons/LICENSE.txt`. The REST API, CLI, MCP, and `@formaglyph/icons` package continue to expose original Core and eligible reviewed project assets; third-party Explore libraries are not repackaged as Formaglyph Core or inserted into private project workflows.
 
 Catalog, style, permission, and proposal contracts live in `@formaglyph/schema`. New APIs, MCP tools, CLI commands, and framework packages should consume those contracts rather than defining parallel models.
 

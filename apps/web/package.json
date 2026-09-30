@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "libraries": "node --import tsx scripts/build-libraries.mjs",
+    "dev": "pnpm libraries && vite",
+    "build": "pnpm libraries && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "pnpm libraries && vitest run",
     "test:watch": "vitest",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "preview": "vite preview"
@@ -28,8 +29,10 @@
     "vite": "6.4.2"
   },
   "devDependencies": {
+    "@phosphor-icons/core": "2.1.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "tsx": "4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }

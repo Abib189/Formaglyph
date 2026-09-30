@@ -36,6 +36,7 @@ const contentTypes = new Map([
   [".map", "application/json; charset=utf-8"],
   [".png", "image/png"],
   [".svg", "image/svg+xml"],
+  [".txt", "text/plain; charset=utf-8"],
   [".webp", "image/webp"],
   [".woff", "font/woff"],
   [".woff2", "font/woff2"],
@@ -109,7 +110,7 @@ const server = createServer(async (request, response) => {
   }
 
   const requested = await existingFile(url.pathname);
-  if (!requested && url.pathname.startsWith("/assets/")) {
+  if (!requested && (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/libraries/"))) {
     sendJson(response, 404, { error: "asset_not_found" });
     return;
   }
@@ -131,7 +132,7 @@ const server = createServer(async (request, response) => {
   const gzip = compressible.has(extension) && /(?:^|,)\s*gzip\s*(?:,|$)/i.test(request.headers["accept-encoding"] ?? "");
   const headers = {
     "content-type": contentTypes.get(extension) ?? "application/octet-stream",
-    "cache-control": url.pathname.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache",
+    "cache-control": url.pathname.startsWith("/assets/") || /^\/libraries\/(?:phosphor|lucide)\/\d+\.\d+\.\d+-fg\.\d+\/(?:thin|light|regular|bold|fill|duotone)\/[a-z0-9-]+\.svg$/.test(url.pathname) ? "public, max-age=31536000, immutable" : "no-cache",
     "etag": etag,
     "referrer-policy": "strict-origin-when-cross-origin",
     "permissions-policy": "camera=(), microphone=(), geolocation=()",

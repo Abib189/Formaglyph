@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Icon } from "@phosphor-icons/react/lib";
-import type { PreviewWeight } from "../domain/types";
+import type { CatalogVariant, PreviewWeight } from "../domain/types";
 
 export function renderIconSvg(IconComponent: Icon, weight: PreviewWeight = "regular") {
   return renderToStaticMarkup(createElement(IconComponent, {
@@ -40,9 +40,11 @@ export interface DesignHandoffMetadata {
   name: string;
   label: string;
   version: string;
-  variant: "regular" | "solid";
+  variant: CatalogVariant;
   licence: string;
   contentHash?: string;
+  library?: string;
+  sourceUrl?: string;
 }
 
 function escapeXml(value: string) {
@@ -70,6 +72,8 @@ export function prepareDesignSvg(svg: string, metadata: DesignHandoffMetadata, t
     `data-formaglyph-variant="${escapeXml(metadata.variant)}"`,
     `data-formaglyph-licence="${escapeXml(metadata.licence)}"`,
     `data-formaglyph-target="${target}"`,
+    metadata.library ? `data-formaglyph-library="${escapeXml(metadata.library)}"` : "",
+    metadata.sourceUrl ? `data-formaglyph-source="${escapeXml(metadata.sourceUrl)}"` : "",
     metadata.contentHash ? `data-formaglyph-sha256="${escapeXml(metadata.contentHash)}"` : "",
   ].filter(Boolean).join(" ");
   const enrichedOpening = `${cleanOpening.slice(0, -1)} ${attributes}>`;
