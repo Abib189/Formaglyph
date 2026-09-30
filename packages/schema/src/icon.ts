@@ -14,7 +14,7 @@ export interface LocalizedAlias {
 }
 
 export interface IconProvenance {
-  kind: "original" | "generated" | "imported" | "third-party";
+  kind: "original" | "generated" | "imported" | "third-party" | "human-reviewed";
   source: string;
   sourceRevision?: string;
   adapter?: string;

@@ -5,6 +5,7 @@
     "dockerfilePath": "Dockerfile",
     "watchPatterns": [
       "/apps/web/**",
+      "/packages/cli/**",
       "/packages/icons/**",
       "/packages/schema/**",
       "/packages/validators/**",

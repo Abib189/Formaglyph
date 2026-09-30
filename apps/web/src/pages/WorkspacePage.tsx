@@ -1,21 +1,24 @@
 import { useMemo, useState } from "react";
-import {
-  Archive,
-  ArrowRight,
-  Copy,
-  DownloadSimple,
-  MagnifyingGlass,
-  NotePencil,
-  Plus,
-  RocketLaunch,
-  X,
-} from "@phosphor-icons/react";
-import { CloudArrowUp } from "@phosphor-icons/react";
+import { useNavigate, useParams } from "react-router-dom";
+import { Archive } from "@phosphor-icons/react/Archive";
+import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { Copy } from "@phosphor-icons/react/Copy";
+import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
+import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
+import { NotePencil } from "@phosphor-icons/react/NotePencil";
+import { Prohibit } from "@phosphor-icons/react/Prohibit";
+import { Plus } from "@phosphor-icons/react/Plus";
+import { RocketLaunch } from "@phosphor-icons/react/RocketLaunch";
+import { ShieldCheck } from "@phosphor-icons/react/ShieldCheck";
+import { X } from "@phosphor-icons/react/X";
+import { CloudArrowUp } from "@phosphor-icons/react/CloudArrowUp";
 import { workspaceIconLibrary } from "../data/catalog";
 import type { RouteName, WorkspaceIcon, WorkspaceStatus } from "../domain/types";
 import { PageFooter, PageIntro, Panel, PanelHeader } from "../components/Layout";
 import { downloadSvg, renderIconSvg } from "../services/svg";
 import { useAppState } from "../state/AppState";
+import { useAuthState } from "../state/AuthState";
+import { isSupabaseMode } from "../services/dataMode";
 
 type WorkspaceFilter = "all" | WorkspaceStatus;
 
@@ -25,7 +28,9 @@ const statusLabels: Record<WorkspaceFilter, string> = {
   in_review: "In review",
   changes_requested: "Changes requested",
   approved: "Approved",
+  rejected: "Rejected",
   published: "Published",
+  deprecated: "Deprecated",
   archived: "Archived",
 };
 
@@ -34,10 +39,23 @@ function formatUpdated(value: string) {
 }
 
 function WorkspaceRow({ icon, onNavigate, role }: { icon: WorkspaceIcon; onNavigate: (route: RouteName) => void; role: "contributor" | "reviewer" | "admin" }) {
-  const { openWorkspaceIcon, updateWorkspaceStatus, duplicateWorkspaceIcon } = useAppState();
+  const { reviewQueue, openWorkspaceIcon, updateWorkspaceStatus, reopenApprovedProposal, duplicateWorkspaceIcon } = useAppState();
+  const { user } = useAuthState();
+  const navigate = useNavigate();
+  const { projectSlug = "core" } = useParams();
+  const canEdit = !isSupabaseMode || icon.creatorId === user?.id;
+  const approvedItem = reviewQueue.find((item) => item.draft.workspaceIconId === icon.id && item.proposal.status === "approved");
+  const approvedCandidate = approvedItem?.revisions.find((revision) => revision.candidate.id === approvedItem.proposal.candidateId)?.candidate;
+  const hasPair = !isSupabaseMode || Boolean(approvedCandidate?.variants.regular && approvedCandidate.variants.solid);
+  const [deprecating, setDeprecating] = useState(false);
+  const [deprecationReason, setDeprecationReason] = useState("");
   const Icon = workspaceIconLibrary[icon.visualKey as keyof typeof workspaceIconLibrary] ?? CloudArrowUp;
 
   const open = (route: RouteName) => {
+    if (route === "create" && isSupabaseMode) {
+      navigate(`/projects/${encodeURIComponent(projectSlug)}/create?draft=${encodeURIComponent(icon.id)}`);
+      return;
+    }
     openWorkspaceIcon(icon.id);
     onNavigate(route);
   };
@@ -51,17 +69,39 @@ function WorkspaceRow({ icon, onNavigate, role }: { icon: WorkspaceIcon; onNavig
       <div className="workspace-status"><span className={`status-label status-${icon.status}`}>{statusLabels[icon.status]}</span><small>{icon.validation === "passed" ? "Validation passed" : "Validation issue"}</small></div>
       <div className="workspace-meta"><span>{icon.variant}</span><span>{icon.creator}</span><span>{formatUpdated(icon.updatedAt)}</span></div>
       <div className="workspace-actions">
-        {(icon.status === "draft" || icon.status === "changes_requested") && <button onClick={() => open("create")}><NotePencil size={15} /> Edit</button>}
+        {(icon.status === "draft" || icon.status === "changes_requested") && canEdit && <button onClick={() => open("create")}><NotePencil size={15} /> Edit</button>}
+        {(icon.status === "draft" || icon.status === "changes_requested") && !canEdit && <span className="permission-note">Author edit</span>}
         {icon.status === "in_review" && <button onClick={() => open("review")}><ArrowRight size={15} /> Review</button>}
-        {icon.status === "approved" && role === "admin" && <button className="workspace-publish" onClick={() => void updateWorkspaceStatus(icon.id, "published")}><RocketLaunch size={15} /> Publish</button>}
-        {icon.status === "approved" && role !== "admin" && <span className="permission-note">Admin publish</span>}
+        {icon.status === "approved" && role === "admin" && hasPair && <button className="workspace-publish" onClick={() => void updateWorkspaceStatus(icon.id, "published", "", approvedItem?.proposal.id)}><RocketLaunch size={15} /> Publish pair</button>}
+        {icon.status === "approved" && role === "admin" && !hasPair && approvedItem && <button onClick={() => void reopenApprovedProposal(approvedItem.proposal.id)}><NotePencil size={15} /> Return for pair</button>}
+        {icon.status === "approved" && role !== "admin" && <span className="permission-note">{hasPair ? "Admin publish" : "Pair required"}</span>}
         {icon.status === "published" && <button onClick={() => { window.location.assign(`/explore?q=${encodeURIComponent(icon.name)}`); }}><ArrowRight size={15} /> Explore</button>}
+        {icon.status === "published" && role === "admin" && <button className="workspace-deprecate" onClick={() => setDeprecating((current) => !current)}><Prohibit size={15} /> Deprecate</button>}
+        {icon.status === "deprecated" && <span className="permission-note">Immutable release retained</span>}
         {icon.status !== "archived" && <button className="icon-action" onClick={() => duplicateWorkspaceIcon(icon.id)} aria-label={`Duplicate ${icon.name}`} title="Duplicate"><Copy size={15} /></button>}
         {icon.status !== "archived" && <button className="icon-action" onClick={exportIcon} aria-label={`Export ${icon.name}`} title="Export SVG"><DownloadSimple size={15} /></button>}
-        <button className="icon-action" onClick={() => updateWorkspaceStatus(icon.id, icon.status === "archived" ? "draft" : "archived")} aria-label={`${icon.status === "archived" ? "Restore" : "Archive"} ${icon.name}`} title={icon.status === "archived" ? "Restore as draft" : "Archive"}><Archive size={15} /></button>
+        {icon.status !== "published" && icon.status !== "deprecated" && <button className="icon-action" onClick={() => void updateWorkspaceStatus(icon.id, icon.status === "archived" ? "draft" : "archived")} aria-label={`${icon.status === "archived" ? "Restore" : "Archive"} ${icon.name}`} title={icon.status === "archived" ? "Restore as draft" : "Archive"}><Archive size={15} /></button>}
       </div>
+      {deprecating && <form className="workspace-governance-form" onSubmit={(event) => { event.preventDefault(); void updateWorkspaceStatus(icon.id, "deprecated", deprecationReason); setDeprecating(false); setDeprecationReason(""); }}><label><span>Deprecation reason</span><textarea value={deprecationReason} onChange={(event) => setDeprecationReason(event.target.value)} placeholder="Explain the replacement or product decision" /></label><div><button type="button" onClick={() => setDeprecating(false)}>Cancel</button><button type="submit" className="danger-action" disabled={deprecationReason.trim().length < 10}><Prohibit size={16} />Confirm deprecation</button></div></form>}
     </article>
   );
+}
+
+function governanceLabel(action: string) {
+  const labels: Record<string, string> = {
+    "proposal.submitted": "Proposal submitted",
+    "proposal.approved": "Proposal approved",
+    "proposal.changes_requested": "Changes requested",
+    "proposal.rejected": "Proposal rejected",
+    "icon.published": "Icon published",
+    "icon.deprecated": "Icon deprecated",
+    "review.comment_added": "Review note added",
+    "review.comment_resolved": "Review note resolved",
+    "review.comment_reopened": "Review note reopened",
+    "generation.started": "Generation started",
+    "generation.completed": "Generation completed",
+  };
+  return labels[action] ?? action.replaceAll(".", " ");
 }
 
 export function WorkspacePage({ onNavigate, dark }: { onNavigate: (route: RouteName) => void; dark: boolean }) {
@@ -78,7 +118,7 @@ export function WorkspacePage({ onNavigate, dark }: { onNavigate: (route: RouteN
       .filter((icon) => !normalized || [icon.name, icon.label, icon.project, ...icon.tags].some((value) => value.toLowerCase().includes(normalized)));
   }, [filter, project, query, state.workspace]);
 
-  const activeCount = state.workspace.filter((icon) => icon.status !== "archived").length;
+  const activeCount = state.workspace.filter((icon) => icon.status !== "archived" && icon.status !== "deprecated").length;
   const reviewCount = state.workspace.filter((icon) => icon.status === "in_review" || icon.status === "changes_requested").length;
   const publishedCount = state.workspace.filter((icon) => icon.status === "published").length;
 
@@ -107,6 +147,21 @@ export function WorkspacePage({ onNavigate, dark }: { onNavigate: (route: RouteN
         <div className="workspace-list">
           {backendLoading ? <div className="workspace-empty"><strong>Loading project records…</strong><p>Restoring drafts, proposals, and published versions.</p></div> : backendError ? <div className="workspace-empty"><strong>Workspace unavailable</strong><p>{backendError}</p></div> : filtered.length ? filtered.map((icon) => <WorkspaceRow key={icon.id} icon={icon} onNavigate={onNavigate} role={role} />) : <div className="workspace-empty"><MagnifyingGlass size={30} /><strong>No icons match this view.</strong><p>Change the status, project, or search filter.</p><button onClick={() => { setFilter("all"); setProject("all"); setQuery(""); }}>Clear filters</button></div>}
         </div>
+      </Panel>
+      <Panel className="governance-panel">
+        <PanelHeader number="03" title="Release and audit" meta={role === "contributor" ? "REVIEWER ACCESS" : "IMMUTABLE HISTORY"} />
+        {role === "contributor" ? <div className="governance-restricted"><ShieldCheck size={28} /><strong>Governance history is restricted</strong><p>Reviewers and administrators can inspect project audit events and release provenance.</p></div> : <div className="governance-grid">
+          <section>
+            <header><strong>Release changelog</strong><span>{state.releaseEntries.length} versions</span></header>
+            <div className="release-log">{state.releaseEntries.slice(0, 6).map((entry) => <article key={entry.id}><div><strong>{entry.iconName}</strong><span>v{entry.version} / {entry.variant}</span></div><span className={`release-state ${entry.status}`}>{entry.status}</span><code>{entry.contentHash.slice(0, 12)}</code><time dateTime={entry.occurredAt}>{formatUpdated(entry.occurredAt)}</time>{entry.reason && <p>{entry.reason}</p>}</article>)}</div>
+            {!state.releaseEntries.length && <div className="governance-empty">Published versions will appear here with their immutable content hash.</div>}
+          </section>
+          <section>
+            <header><strong>Audit trail</strong><span>{state.auditEvents.length} events</span></header>
+            <div className="audit-log">{state.auditEvents.slice(0, 6).map((event) => <article key={event.id}><span className="audit-action">{governanceLabel(event.action)}</span><strong>{event.targetType}</strong><small>{event.actorId ? event.actorId.slice(0, 8) : "system"} / {event.source}</small><time dateTime={event.occurredAt}>{formatUpdated(event.occurredAt)}</time></article>)}</div>
+            {!state.auditEvents.length && <div className="governance-empty">No privileged activity has been recorded for this project.</div>}
+          </section>
+        </div>}
       </Panel>
       <PageFooter dark={dark} />
     </main>

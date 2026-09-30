@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import { GithubLogo, Moon, Shapes, SignOut, SlidersHorizontal, Sun, X } from "@phosphor-icons/react";
+import { GithubLogo } from "@phosphor-icons/react/GithubLogo";
+import { Moon } from "@phosphor-icons/react/Moon";
+import { Shapes } from "@phosphor-icons/react/Shapes";
+import { SignOut } from "@phosphor-icons/react/SignOut";
+import { SlidersHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
+import { Sun } from "@phosphor-icons/react/Sun";
+import { X } from "@phosphor-icons/react/X";
 import type { RouteName } from "../domain/types";
 import { useAppState } from "../state/AppState";
 

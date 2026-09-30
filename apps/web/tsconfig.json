@@ -17,5 +17,6 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src", "vite.config.mjs"]
+  "include": ["src", "vite.config.mjs"],
+  "exclude": ["src/**/* 2.ts", "src/**/* 2.tsx"]
 }

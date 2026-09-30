@@ -7,6 +7,7 @@
 **/.npm-cache/
 output/
 packages/icons/release/
+apps/web/public/libraries/
 .DS_Store
 .env
 .env.*

@@ -1,6 +1,6 @@
 {
   "name": "@formaglyph/icons",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Original Formaglyph icon geometry, metadata, and deterministic SVG assets.",
   "type": "module",
   "sideEffects": false,

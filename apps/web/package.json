@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "libraries": "node --import tsx scripts/build-libraries.mjs",
+    "dev": "pnpm libraries && vite",
+    "build": "pnpm libraries && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "pnpm libraries && vitest run",
     "test:watch": "vitest",
     "check": "pnpm typecheck && pnpm test && pnpm build",
     "preview": "vite preview"
@@ -21,14 +22,20 @@
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "2.110.7",
     "@vitejs/plugin-react": "5.0.4",
+    "morphicons": "^1.6.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-router-dom": "7.18.1",
     "vite": "6.4.2"
   },
   "devDependencies": {
+    "@iconify-json/heroicons": "1.2.3",
+    "@iconify-json/lucide": "1.2.137",
+    "@iconify-json/tabler": "1.2.41",
+    "@phosphor-icons/core": "2.1.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "tsx": "4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }

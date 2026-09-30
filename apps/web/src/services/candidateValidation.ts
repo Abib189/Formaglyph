@@ -3,9 +3,17 @@ import {
   SvgValidationError,
   type SvgValidationResult,
 } from "@formaglyph/validators";
-import type { CandidateAssetInput } from "./repositories/types";
 
-export function validateCandidateAsset(candidate: CandidateAssetInput): SvgValidationResult {
+export interface CandidateSvgInput {
+  id: string;
+  name: string;
+  description: string;
+  svg: string;
+  issue: string | null;
+  variant?: "regular" | "solid";
+}
+
+export function validateCandidateAsset(candidate: CandidateSvgInput): SvgValidationResult {
   const result = sanitizeAndValidateSvg(candidate.svg);
   if (!result.safe || !result.normalizedSvg) throw new SvgValidationError(result);
   if (!candidate.issue) return result;

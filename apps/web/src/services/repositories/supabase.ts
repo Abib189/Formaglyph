@@ -1,12 +1,14 @@
-import { CloudArrowUp } from "@phosphor-icons/react";
-import type { CatalogIcon, DraftBrief, Proposal, WorkspaceIcon } from "../../domain/types";
+import type { AuditEvent, Candidate, CatalogIcon, DraftBrief, GenerationJob, Proposal, ReleaseEntry, ReviewComment, ReviewQueueItem, WorkspaceIcon } from "../../domain/types";
 import { requireSupabaseClient } from "../supabase";
 import type { Database, Json } from "../database.types";
 import { validateCandidateAsset } from "../candidateValidation";
+import { hydratePersistedCandidate, persistedProvenance } from "../candidateAsset";
+import { publishedBaselineForReview, sortReviewQueue } from "../reviewQueue";
 import { SVG_VALIDATOR_VERSION } from "@formaglyph/validators";
-import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, SavedDraft, WorkspaceData } from "./types";
+import type { CandidateAssetInput, FormaglyphRepository, MembershipRole, ProjectAccess, ProjectTokenSummary, SavedDraft, WorkspaceData } from "./types";
 
 type ProposalRow = Database["public"]["Tables"]["proposals"]["Row"];
+type GenerationJobRow = Database["public"]["Tables"]["generation_jobs"]["Row"];
 
 function rowToProposal(row: ProposalRow, comments: Proposal["comments"] = []): Proposal {
   return {
@@ -19,6 +21,54 @@ function rowToProposal(row: ProposalRow, comments: Proposal["comments"] = []): P
     submittedAt: row.submitted_at,
     decidedAt: row.decided_at,
     publishedAt: row.published_at,
+  };
+}
+
+function rowToGenerationJob(row: GenerationJobRow): GenerationJob {
+  return {
+    id: row.id,
+    adapter: row.adapter as GenerationJob["adapter"],
+    status: row.status as GenerationJob["status"],
+    progress: row.progress,
+    promptHash: row.prompt_sha256,
+    promptRetained: row.retain_prompt,
+    candidateCount: row.candidate_count,
+    error: row.error_message,
+    startedAt: row.started_at ?? row.created_at,
+    completedAt: row.completed_at,
+  };
+}
+
+function rowToReview(row: Database["public"]["Tables"]["reviews"]["Row"]): ReviewComment {
+  return {
+    id: row.id,
+    title: row.title,
+    author: row.reviewer_id,
+    time: new Date(row.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
+    text: row.body,
+    resolved: row.resolved,
+  };
+}
+
+function rowToProjectToken(row: {
+  id: string;
+  name: string;
+  token_prefix: string;
+  scopes: string[];
+  expires_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+}): ProjectTokenSummary {
+  return {
+    id: row.id,
+    name: row.name,
+    tokenPrefix: row.token_prefix,
+    scopes: row.scopes,
+    expiresAt: row.expires_at,
+    lastUsedAt: row.last_used_at,
+    revokedAt: row.revoked_at,
+    createdAt: row.created_at,
   };
 }
 
@@ -36,7 +86,7 @@ async function currentProject(projectSlug: string): Promise<ProjectAccess> {
   if (projectError) throw projectError;
   const { data: membership, error: membershipError } = await client.from("memberships").select("role").eq("organization_id", project.organization_id).eq("user_id", authData.user.id).single();
   if (membershipError) throw membershipError;
-  return { id: project.id, organizationId: project.organization_id, slug: project.slug, name: project.name, role: membership.role as MembershipRole };
+  return { id: project.id, organizationId: project.organization_id, slug: project.slug, name: project.name, visibility: project.visibility as "private" | "public", role: membership.role as MembershipRole };
 }
 
 async function findProposal(proposalId: string): Promise<ProposalRow> {
@@ -48,6 +98,75 @@ async function findProposal(proposalId: string): Promise<ProposalRow> {
   return data;
 }
 
+async function loadCandidateFromStorage(candidateId: string): Promise<Candidate> {
+  const client = requireSupabaseClient();
+  const { data: candidate, error: candidateError } = await client.from("candidates").select("*").eq("id", candidateId).single();
+  if (candidateError) throw new Error(`Could not load the submitted candidate: ${candidateError.message}`);
+  try {
+    const { data: storedVariants, error: variantError } = await client
+      .from("candidate_variant_assets")
+      .select("*")
+      .eq("candidate_id", candidateId)
+      .order("variant");
+    if (variantError) throw new Error(`Could not load the submitted variants: ${variantError.message}`);
+    const variantLinks = storedVariants.length
+      ? storedVariants
+      : [{
+          candidate_id: candidate.id,
+          variant: candidate.variant,
+          asset_id: candidate.asset_id,
+          validation_run_id: candidate.validation_run_id,
+          created_at: candidate.created_at,
+        }];
+    const assetIds = variantLinks.map((link) => link.asset_id);
+    const { data: assets, error: assetError } = await client.from("asset_blobs").select("*").in("id", assetIds);
+    if (assetError) throw new Error(`Could not load the submitted asset records: ${assetError.message}`);
+    const hydratedVariants = await Promise.all(variantLinks.map(async (link) => {
+      const asset = assets.find((item) => item.id === link.asset_id);
+      if (!asset) throw new Error(`The submitted ${link.variant} asset record is missing.`);
+      const { data: blob, error: downloadError } = await client.storage.from(asset.storage_bucket).download(asset.storage_path);
+      if (downloadError) throw new Error(`Could not download the submitted ${link.variant} SVG: ${downloadError.message}`);
+      return {
+        variant: link.variant === "solid" ? "solid" as const : "regular" as const,
+        svg: await blob.text(),
+        expectedSha256: asset.sha256,
+      };
+    }));
+
+    return hydratePersistedCandidate({
+      id: candidate.id,
+      name: candidate.name,
+      description: candidate.description,
+      variant: candidate.variant,
+      issue: candidate.issue,
+      provenance: candidate.provenance,
+      generationJobId: candidate.generation_job_id,
+      promptSha256: candidate.prompt_sha256,
+      createdAt: candidate.created_at,
+    }, hydratedVariants);
+  } catch (error) {
+    return {
+      id: candidate.id,
+      name: candidate.name,
+      description: candidate.description,
+      variants: { regular: null, solid: null },
+      issue: error instanceof Error ? error.message : "The stored SVG is unavailable.",
+      provenance: persistedProvenance({
+        id: candidate.id,
+        name: candidate.name,
+        description: candidate.description,
+        variant: candidate.variant,
+        issue: candidate.issue,
+        provenance: candidate.provenance,
+        generationJobId: candidate.generation_job_id,
+        promptSha256: candidate.prompt_sha256,
+        createdAt: candidate.created_at,
+      }),
+      createdAt: candidate.created_at,
+    };
+  }
+}
+
 export class SupabaseRepository implements FormaglyphRepository {
   readonly mode = "supabase" as const;
 
@@ -55,9 +174,8 @@ export class SupabaseRepository implements FormaglyphRepository {
     const client = requireSupabaseClient();
     const { data: icons, error } = await client.from("icons").select("*").eq("status", "published").order("canonical_name");
     if (error) throw error;
-    const versionIds = icons.map((icon) => icon.current_version_id).filter((id): id is string => Boolean(id));
     const iconIds = icons.map((icon) => icon.id);
-    const { data: versions, error: versionError } = versionIds.length ? await client.from("icon_versions").select("*").in("id", versionIds) : { data: [], error: null };
+    const { data: versions, error: versionError } = iconIds.length ? await client.from("icon_versions").select("*").in("icon_id", iconIds) : { data: [], error: null };
     if (versionError) throw versionError;
     const assetIds = versions.map((version) => version.optimized_asset_id ?? version.source_asset_id);
     const { data: assets, error: assetError } = assetIds.length ? await client.from("asset_blobs").select("*").in("id", assetIds) : { data: [], error: null };
@@ -65,34 +183,48 @@ export class SupabaseRepository implements FormaglyphRepository {
     const { data: aliases, error: aliasError } = iconIds.length ? await client.from("icon_aliases").select("*").in("icon_id", iconIds) : { data: [], error: null };
     if (aliasError) throw aliasError;
 
-    return icons.map((icon) => {
-      const version = versions.find((item) => item.id === icon.current_version_id);
-      const asset = assets.find((item) => item.id === (version?.optimized_asset_id ?? version?.source_asset_id));
-      const assetUrl = asset ? client.storage.from(asset.storage_bucket).getPublicUrl(asset.storage_path).data.publicUrl : undefined;
-      return {
-        id: icon.id,
-        stableId: icon.stable_id,
-        name: icon.canonical_name,
-        label: icon.label,
-        category: icon.category,
-        description: icon.description,
-        Icon: CloudArrowUp,
-        tags: aliases.filter((item) => item.icon_id === icon.id).map((item) => item.alias),
-        aliases: aliases.filter((item) => item.icon_id === icon.id).map((item) => ({ locale: item.locale, value: item.alias, reviewed: item.reviewed })),
-        version: version?.version ?? "0.0.0",
-        variant: version?.variant === "solid" ? "solid" : "regular",
-        previewWeight: version?.variant === "solid" ? "fill" : "regular",
-        directionality: icon.directionality === "ltr" ? "ltr-specific" : icon.directionality === "rtl" ? "rtl-specific" : icon.directionality === "mirrored" ? "mirrored-safe" : "neutral",
-        licence: "MIT",
-        status: "published",
-        provenance: { kind: "original", source: "Formaglyph", disclosed: true },
-        assetUrl,
-        contentHash: version?.content_hash,
-      };
+    const publishedVersions = icons.flatMap((icon) => {
+      const current = versions.find((item) => item.id === icon.current_version_id);
+      if (!current || icon.licence !== "MIT") return [];
+      const release = versions.filter((item) => item.icon_id === icon.id && item.version === current.version);
+      if (!release.some((item) => item.variant === "regular") || !release.some((item) => item.variant === "solid")) return [];
+      return release.map((version) => ({ icon, version }));
     });
+
+    return (await Promise.all(publishedVersions.map(async ({ icon, version }) => {
+        const asset = assets.find((item) => item.id === (version.optimized_asset_id ?? version.source_asset_id));
+        if (!asset || asset.storage_bucket !== "published-assets" || asset.sha256 !== version.content_hash) return null;
+        const { data: blob, error: downloadError } = await client.storage.from("published-assets").download(asset.storage_path);
+        if (downloadError) throw new Error(`Could not load ${icon.canonical_name} ${version.variant}: ${downloadError.message}`);
+        const sourceSvg = await blob.text();
+        if (await sha256(sourceSvg) !== version.content_hash) throw new Error(`The published ${icon.canonical_name} ${version.variant} asset failed its content-hash check.`);
+        const validated = validateCandidateAsset({ id: version.id, name: icon.canonical_name, description: icon.description, svg: sourceSvg, issue: null, variant: version.variant as "regular" | "solid" });
+        if (!validated.normalizedSvg) throw new Error(`The published ${icon.canonical_name} ${version.variant} SVG could not be validated.`);
+        const reviewedAliases = aliases.filter((item) => item.icon_id === icon.id && item.reviewed);
+        const catalogIcon: CatalogIcon = {
+          id: version.id,
+          stableId: icon.stable_id,
+          name: icon.canonical_name,
+          label: icon.label,
+          category: icon.category,
+          description: icon.description,
+          tags: reviewedAliases.map((item) => item.alias),
+          aliases: reviewedAliases.map((item) => ({ locale: item.locale, value: item.alias, reviewed: true })),
+          version: version.version,
+          variant: version.variant === "solid" ? "solid" as const : "regular" as const,
+          previewWeight: version.variant === "solid" ? "fill" as const : "regular" as const,
+          directionality: icon.directionality === "ltr" ? "ltr-specific" : icon.directionality === "rtl" ? "rtl-specific" : icon.directionality === "mirrored" ? "mirrored-safe" : "neutral",
+          licence: "MIT",
+          status: "published",
+          provenance: { kind: "human-reviewed", source: "Formaglyph project publication", disclosed: true },
+          svg: validated.normalizedSvg,
+          contentHash: version.content_hash,
+        };
+        return catalogIcon;
+    }))).filter((icon): icon is CatalogIcon => icon !== null);
   }
 
-  async loadWorkspace(projectSlug: string): Promise<WorkspaceData | null> {
+  async loadWorkspace(projectSlug: string, draftId?: string | null, proposalId?: string | null): Promise<WorkspaceData | null> {
     const client = requireSupabaseClient();
     let project: ProjectAccess;
     try { project = await currentProject(projectSlug); } catch { return null; }
@@ -102,43 +234,204 @@ export class SupabaseRepository implements FormaglyphRepository {
       client.from("proposals").select("*").eq("project_id", project.id).order("updated_at", { ascending: false }),
     ]);
     if (iconError || draftError || proposalError) throw iconError ?? draftError ?? proposalError;
+    const currentVersionIds = icons.map((icon) => icon.current_version_id).filter((id): id is string => Boolean(id));
+    const { data: currentVersions, error: currentVersionError } = currentVersionIds.length
+      ? await client.from("icon_versions").select("id, provenance").in("id", currentVersionIds)
+      : { data: [], error: null };
+    if (currentVersionError) throw currentVersionError;
+    const releasedProposalIds = currentVersions.map((version) => {
+      const provenance = version.provenance;
+      return {
+        id: version.id,
+        proposalPublicId: provenance && typeof provenance === "object" && !Array.isArray(provenance)
+          && typeof provenance.proposal_id === "string" ? provenance.proposal_id : null,
+      };
+    });
     const workspace: WorkspaceIcon[] = [
-      ...drafts.map((draft) => ({
-        id: draft.id,
-        stableId: draft.icon_id ? `ico_${draft.icon_id.replaceAll("-", "_")}` : `draft_${draft.id.replaceAll("-", "_")}`,
-        name: draft.name,
-        label: draft.name.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" "),
-        description: draft.description,
-        category: "Workspace",
-        tags: draft.keywords,
-        project: project.name,
-        status: draft.status === "rejected" ? "changes_requested" : draft.status === "published" ? "published" : draft.status as WorkspaceIcon["status"],
-        variant: "regular" as const,
-        visualKey: "cloud-upload",
-        creator: "Team member",
-        updatedAt: draft.updated_at,
-        validation: "passed" as const,
-        version: proposals.find((item) => item.draft_id === draft.id)?.target_version ?? "1.0.0",
-      })),
+      ...drafts.map((draft) => {
+        const linkedIcon = icons.find((icon) => icon.id === draft.icon_id);
+        return {
+          id: draft.id,
+          stableId: draft.icon_id ? `ico_${draft.icon_id.replaceAll("-", "_")}` : `draft_${draft.id.replaceAll("-", "_")}`,
+          name: draft.name,
+          label: draft.name.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" "),
+          description: draft.description,
+          category: "Workspace",
+          tags: draft.keywords,
+          project: project.name,
+          status: (linkedIcon?.status === "deprecated" ? "deprecated" : draft.status) as WorkspaceIcon["status"],
+          variant: "regular" as const,
+          visualKey: "cloud-upload",
+          creator: "Team member",
+          creatorId: draft.created_by,
+          updatedAt: linkedIcon?.status === "deprecated" ? linkedIcon.updated_at : draft.updated_at,
+          validation: "passed" as const,
+          version: proposals.find((item) => item.draft_id === draft.id)?.target_version ?? "1.0.0",
+          databaseIconId: draft.icon_id,
+        };
+      }),
       ...icons.filter((icon) => !drafts.some((draft) => draft.icon_id === icon.id)).map((icon) => ({
         id: icon.id, stableId: icon.stable_id, name: icon.canonical_name, label: icon.label, description: icon.description,
         category: icon.category, tags: [], project: project.name, status: icon.status as WorkspaceIcon["status"], variant: "regular" as const,
-        visualKey: "cloud-upload", creator: "Team member", updatedAt: icon.updated_at, validation: "passed" as const, version: "1.0.0",
+        visualKey: "cloud-upload", creator: "Team member", creatorId: icon.created_by, updatedAt: icon.updated_at, validation: "passed" as const, version: "1.0.0",
+        databaseIconId: icon.id,
       })),
     ];
-    const activeDraft = drafts[0];
-    const activeProposal = proposals.find((item) => item.draft_id === activeDraft?.id) ?? proposals[0];
-    let comments: Proposal["comments"] = [];
-    if (activeProposal) {
-      const { data: reviews, error } = await client.from("reviews").select("*").eq("proposal_id", activeProposal.id).order("created_at");
+    const proposalIds = proposals.map((proposal) => proposal.id);
+    const { data: reviews, error: reviewError } = proposalIds.length
+      ? await client.from("reviews").select("*").in("proposal_id", proposalIds).order("created_at")
+      : { data: [], error: null };
+    if (reviewError) throw reviewError;
+    let auditEvents: AuditEvent[] = [];
+    let auditRows: Database["public"]["Tables"]["audit_events"]["Row"][] = [];
+    if (project.role !== "contributor") {
+      const { data: events, error } = await client.from("audit_events").select("*").eq("project_id", project.id).order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
-      comments = reviews.map((review, index) => ({ id: `R${index + 1}`, title: review.title, author: review.reviewer_id, time: new Date(review.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), text: review.body, resolved: review.resolved }));
+      auditRows = events;
+      auditEvents = events.map((event) => ({
+        id: String(event.id),
+        action: event.action,
+        actorId: event.actor_id,
+        targetType: event.target_type,
+        targetId: event.target_id,
+        source: event.source,
+        occurredAt: event.created_at,
+        metadata: (event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata) ? event.metadata : {}) as AuditEvent["metadata"],
+      }));
     }
+    const revisionCandidateIds = auditRows.flatMap((event) => {
+      if (event.action !== "proposal.submitted" || !event.metadata || typeof event.metadata !== "object" || Array.isArray(event.metadata)) return [];
+      const candidateId = event.metadata.candidate_id;
+      return typeof candidateId === "string" ? [candidateId] : [];
+    });
+    const candidateIds = [...new Set([
+      ...proposals.map((proposal) => proposal.candidate_id),
+      ...drafts.map((draft) => draft.selected_candidate_id).filter((id): id is string => Boolean(id)),
+      ...revisionCandidateIds,
+    ])];
+    const hydratedCandidates = await Promise.all(candidateIds.map(async (candidateId) => [candidateId, await loadCandidateFromStorage(candidateId)] as const));
+    const candidateMap = new Map(hydratedCandidates);
+    const baselineIcons = icons.map((icon) => ({ id: icon.id, canonicalName: icon.canonical_name, currentVersionId: icon.current_version_id }));
+    const baselineProposals = proposals.map((proposal) => ({ publicId: proposal.public_id, candidateId: proposal.candidate_id }));
+    const reviewQueue = sortReviewQueue(proposals.flatMap<ReviewQueueItem>((proposal) => {
+      const draft = drafts.find((item) => item.id === proposal.draft_id);
+      const currentCandidate = candidateMap.get(proposal.candidate_id);
+      if (!draft || !currentCandidate) return [];
+      const submissionEvents = auditRows
+        .filter((event) => event.action === "proposal.submitted" && event.target_id === proposal.id)
+        .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime());
+      const revisions = submissionEvents.flatMap((event, index) => {
+        const metadata = event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata) ? event.metadata : {};
+        const submittedCandidate = typeof metadata.candidate_id === "string" ? candidateMap.get(metadata.candidate_id) : undefined;
+        return submittedCandidate ? [{
+          id: String(event.id),
+          sequence: index + 1,
+          candidate: submittedCandidate,
+          submittedAt: event.created_at,
+          submittedBy: event.actor_id,
+        }] : [];
+      });
+      if (!revisions.length) {
+        revisions.push({
+          id: `proposal-${proposal.id}`,
+          sequence: 1,
+          candidate: currentCandidate,
+          submittedAt: proposal.submitted_at ?? proposal.created_at,
+          submittedBy: proposal.author_id,
+        });
+      }
+      const previousPublished = proposals
+        .filter((item) => item.id !== proposal.id && item.draft_id === proposal.draft_id && item.status === "published" && new Date(item.created_at) < new Date(proposal.created_at))
+        .sort((left, right) => new Date(right.published_at ?? right.updated_at).getTime() - new Date(left.published_at ?? left.updated_at).getTime())[0];
+      const proposalReviews = reviews.filter((review) => review.proposal_id === proposal.id);
+      const comments = proposalReviews.filter((review) => review.decision === "comment").map(rowToReview);
+      return [{
+        proposal: rowToProposal(proposal, comments),
+        databaseProposalId: proposal.id,
+        draft: {
+          workspaceIconId: draft.id,
+          name: draft.name,
+          description: draft.description,
+          keywords: draft.keywords.join(", "),
+          selectedCandidateId: proposal.candidate_id,
+          updatedAt: draft.updated_at,
+        },
+        authorId: proposal.author_id,
+        updatedAt: proposal.updated_at,
+        revisions,
+        baselineCandidate: (previousPublished ? candidateMap.get(previousPublished.candidate_id) ?? null : null)
+          ?? publishedBaselineForReview({
+            draftIconId: draft.icon_id,
+            draftName: draft.name,
+            proposalPublicId: proposal.public_id,
+            proposalStatus: proposal.status as ReviewQueueItem["proposal"]["status"],
+            icons: baselineIcons,
+            currentVersions: releasedProposalIds,
+            proposals: baselineProposals,
+            candidates: candidateMap,
+          }),
+        decisions: proposalReviews.flatMap((review) => review.decision === "comment" ? [] : [{
+          id: review.id,
+          decision: review.decision as "approve" | "request_changes" | "reject",
+          reviewerId: review.reviewer_id,
+          body: review.body,
+          createdAt: review.created_at,
+        }]),
+      }];
+    }));
+    const requestedProposal = proposalId && proposalId !== "current"
+      ? proposals.find((item) => item.id === proposalId || item.public_id === proposalId)
+      : undefined;
+    const requestedProposalDraft = requestedProposal ? drafts.find((draft) => draft.id === requestedProposal.draft_id) : undefined;
+    const requestedDraft = draftId ? drafts.find((draft) => draft.id === draftId) : undefined;
+    if (draftId && !requestedDraft) throw new Error("Draft not found in this project.");
+    const activeDraft = requestedProposalDraft ?? requestedDraft ?? drafts[0];
+    const activeProposal = requestedProposal ?? proposals.find((item) => (
+      item.draft_id === activeDraft?.id && item.status === "in_review"
+    )) ?? proposals.find((item) => (
+      item.draft_id === activeDraft?.id && item.status !== "published" && item.status !== "rejected"
+    )) ?? proposals.find((item) => item.draft_id === activeDraft?.id);
+    const activeQueueItem = reviewQueue.find((item) => item.databaseProposalId === activeProposal?.id);
+    const activeCandidateId = draftId && !proposalId
+      ? activeDraft?.selected_candidate_id ?? activeProposal?.candidate_id
+      : activeProposal?.candidate_id ?? activeDraft?.selected_candidate_id;
+    const candidates = activeQueueItem
+      ? [...new Map([
+          ...(activeQueueItem.baselineCandidate ? [[activeQueueItem.baselineCandidate.id, activeQueueItem.baselineCandidate] as const] : []),
+          ...activeQueueItem.revisions.map((revision) => [revision.candidate.id, revision.candidate] as const),
+          ...(activeCandidateId && candidateMap.has(activeCandidateId) ? [[activeCandidateId, candidateMap.get(activeCandidateId)!] as const] : []),
+        ]).values()]
+      : activeCandidateId && candidateMap.has(activeCandidateId) ? [candidateMap.get(activeCandidateId)!] : [];
+    const comments = activeQueueItem?.proposal.comments ?? [];
+    const iconIds = icons.map((icon) => icon.id);
+    const { data: versions, error: versionError } = iconIds.length
+      ? await client.from("icon_versions").select("*").in("icon_id", iconIds).order("created_at", { ascending: false }).limit(50)
+      : { data: [], error: null };
+    if (versionError) throw versionError;
+    const releaseEntries: ReleaseEntry[] = versions.map((version) => {
+      const icon = icons.find((item) => item.id === version.icon_id)!;
+      const deprecation = auditEvents.find((event) => event.action === "icon.deprecated" && event.targetId === icon.id);
+      return {
+        id: version.id,
+        iconId: icon.id,
+        iconName: icon.canonical_name,
+        version: version.version,
+        variant: version.variant === "solid" ? "solid" : "regular",
+        status: icon.status === "deprecated" && icon.current_version_id === version.id ? "deprecated" : "published",
+        contentHash: version.content_hash,
+        occurredAt: version.created_at,
+        reason: typeof deprecation?.metadata.reason === "string" ? deprecation.metadata.reason : null,
+      };
+    });
     return {
       project,
       icons: workspace,
-      draft: activeDraft ? { workspaceIconId: activeDraft.id, name: activeDraft.name, description: activeDraft.description, keywords: activeDraft.keywords.join(", "), selectedCandidateId: activeDraft.selected_candidate_id ?? "candidate-01", updatedAt: activeDraft.updated_at } : undefined,
+      draft: activeDraft ? { workspaceIconId: activeDraft.id, name: activeDraft.name, description: activeDraft.description, keywords: activeDraft.keywords.join(", "), selectedCandidateId: activeCandidateId ?? "", updatedAt: activeDraft.updated_at } : undefined,
       proposal: activeProposal ? rowToProposal(activeProposal, comments) : undefined,
+      candidates,
+      reviewQueue,
+      auditEvents,
+      releaseEntries,
     };
   }
 
@@ -150,40 +443,80 @@ export class SupabaseRepository implements FormaglyphRepository {
     const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(draft.workspaceIconId);
     let draftId = looksLikeUuid ? draft.workspaceIconId : crypto.randomUUID();
     if (looksLikeUuid) {
-      const { error } = await client.from("drafts").update({ name: draft.name, description: draft.description, keywords: draft.keywords.split(",").map((item) => item.trim()).filter(Boolean), updated_at: new Date().toISOString() }).eq("id", draftId);
+      const { data, error } = await client.from("drafts").update({ name: draft.name, description: draft.description, keywords: draft.keywords.split(",").map((item) => item.trim()).filter(Boolean), updated_at: new Date().toISOString() }).eq("id", draftId).select("id").maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Draft not found or not owned. Open one of your drafts or start a new icon.");
     } else {
       const { data, error } = await client.from("drafts").insert({ id: draftId, project_id: project.id, name: draft.name, description: draft.description, keywords: draft.keywords.split(",").map((item) => item.trim()).filter(Boolean), created_by: authData.user.id }).select("id").single();
       if (error) throw error;
       draftId = data.id;
     }
     const candidateId = crypto.randomUUID();
-    const assetId = crypto.randomUUID();
-    const validationId = crypto.randomUUID();
-    const path = `${project.organizationId}/${project.id}/${draftId}/${assetId}/source.svg`;
-    const validation = validateCandidateAsset(candidate);
-    const normalizedSvg = validation.normalizedSvg;
-    if (!normalizedSvg) throw new Error("Safe normalized SVG output is required before upload.");
-    const normalizedBlob = new Blob([normalizedSvg], { type: "image/svg+xml" });
-    const hash = await sha256(normalizedSvg);
-    const { error: uploadError } = await client.storage.from("source-assets").upload(path, normalizedBlob, { contentType: "image/svg+xml", upsert: false });
-    if (uploadError) throw uploadError;
-    const { error: assetError } = await client.from("asset_blobs").insert({ id: assetId, project_id: project.id, storage_bucket: "source-assets", storage_path: path, byte_size: normalizedBlob.size, sha256: hash, sanitization_status: "passed", created_by: authData.user.id });
-    if (assetError) throw assetError;
-    const issueCounts = validation.issues.reduce<Record<string, number>>((counts, issue) => ({ ...counts, [issue.severity]: (counts[issue.severity] ?? 0) + 1 }), {});
-    const summary = { safe: validation.safe, changes: validation.changes, measurements: validation.measurements, issueCounts } as unknown as Json;
-    const { error: validationError } = await client.from("validation_runs").insert({ id: validationId, project_id: project.id, target_type: "candidate", target_id: candidateId, validator_version: SVG_VALIDATOR_VERSION, status: validation.status, summary, created_by: authData.user.id });
-    if (validationError) throw validationError;
-    if (validation.issues.length) {
-      const { error: issuesError } = await client.from("validation_issues").insert(validation.issues.map((issue) => ({ validation_run_id: validationId, rule_id: issue.ruleId, severity: issue.severity, location: issue.location ?? null, message: issue.message, remediation: issue.remediation ?? null })));
-      if (issuesError) throw issuesError;
+    const availableVariants = (["regular", "solid"] as const).flatMap((variant) => {
+      const svg = candidate.variants[variant];
+      return svg ? [{ variant, svg }] : [];
+    });
+    if (!availableVariants.length) throw new Error("At least one safe SVG variant is required before saving.");
+    const storedVariants: Array<{
+      variant: "regular" | "solid";
+      svg: string;
+      assetId: string;
+      validationId: string;
+      validation: ReturnType<typeof validateCandidateAsset>;
+    }> = [];
+    for (const source of availableVariants) {
+      const assetId = crypto.randomUUID();
+      const validationId = crypto.randomUUID();
+      const path = `${project.organizationId}/${project.id}/${draftId}/${candidateId}/${source.variant}/${assetId}.svg`;
+      const validation = validateCandidateAsset({ ...candidate, svg: source.svg, variant: source.variant });
+      const normalizedSvg = validation.normalizedSvg;
+      if (!normalizedSvg) throw new Error(`Safe normalized ${source.variant} SVG output is required before upload.`);
+      const normalizedBlob = new Blob([normalizedSvg], { type: "image/svg+xml" });
+      const hash = await sha256(normalizedSvg);
+      const { error: uploadError } = await client.storage.from("source-assets").upload(path, normalizedBlob, { contentType: "image/svg+xml", upsert: false });
+      if (uploadError) throw uploadError;
+      const { error: assetError } = await client.from("asset_blobs").insert({ id: assetId, project_id: project.id, storage_bucket: "source-assets", storage_path: path, byte_size: normalizedBlob.size, sha256: hash, sanitization_status: "passed", created_by: authData.user.id });
+      if (assetError) throw assetError;
+      const issueCounts = validation.issues.reduce<Record<string, number>>((counts, issue) => ({ ...counts, [issue.severity]: (counts[issue.severity] ?? 0) + 1 }), {});
+      const summary = { variant: source.variant, safe: validation.safe, changes: validation.changes, measurements: validation.measurements, issueCounts } as unknown as Json;
+      const { error: validationError } = await client.from("validation_runs").insert({ id: validationId, project_id: project.id, target_type: "candidate", target_id: candidateId, validator_version: SVG_VALIDATOR_VERSION, status: validation.status, summary, created_by: authData.user.id });
+      if (validationError) throw validationError;
+      if (validation.issues.length) {
+        const { error: issuesError } = await client.from("validation_issues").insert(validation.issues.map((issue) => ({ validation_run_id: validationId, rule_id: issue.ruleId, severity: issue.severity, location: issue.location ?? null, message: issue.message, remediation: issue.remediation ?? null })));
+        if (issuesError) throw issuesError;
+      }
+      storedVariants.push({ ...source, assetId, validationId, validation });
     }
-    const blockingIssue = candidate.issue ?? validation.issues.find((issue) => issue.severity === "blocker" || issue.severity === "error")?.message ?? null;
-    const { error: candidateError } = await client.from("candidates").insert({ id: candidateId, draft_id: draftId, name: candidate.name, description: candidate.description, asset_id: assetId, validation_run_id: validationId, issue: blockingIssue, created_by: authData.user.id });
+    const primaryVariant = candidate.primaryVariant && storedVariants.some((item) => item.variant === candidate.primaryVariant)
+      ? candidate.primaryVariant
+      : storedVariants[0].variant;
+    const primary = storedVariants.find((item) => item.variant === primaryVariant)!;
+    const blockingIssue = candidate.issue ?? storedVariants.flatMap((item) => item.validation.issues).find((issue) => issue.severity === "blocker" || issue.severity === "error")?.message ?? null;
+    const { error: candidateError } = await client.from("candidates").insert({
+      id: candidateId,
+      draft_id: draftId,
+      name: candidate.name,
+      description: candidate.description,
+      variant: primaryVariant,
+      asset_id: primary.assetId,
+      validation_run_id: primary.validationId,
+      issue: blockingIssue,
+      generation_job_id: candidate.generationJobId ?? null,
+      prompt_sha256: candidate.promptSha256 ?? null,
+      provenance: (candidate.provenance ?? { kind: "import", disclosed: true }) as unknown as Json,
+      created_by: authData.user.id,
+    });
     if (candidateError) throw candidateError;
+    const { error: variantLinkError } = await client.from("candidate_variant_assets").insert(storedVariants.map((item) => ({
+      candidate_id: candidateId,
+      variant: item.variant,
+      asset_id: item.assetId,
+      validation_run_id: item.validationId,
+    })));
+    if (variantLinkError) throw variantLinkError;
     const { error: selectionError } = await client.from("drafts").update({ selected_candidate_id: candidateId, updated_at: new Date().toISOString() }).eq("id", draftId);
     if (selectionError) throw selectionError;
-    return { draftId, candidateId, validation };
+    return { draftId, candidateId, validation: primary.validation };
   }
 
   async submitProposal(draftId: string, candidateId: string, targetVersion: string) {
@@ -203,25 +536,157 @@ export class SupabaseRepository implements FormaglyphRepository {
   async publishProposal(proposalId: string) {
     const client = requireSupabaseClient();
     const proposal = await findProposal(proposalId);
-    const { data: candidate, error: candidateError } = await client.from("candidates").select("*").eq("id", proposal.candidate_id).single();
-    if (candidateError) throw candidateError;
-    const { data: source, error: sourceError } = await client.from("asset_blobs").select("*").eq("id", candidate.asset_id).single();
-    if (sourceError) throw sourceError;
-    if (source.storage_bucket !== "published-assets") {
-      const project = await currentProject((await client.from("projects").select("slug").eq("id", proposal.project_id).single()).data?.slug ?? "");
-      const { data: sourceBlob, error: downloadError } = await client.storage.from(source.storage_bucket).download(source.storage_path);
-      if (downloadError) throw downloadError;
-      const publishedAssetId = crypto.randomUUID();
-      const publishedPath = `${project.organizationId}/${project.id}/${proposal.draft_id}/${proposal.id}/${proposal.target_version}/${candidate.variant}.svg`;
-      const { error: uploadError } = await client.storage.from("published-assets").upload(publishedPath, sourceBlob, { contentType: "image/svg+xml", upsert: false });
-      if (uploadError) throw uploadError;
-      const { error: assetError } = await client.from("asset_blobs").insert({ id: publishedAssetId, project_id: project.id, storage_bucket: "published-assets", storage_path: publishedPath, byte_size: sourceBlob.size, sha256: await sha256(sourceBlob), sanitization_status: "passed", created_by: (await client.auth.getUser()).data.user?.id });
-      if (assetError) throw assetError;
-      const { error: updateError } = await client.from("candidates").update({ asset_id: publishedAssetId }).eq("id", candidate.id);
-      if (updateError) throw updateError;
+    const { data: variants, error: variantError } = await client.from("candidate_variant_assets").select("*").eq("candidate_id", proposal.candidate_id);
+    if (variantError) throw new Error(variantError.message);
+    if (!variants || variants.length !== 2 || !variants.some((item) => item.variant === "regular") || !variants.some((item) => item.variant === "solid")) {
+      throw new Error("Regular and Solid are required before publication. Return this proposal for edits.");
+    }
+    const { data: projectRow, error: projectError } = await client.from("projects").select("slug").eq("id", proposal.project_id).single();
+    if (projectError) throw new Error(projectError.message);
+    const project = await currentProject(projectRow.slug);
+    const { data: authData, error: authError } = await client.auth.getUser();
+    if (authError || !authData.user) throw new Error(authError?.message ?? "Sign in before publishing.");
+
+    for (const variant of variants) {
+      const { data: source, error: sourceError } = await client.from("asset_blobs").select("*").eq("id", variant.asset_id).single();
+      if (sourceError) throw new Error(sourceError.message);
+      if (source.storage_bucket !== "source-assets" || source.sanitization_status !== "passed") throw new Error(`A validated ${variant.variant} source asset is required.`);
+      const { data: sourceBlob, error: downloadError } = await client.storage.from("source-assets").download(source.storage_path);
+      if (downloadError) throw new Error(downloadError.message);
+      const sourceHash = await sha256(sourceBlob);
+      if (sourceHash !== source.sha256) throw new Error(`The ${variant.variant} source asset failed its content-hash check.`);
+
+      const publishedPath = `${project.organizationId}/${project.id}/${proposal.draft_id}/${proposal.id}/${proposal.candidate_id}/${variant.variant}.svg`;
+      const publishedBucket = client.storage.from("published-assets");
+      const { data: recorded, error: lookupError } = await client.from("asset_blobs").select("*").eq("storage_path", publishedPath).maybeSingle();
+      if (lookupError) throw new Error(lookupError.message);
+      if (recorded && (recorded.sha256 !== sourceHash || recorded.storage_bucket !== "published-assets")) throw new Error(`The published ${variant.variant} path contains a different asset.`);
+      if (!recorded) {
+        const { error: uploadError } = await publishedBucket.upload(publishedPath, sourceBlob, { contentType: "image/svg+xml", upsert: false });
+        if (uploadError) {
+          const { data: existingBlob, error: existingError } = await publishedBucket.download(publishedPath);
+          if (existingError || !existingBlob || await sha256(existingBlob) !== sourceHash) throw new Error(uploadError.message);
+        }
+        const { error: assetError } = await client.from("asset_blobs").insert({
+          id: crypto.randomUUID(),
+          project_id: project.id,
+          storage_bucket: "published-assets",
+          storage_path: publishedPath,
+          byte_size: sourceBlob.size,
+          sha256: sourceHash,
+          sanitization_status: "passed",
+          created_by: authData.user.id,
+        });
+        if (assetError) {
+          const { data: raced } = await client.from("asset_blobs").select("sha256").eq("storage_path", publishedPath).maybeSingle();
+          if (raced?.sha256 !== sourceHash) throw new Error(assetError.message);
+        }
+      }
+      const { data: publishedBlob, error: publishedError } = await publishedBucket.download(publishedPath);
+      if (publishedError || !publishedBlob || await sha256(publishedBlob) !== sourceHash) throw new Error(`Published ${variant.variant} asset could not be verified.`);
     }
     const { error } = await client.rpc("publish_proposal", { p_proposal_id: proposal.id });
-    if (error) throw error;
+    if (error) throw new Error(error.message);
+  }
+
+  async reopenApprovedProposal(proposalId: string) {
+    const row = await findProposal(proposalId);
+    const { data, error } = await requireSupabaseClient().rpc("reopen_approved_proposal", { p_proposal_id: row.id });
+    if (error) throw new Error(error.message);
+    return rowToProposal(data);
+  }
+
+  async commentProposal(proposalId: string, title: string, body: string) {
+    const client = requireSupabaseClient();
+    const proposal = await findProposal(proposalId);
+    const { data, error } = await client.rpc("comment_proposal", { p_proposal_id: proposal.id, p_title: title, p_body: body });
+    if (error) throw new Error(error.message);
+    return rowToReview(data);
+  }
+
+  async resolveReview(reviewId: string, resolved: boolean) {
+    const { data, error } = await requireSupabaseClient().rpc("resolve_review", { p_review_id: reviewId, p_resolved: resolved });
+    if (error) throw new Error(error.message);
+    return rowToReview(data);
+  }
+
+  async deprecateIcon(iconId: string, reason: string) {
+    const { error } = await requireSupabaseClient().rpc("deprecate_icon", { p_icon_id: iconId, p_reason: reason });
+    if (error) throw new Error(error.message);
+  }
+
+  async startGenerationJob(projectSlug: string, input: { draftId?: string | null; adapter: GenerationJob["adapter"]; prompt: string; promptHash: string; retainPrompt: boolean; candidateCount: number }) {
+    const project = await currentProject(projectSlug);
+    const draftId = input.draftId && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(input.draftId) ? input.draftId : null;
+    const { data, error } = await requireSupabaseClient().rpc("start_generation_job", {
+      p_project_id: project.id,
+      // PostgreSQL accepts NULL for this UUID argument; generated RPC types do
+      // not currently represent nullable function arguments.
+      p_draft_id: draftId as string,
+      p_adapter: input.adapter,
+      p_prompt: input.retainPrompt ? input.prompt : "",
+      p_prompt_sha256: input.promptHash,
+      p_retain_prompt: input.retainPrompt,
+      p_candidate_count: input.candidateCount,
+    });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
+  }
+
+  async completeGenerationJob(jobId: string, result: { candidateCount: number; passedCount: number }) {
+    const { data, error } = await requireSupabaseClient().rpc("complete_generation_job", { p_job_id: jobId, p_result_summary: { candidate_count: result.candidateCount, passed_count: result.passedCount } });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
+  }
+
+  async failGenerationJob(jobId: string, errorCode: string, errorMessage: string) {
+    const { data, error } = await requireSupabaseClient().rpc("fail_generation_job", { p_job_id: jobId, p_error_code: errorCode, p_error_message: errorMessage });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
+  }
+
+  async cancelGenerationJob(jobId: string) {
+    const { data, error } = await requireSupabaseClient().rpc("cancel_generation_job", { p_job_id: jobId });
+    if (error) throw new Error(error.message);
+    return rowToGenerationJob(data);
+  }
+
+  async listProjectTokens(projectSlug: string) {
+    const project = await currentProject(projectSlug);
+    const { data, error } = await requireSupabaseClient().rpc("list_project_tokens", { p_project_id: project.id });
+    if (error) throw new Error(error.message);
+    return data.map(rowToProjectToken);
+  }
+
+  async issueProjectToken(projectSlug: string, name: string, expiresInDays = 30) {
+    const project = await currentProject(projectSlug);
+    const { data, error } = await requireSupabaseClient().rpc("issue_project_token", {
+      p_project_id: project.id,
+      p_name: name,
+      p_expires_in_days: expiresInDays,
+    });
+    if (error) throw new Error(error.message);
+    const row = data[0];
+    if (!row) throw new Error("The project token was not issued.");
+    return { ...rowToProjectToken(row), token: row.token };
+  }
+
+  async revokeProjectToken(tokenId: string) {
+    const { data, error } = await requireSupabaseClient().rpc("revoke_project_token", { p_token_id: tokenId });
+    if (error) throw new Error(error.message);
+    const row = data[0];
+    if (!row) throw new Error("The project token was not found.");
+    return rowToProjectToken(row);
+  }
+
+  async setProjectVisibility(projectSlug: string, visibility: "private" | "public"): Promise<ProjectAccess> {
+    const project = await currentProject(projectSlug);
+    const { data, error } = await requireSupabaseClient().rpc("set_project_visibility", {
+      p_project_id: project.id,
+      p_visibility: visibility,
+    });
+    if (error) throw new Error(error.message);
+    return { ...project, visibility: data.visibility as "private" | "public" };
   }
 
   async bootstrapWorkspace(input: { organizationName: string; organizationSlug: string; projectName: string; projectSlug: string }) {
@@ -229,6 +694,6 @@ export class SupabaseRepository implements FormaglyphRepository {
     const { data, error } = await client.rpc("bootstrap_workspace", { p_organization_name: input.organizationName, p_organization_slug: input.organizationSlug, p_project_name: input.projectName, p_project_slug: input.projectSlug });
     if (error) throw error;
     const row = data[0];
-    return { id: row.project_id, organizationId: row.organization_id, slug: row.project_slug, name: input.projectName, role: "admin" as const };
+    return { id: row.project_id, organizationId: row.organization_id, slug: row.project_slug, name: input.projectName, visibility: "private" as const, role: "admin" as const };
   }
 }
