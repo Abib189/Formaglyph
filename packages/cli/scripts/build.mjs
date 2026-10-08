@@ -1,11 +1,13 @@
 import { chmod, mkdir, rm } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
+import { createRequire } from "node:module";
 import { promisify } from "node:util";
 import { build } from "esbuild";
 
 const root = resolve(import.meta.dirname, "..");
 const dist = resolve(root, "dist");
+const require = createRequire(import.meta.url);
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
@@ -26,7 +28,8 @@ await Promise.all([
   build({ ...shared, entryPoints: [resolve(root, "src/http.ts")], outfile: resolve(dist, "http.mjs") }),
 ]);
 
-await promisify(execFile)(resolve(root, "node_modules/.bin/tsc"), [
+// Run TypeScript through Node rather than the Unix-only .bin shell shim.
+await promisify(execFile)(process.execPath, [require.resolve("typescript/bin/tsc"),
   "--project", resolve(root, "tsconfig.build.json"),
 ]);
 

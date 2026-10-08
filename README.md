@@ -69,6 +69,8 @@ The default `.env.example` uses `VITE_DATA_MODE=local`, preserving the safe demo
 
 ## Run the Supabase vertical slice
 
+For an existing stack moved to a Windows PC, see [Docker on Windows, development from the Mac](./docs/docker-windows.md). The instructions below create a fresh local stack; do not reset migrated working data.
+
 Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) directly from Docker (Homebrew is not required), launch it once, then copy `.env.example` to `.env.local` and set:
 
 ```dotenv
