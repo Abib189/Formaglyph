@@ -18,4 +18,9 @@ describe("proposal state machine", () => {
   it("rejects invalid transitions", () => {
     expect(() => transitionProposal({ ...initialAppState.proposal, status: "approved" }, "in_review")).toThrow(/cannot transition/);
   });
+
+  it("allows an approved legacy proposal to return for a missing variant", () => {
+    expect(canTransitionProposal("approved", "changes_requested")).toBe(true);
+    expect(canTransitionProposal("published", "changes_requested")).toBe(false);
+  });
 });

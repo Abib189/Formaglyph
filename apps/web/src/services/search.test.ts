@@ -19,6 +19,16 @@ describe("catalog search", () => {
     expect(searchIcons(iconResults, "xylophone-orbit")).toEqual([]);
   });
 
+  it("browses all original pairs and finds everyday intents", () => {
+    expect(searchIcons(iconResults, "")).toHaveLength(96);
+    expect(searchIcons(iconResults, "", { variant: "regular" })).toHaveLength(48);
+    for (const [query, name] of [["change language", "globe"], ["save for later", "bookmark"], ["take photo", "camera"], ["go back", "arrow-left"], ["api credential", "key"]]) {
+      expect(searchIcons(iconResults, query)[0]?.name, query).toBe(name);
+    }
+    const media = searchIcons(iconResults, "", { category: "Media", variant: "solid" });
+    expect(media.map((asset) => asset.name)).toEqual(["camera", "image"]);
+  });
+
   it("tolerates a single-character typo without outranking exact aliases", () => {
     const typoMatches = searchIcons(iconResults, "reciept");
     expect(typoMatches[0]?.name).toBe("receipt-search");

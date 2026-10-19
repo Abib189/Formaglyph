@@ -6,12 +6,26 @@ import { fileURLToPath } from "node:url";
 import { createGzip } from "node:zlib";
 import { createCatalogApi } from "./catalog-api.mjs";
 
+const mcpModule = process.env.FORMAGLYPH_MCP_MODULE ?? new URL("../../packages/cli/dist/http.mjs", import.meta.url).href;
+const { handleFormaglyphMcpHttp } = await import(mcpModule);
+
 const root = resolve(fileURLToPath(new URL("./dist", import.meta.url)));
 const configuredPort = Number.parseInt(process.env.PORT ?? "3000", 10);
 const port = Number.isFinite(configuredPort) ? configuredPort : 3000;
 const host = "0.0.0.0";
+const canonicalHost = process.env.FORMAGLYPH_CANONICAL_HOST ?? "formaglyph.com";
 const catalogRoot = process.env.FORMAGLYPH_CATALOG_ROOT ?? resolve(fileURLToPath(new URL("../../packages/icons/assets", import.meta.url)));
-const handleCatalogApi = await createCatalogApi({ catalogRoot });
+const handleCatalogApi = await createCatalogApi({
+  catalogRoot,
+  agentDraft: {
+    supabaseUrl: process.env.VITE_SUPABASE_URL,
+    publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  },
+  publicCatalog: {
+    supabaseUrl: process.env.VITE_SUPABASE_URL,
+    publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  },
+});
 
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -22,6 +36,7 @@ const contentTypes = new Map([
   [".map", "application/json; charset=utf-8"],
   [".png", "image/png"],
   [".svg", "image/svg+xml"],
+  [".txt", "text/plain; charset=utf-8"],
   [".webp", "image/webp"],
   [".woff", "font/woff"],
   [".woff2", "font/woff2"],
@@ -66,9 +81,25 @@ function sendJson(response, status, body) {
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
+  const forwardedHost = request.headers["x-forwarded-host"] ?? request.headers.host ?? "";
+  const requestHost = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost).split(",")[0].trim().toLowerCase();
+
+  if (requestHost === `www.${canonicalHost}` || requestHost.startsWith(`www.${canonicalHost}:`)) {
+    response.writeHead(308, {
+      "location": `https://${canonicalHost}${request.url ?? "/"}`,
+      "cache-control": "public, max-age=3600",
+      "x-content-type-options": "nosniff",
+    });
+    response.end();
+    return;
+  }
 
   if (url.pathname === "/health") {
     sendJson(response, 200, { status: "ok" });
+    return;
+  }
+  if (url.pathname === "/mcp") {
+    await handleFormaglyphMcpHttp(request, response);
     return;
   }
   if (await handleCatalogApi(request, response, url)) return;
@@ -79,7 +110,7 @@ const server = createServer(async (request, response) => {
   }
 
   const requested = await existingFile(url.pathname);
-  if (!requested && url.pathname.startsWith("/assets/")) {
+  if (!requested && (url.pathname.startsWith("/assets/") || url.pathname.startsWith("/libraries/"))) {
     sendJson(response, 404, { error: "asset_not_found" });
     return;
   }
@@ -101,7 +132,7 @@ const server = createServer(async (request, response) => {
   const gzip = compressible.has(extension) && /(?:^|,)\s*gzip\s*(?:,|$)/i.test(request.headers["accept-encoding"] ?? "");
   const headers = {
     "content-type": contentTypes.get(extension) ?? "application/octet-stream",
-    "cache-control": url.pathname.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache",
+    "cache-control": url.pathname.startsWith("/assets/") || /^\/libraries\/(?:phosphor|lucide|tabler|heroicons)\/\d+\.\d+\.\d+-fg\.\d+\/(?:thin|light|regular|bold|fill|duotone|mini|micro)\/[a-z0-9-]+\.svg$/.test(url.pathname) ? "public, max-age=31536000, immutable" : "no-cache",
     "etag": etag,
     "referrer-policy": "strict-origin-when-cross-origin",
     "permissions-policy": "camera=(), microphone=(), geolocation=()",

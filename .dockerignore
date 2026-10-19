@@ -9,6 +9,7 @@
 **/dist
 **/coverage
 packages/icons/release
+apps/web/public/libraries
 **/.env*
 apps/web/qa
 formaglyph-prototype

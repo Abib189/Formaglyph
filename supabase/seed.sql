@@ -30,11 +30,13 @@ update public.projects set default_style_profile_id = '44444444-4444-4444-8444-4
 
 insert into public.asset_blobs (id, project_id, storage_bucket, storage_path, byte_size, sha256, sanitization_status, created_by) values
   ('66666666-6666-4666-8666-666666666666', '22222222-2222-4222-8222-222222222222', 'published-assets', '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/99999999-9999-4999-8999-999999999999/12121212-1212-4212-8212-121212121212/regular.svg', 284, repeat('a', 64), 'passed', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
-  ('77777777-7777-4777-8777-777777777777', '22222222-2222-4222-8222-222222222222', 'source-assets', '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/dddddddd-dddd-4ddd-8ddd-dddddddddddd/source.svg', 312, repeat('b', 64), 'passed', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  ('77777777-7777-4777-8777-777777777777', '22222222-2222-4222-8222-222222222222', 'source-assets', '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/dddddddd-dddd-4ddd-8ddd-dddddddddddd/eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee/regular/77777777-7777-4777-8777-777777777777.svg', 312, repeat('b', 64), 'passed', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  ('78787878-7878-4787-8787-787878787878', '22222222-2222-4222-8222-222222222222', 'source-assets', '11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/dddddddd-dddd-4ddd-8ddd-dddddddddddd/eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee/solid/78787878-7878-4787-8787-787878787878.svg', 264, repeat('c', 64), 'passed', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
 
 insert into public.validation_runs (id, project_id, target_type, target_id, validator_version, status, summary, created_by) values
   ('88888888-8888-4888-8888-888888888888', '22222222-2222-4222-8222-222222222222', 'icon_version', '12121212-1212-4212-8212-121212121212', 'formaglyph-validator/0.1.0', 'passed', '{"checks":8,"fixture":true}', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
-  ('89898989-8989-4989-8989-898989898989', '22222222-2222-4222-8222-222222222222', 'candidate', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'formaglyph-svg/0.1.0', 'passed', '{"safe":true,"fixture":true}', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  ('89898989-8989-4989-8989-898989898989', '22222222-2222-4222-8222-222222222222', 'candidate', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'formaglyph-svg/0.1.0', 'passed', '{"safe":true,"fixture":true,"variant":"regular"}', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
+  ('90909090-9090-4090-8090-909090909090', '22222222-2222-4222-8222-222222222222', 'candidate', 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'formaglyph-svg/0.1.0', 'passed', '{"safe":true,"fixture":true,"variant":"solid"}', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
 
 insert into public.icons (id, stable_id, project_id, canonical_name, label, description, category, status, licence, created_by) values
   ('99999999-9999-4999-8999-999999999999', 'ico_dev_circle_check', '22222222-2222-4222-8222-222222222222', 'circle-check', 'Circle check', 'Development fixture for the published catalog path.', 'Status', 'published', 'MIT', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
@@ -48,6 +50,9 @@ insert into public.drafts (id, project_id, name, description, keywords, status, 
   ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '22222222-2222-4222-8222-222222222222', 'cloud-upload', 'Upload to cloud storage.', array['upload','cloud'], 'draft', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
 insert into public.candidates (id, draft_id, name, description, asset_id, validation_run_id, created_by) values
   ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'Balanced aperture', 'Development candidate fixture.', '77777777-7777-4777-8777-777777777777', '89898989-8989-4989-8989-898989898989', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+insert into public.candidate_variant_assets (candidate_id, variant, asset_id, validation_run_id) values
+  ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'regular', '77777777-7777-4777-8777-777777777777', '89898989-8989-4989-8989-898989898989'),
+  ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 'solid', '78787878-7878-4787-8787-787878787878', '90909090-9090-4090-8090-909090909090');
 update public.drafts set selected_candidate_id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee' where id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
 insert into public.audit_events (organization_id, project_id, actor_id, action, target_type, target_id, source, metadata) values

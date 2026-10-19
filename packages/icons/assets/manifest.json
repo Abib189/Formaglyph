@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
   "name": "Formaglyph Core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "grid": 24,
   "licence": "MIT",
-  "conceptCount": 12,
-  "assetCount": 24,
+  "conceptCount": 48,
+  "assetCount": 96,
   "assets": [
     {
       "stableId": "ico_fg_001_check_circle",
@@ -1062,6 +1062,3130 @@
       "path": "assets/archive-box/solid.svg",
       "bytes": 348,
       "sha256": "f5ed49c2a0f95117d8a7d6ab76f71de441d6d706741887ae25c24a800560ae0f"
+    },
+    {
+      "stableId": "ico_fg_013_home",
+      "name": "home",
+      "label": "Home",
+      "category": "Navigation",
+      "description": "Returns to the main screen or starting point.",
+      "tags": [
+        "home",
+        "house",
+        "start",
+        "dashboard"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "home page",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "main screen",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "start page",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/home/regular.svg",
+      "bytes": 253,
+      "sha256": "f163a47e9cacb7a585ef22d499242aaa7b22727e91d3b5a6b328aa916984bd93"
+    },
+    {
+      "stableId": "ico_fg_013_home",
+      "name": "home",
+      "label": "Home",
+      "category": "Navigation",
+      "description": "Returns to the main screen or starting point.",
+      "tags": [
+        "home",
+        "house",
+        "start",
+        "dashboard"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "home page",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "main screen",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "start page",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/home/solid.svg",
+      "bytes": 235,
+      "sha256": "3fa8a3bfa0f0e9aa93cba415f2b28a86a775374b35c4545f3ab7fee5929418cf"
+    },
+    {
+      "stableId": "ico_fg_014_grid_four",
+      "name": "grid-four",
+      "label": "Grid four",
+      "category": "Navigation",
+      "description": "Switches to a grid of applications, tiles, or dashboard modules.",
+      "tags": [
+        "grid",
+        "apps",
+        "tiles",
+        "dashboard",
+        "layout"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "app grid",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "grid view",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "four tiles",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/grid-four/regular.svg",
+      "bytes": 428,
+      "sha256": "852b16065d39d37c2757fa4c9068c5059964af3a3df59b3f38d241f7cd477ce7"
+    },
+    {
+      "stableId": "ico_fg_014_grid_four",
+      "name": "grid-four",
+      "label": "Grid four",
+      "category": "Navigation",
+      "description": "Switches to a grid of applications, tiles, or dashboard modules.",
+      "tags": [
+        "grid",
+        "apps",
+        "tiles",
+        "dashboard",
+        "layout"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "app grid",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "grid view",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "four tiles",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/grid-four/solid.svg",
+      "bytes": 373,
+      "sha256": "db57e9015797026f38514074248a22ed47f176a540870e4eed0141ef52f3bb22"
+    },
+    {
+      "stableId": "ico_fg_015_menu",
+      "name": "menu",
+      "label": "Menu",
+      "category": "Navigation",
+      "description": "Opens the primary navigation menu.",
+      "tags": [
+        "menu",
+        "navigation",
+        "hamburger",
+        "list"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "open menu",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "navigation menu",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "three lines",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/menu/regular.svg",
+      "bytes": 239,
+      "sha256": "143de1bf3bf20ad229ebb1c8da3272e47657ab507d0cba988c173bd48259b5b1"
+    },
+    {
+      "stableId": "ico_fg_015_menu",
+      "name": "menu",
+      "label": "Menu",
+      "category": "Navigation",
+      "description": "Opens the primary navigation menu.",
+      "tags": [
+        "menu",
+        "navigation",
+        "hamburger",
+        "list"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "open menu",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "navigation menu",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "three lines",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/menu/solid.svg",
+      "bytes": 315,
+      "sha256": "845a6010721e87ac07abfffaef0ff38c66f295c3ce313b6625fea8c9a9517c2a"
+    },
+    {
+      "stableId": "ico_fg_016_arrow_left",
+      "name": "arrow-left",
+      "label": "Arrow left",
+      "category": "Navigation",
+      "description": "Moves backward in a left-to-right navigation flow; mirror for right-to-left layouts.",
+      "tags": [
+        "arrow",
+        "left",
+        "back",
+        "previous"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go back",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "previous page",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "left arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "mirrored-safe",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/arrow-left/regular.svg",
+      "bytes": 236,
+      "sha256": "f53ad5cb0e6f10730bf9a426ed6bdcd24ff59126aace6c645cd6b379f65fe717"
+    },
+    {
+      "stableId": "ico_fg_016_arrow_left",
+      "name": "arrow-left",
+      "label": "Arrow left",
+      "category": "Navigation",
+      "description": "Moves backward in a left-to-right navigation flow; mirror for right-to-left layouts.",
+      "tags": [
+        "arrow",
+        "left",
+        "back",
+        "previous"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go back",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "previous page",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "left arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "mirrored-safe",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/arrow-left/solid.svg",
+      "bytes": 215,
+      "sha256": "dca0a4da0b56ac8d5242cc542f03a9b17b97844eae51aff87408fbffa4562bdd"
+    },
+    {
+      "stableId": "ico_fg_017_arrow_right",
+      "name": "arrow-right",
+      "label": "Arrow right",
+      "category": "Navigation",
+      "description": "Moves forward in a left-to-right navigation flow; mirror for right-to-left layouts.",
+      "tags": [
+        "arrow",
+        "right",
+        "next",
+        "forward"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go forward",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "next page",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "right arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "mirrored-safe",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/arrow-right/regular.svg",
+      "bytes": 237,
+      "sha256": "c95f69a39012d3e22931b9a7e7b14c1b211d3613545e7dde02048047462bc4e0"
+    },
+    {
+      "stableId": "ico_fg_017_arrow_right",
+      "name": "arrow-right",
+      "label": "Arrow right",
+      "category": "Navigation",
+      "description": "Moves forward in a left-to-right navigation flow; mirror for right-to-left layouts.",
+      "tags": [
+        "arrow",
+        "right",
+        "next",
+        "forward"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go forward",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "next page",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "right arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "mirrored-safe",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/arrow-right/solid.svg",
+      "bytes": 215,
+      "sha256": "55272892065107619e5ffddbdd9849fd05f97bf585d3a72ba618c1e8d48c6ace"
+    },
+    {
+      "stableId": "ico_fg_018_arrow_up",
+      "name": "arrow-up",
+      "label": "Arrow up",
+      "category": "Navigation",
+      "description": "Moves upward or returns to the top of a page.",
+      "tags": [
+        "arrow",
+        "up",
+        "top",
+        "increase"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go up",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "back to top",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "up arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/arrow-up/regular.svg",
+      "bytes": 237,
+      "sha256": "581f880dade00ce3f3a5fdb1c2d3058acdba55ae923de041b0e4d2e852e466e3"
+    },
+    {
+      "stableId": "ico_fg_018_arrow_up",
+      "name": "arrow-up",
+      "label": "Arrow up",
+      "category": "Navigation",
+      "description": "Moves upward or returns to the top of a page.",
+      "tags": [
+        "arrow",
+        "up",
+        "top",
+        "increase"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go up",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "back to top",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "up arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/arrow-up/solid.svg",
+      "bytes": 214,
+      "sha256": "2f1c10402159eecdb91d7f8c83511dabac28507561da9b95e80561c44a7996ba"
+    },
+    {
+      "stableId": "ico_fg_019_arrow_down",
+      "name": "arrow-down",
+      "label": "Arrow down",
+      "category": "Navigation",
+      "description": "Moves downward or reveals content below.",
+      "tags": [
+        "arrow",
+        "down",
+        "bottom",
+        "decrease"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go down",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "scroll down",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "down arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/arrow-down/regular.svg",
+      "bytes": 237,
+      "sha256": "430e8e441f68295f869bac525a3cefaf912c34b372b67efb4328b322c09971dc"
+    },
+    {
+      "stableId": "ico_fg_019_arrow_down",
+      "name": "arrow-down",
+      "label": "Arrow down",
+      "category": "Navigation",
+      "description": "Moves downward or reveals content below.",
+      "tags": [
+        "arrow",
+        "down",
+        "bottom",
+        "decrease"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "go down",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "scroll down",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "down arrow",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/arrow-down/solid.svg",
+      "bytes": 215,
+      "sha256": "0f874d15a87d78a6446fedb5f2be54c16c6d287d3ddb9dada83f35d327bbda2a"
+    },
+    {
+      "stableId": "ico_fg_020_external_link",
+      "name": "external-link",
+      "label": "External link",
+      "category": "Navigation",
+      "description": "Opens a destination outside the current application.",
+      "tags": [
+        "external",
+        "link",
+        "open",
+        "new",
+        "window"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "open in new window",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "external destination",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "launch link",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/external-link/regular.svg",
+      "bytes": 292,
+      "sha256": "39084ce18695d434700143fa565b1574e7a9ed5d2f4bc513a2e41a8cfa9d3c95"
+    },
+    {
+      "stableId": "ico_fg_020_external_link",
+      "name": "external-link",
+      "label": "External link",
+      "category": "Navigation",
+      "description": "Opens a destination outside the current application.",
+      "tags": [
+        "external",
+        "link",
+        "open",
+        "new",
+        "window"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "open in new window",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "external destination",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "launch link",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/external-link/solid.svg",
+      "bytes": 297,
+      "sha256": "751ff57701f0cac77f69491f4f657e6113c1a49b31f9bba84810c6cd97042c76"
+    },
+    {
+      "stableId": "ico_fg_021_search",
+      "name": "search",
+      "label": "Search",
+      "category": "Actions",
+      "description": "Finds an item or filters a collection by a query.",
+      "tags": [
+        "search",
+        "find",
+        "query",
+        "magnifier"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "find item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "magnifying glass",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "search query",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/search/regular.svg",
+      "bytes": 275,
+      "sha256": "36e26a2fac0b7a923cb3c6576dd0d6ae039a2389396f792f3b57d0b3153a2c97"
+    },
+    {
+      "stableId": "ico_fg_021_search",
+      "name": "search",
+      "label": "Search",
+      "category": "Actions",
+      "description": "Finds an item or filters a collection by a query.",
+      "tags": [
+        "search",
+        "find",
+        "query",
+        "magnifier"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "find item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "magnifying glass",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "search query",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/search/solid.svg",
+      "bytes": 276,
+      "sha256": "50da021b0f692fe5f4afdd36e3e6f0e6b58e96c5c261a6b9db1d33e4600a3405"
+    },
+    {
+      "stableId": "ico_fg_022_plus_circle",
+      "name": "plus-circle",
+      "label": "Plus circle",
+      "category": "Actions",
+      "description": "Adds a new item to the current collection.",
+      "tags": [
+        "plus",
+        "add",
+        "new",
+        "create"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "add item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "create new",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "circle plus",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/plus-circle/regular.svg",
+      "bytes": 261,
+      "sha256": "cfc1a97600524e2748951e0137a42d0086099a05752536ee7401b3d3e0675003"
+    },
+    {
+      "stableId": "ico_fg_022_plus_circle",
+      "name": "plus-circle",
+      "label": "Plus circle",
+      "category": "Actions",
+      "description": "Adds a new item to the current collection.",
+      "tags": [
+        "plus",
+        "add",
+        "new",
+        "create"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "add item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "create new",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "circle plus",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/plus-circle/solid.svg",
+      "bytes": 243,
+      "sha256": "74a35d88d97e5964758ee48e4d89ea0644c4f5055006effb0c005d15ced7dace"
+    },
+    {
+      "stableId": "ico_fg_023_close_circle",
+      "name": "close-circle",
+      "label": "Close circle",
+      "category": "Actions",
+      "description": "Closes a surface or cancels an operation.",
+      "tags": [
+        "close",
+        "cancel",
+        "dismiss",
+        "remove"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "dismiss dialog",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "cancel action",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "circle x",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/close-circle/regular.svg",
+      "bytes": 278,
+      "sha256": "71f9996d4c29db407e2c367a5b3ea2716de9da0253290369a1a5ac6830bd68fb"
+    },
+    {
+      "stableId": "ico_fg_023_close_circle",
+      "name": "close-circle",
+      "label": "Close circle",
+      "category": "Actions",
+      "description": "Closes a surface or cancels an operation.",
+      "tags": [
+        "close",
+        "cancel",
+        "dismiss",
+        "remove"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "dismiss dialog",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "cancel action",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "circle x",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/close-circle/solid.svg",
+      "bytes": 314,
+      "sha256": "f43c48115e9b3517b119b7e90a188809ed9ebf6874c50f6b992dea9d378483ec"
+    },
+    {
+      "stableId": "ico_fg_024_settings_sliders",
+      "name": "settings-sliders",
+      "label": "Settings sliders",
+      "category": "Actions",
+      "description": "Adjusts preferences, filters, or configuration values.",
+      "tags": [
+        "settings",
+        "sliders",
+        "preferences",
+        "filter",
+        "configure"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "adjust settings",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "filter controls",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "preferences",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/settings-sliders/regular.svg",
+      "bytes": 347,
+      "sha256": "ad38cc54d51e683dc72f069da35fe55ebb9c1ab23934163c6bbd3d2ee34dc567"
+    },
+    {
+      "stableId": "ico_fg_024_settings_sliders",
+      "name": "settings-sliders",
+      "label": "Settings sliders",
+      "category": "Actions",
+      "description": "Adjusts preferences, filters, or configuration values.",
+      "tags": [
+        "settings",
+        "sliders",
+        "preferences",
+        "filter",
+        "configure"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "adjust settings",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "filter controls",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "preferences",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/settings-sliders/solid.svg",
+      "bytes": 396,
+      "sha256": "6a86beb1fd2117d44de801a2e6018ce51fd6191af63f9848f791333f8d43732c"
+    },
+    {
+      "stableId": "ico_fg_025_edit_pencil",
+      "name": "edit-pencil",
+      "label": "Edit pencil",
+      "category": "Actions",
+      "description": "Edits the content or properties of an existing item.",
+      "tags": [
+        "edit",
+        "pencil",
+        "write",
+        "modify"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "edit item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "write content",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "modify record",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/edit-pencil/regular.svg",
+      "bytes": 304,
+      "sha256": "bc1fc3e69a6ad6c2c125cfd518902dc273a3932612c3b7e0a8a90f8bcc5c71cc"
+    },
+    {
+      "stableId": "ico_fg_025_edit_pencil",
+      "name": "edit-pencil",
+      "label": "Edit pencil",
+      "category": "Actions",
+      "description": "Edits the content or properties of an existing item.",
+      "tags": [
+        "edit",
+        "pencil",
+        "write",
+        "modify"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "edit item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "write content",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "modify record",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/edit-pencil/solid.svg",
+      "bytes": 223,
+      "sha256": "a91fd4624b6bafba3d880fe0a13884ef4bfe391f431e9ef4380b1243c0dace9e"
+    },
+    {
+      "stableId": "ico_fg_026_trash",
+      "name": "trash",
+      "label": "Trash",
+      "category": "Actions",
+      "description": "Deletes an item or moves it to the recycle bin.",
+      "tags": [
+        "trash",
+        "delete",
+        "remove",
+        "bin"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "delete item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "recycle bin",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "remove permanently",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/trash/regular.svg",
+      "bytes": 278,
+      "sha256": "35a34711f9105d363585c37ebed3f6b68479fabff8a352d94b9eac6b60344fef"
+    },
+    {
+      "stableId": "ico_fg_026_trash",
+      "name": "trash",
+      "label": "Trash",
+      "category": "Actions",
+      "description": "Deletes an item or moves it to the recycle bin.",
+      "tags": [
+        "trash",
+        "delete",
+        "remove",
+        "bin"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "delete item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "recycle bin",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "remove permanently",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/trash/solid.svg",
+      "bytes": 255,
+      "sha256": "dc8fa6c0e1e199b4979d8a13649553845bf4e3577c888d6444d018cef9e29daf"
+    },
+    {
+      "stableId": "ico_fg_027_copy",
+      "name": "copy",
+      "label": "Copy",
+      "category": "Actions",
+      "description": "Copies a value or duplicates an existing item.",
+      "tags": [
+        "copy",
+        "duplicate",
+        "clipboard",
+        "clone"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "duplicate item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "copy to clipboard",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "clone record",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/copy/regular.svg",
+      "bytes": 321,
+      "sha256": "c546f463b5f64fefb966d30a47af7a7bdec500ad12bf11955585e83ede869b6b"
+    },
+    {
+      "stableId": "ico_fg_027_copy",
+      "name": "copy",
+      "label": "Copy",
+      "category": "Actions",
+      "description": "Copies a value or duplicates an existing item.",
+      "tags": [
+        "copy",
+        "duplicate",
+        "clipboard",
+        "clone"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "duplicate item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "copy to clipboard",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "clone record",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/copy/solid.svg",
+      "bytes": 291,
+      "sha256": "2a0f8773ae71ed8ff00a9244a4c4cd4a34140f2d42adddd9487f78ed0ca7811c"
+    },
+    {
+      "stableId": "ico_fg_028_link",
+      "name": "link",
+      "label": "Link",
+      "category": "Actions",
+      "description": "Connects two items or copies a shared destination URL.",
+      "tags": [
+        "link",
+        "url",
+        "connect",
+        "chain",
+        "share"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "copy link",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "connect items",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "shared url",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/link/regular.svg",
+      "bytes": 326,
+      "sha256": "3105a946c838d688490c650847697f0368c0acffd5c59cadae8986aa5317e57c"
+    },
+    {
+      "stableId": "ico_fg_028_link",
+      "name": "link",
+      "label": "Link",
+      "category": "Actions",
+      "description": "Connects two items or copies a shared destination URL.",
+      "tags": [
+        "link",
+        "url",
+        "connect",
+        "chain",
+        "share"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "copy link",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "connect items",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "shared url",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/link/solid.svg",
+      "bytes": 469,
+      "sha256": "ee3b9846dd40ec7a88718afde61b7598eda7e6ccc1e996542a094a58606790a7"
+    },
+    {
+      "stableId": "ico_fg_029_mail",
+      "name": "mail",
+      "label": "Mail",
+      "category": "Communication",
+      "description": "Represents an email message or a contact address.",
+      "tags": [
+        "mail",
+        "email",
+        "envelope",
+        "contact"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "email message",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "contact email",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "envelope",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/mail/regular.svg",
+      "bytes": 283,
+      "sha256": "aa54447caa92606c1cf299416e836877221c3fa45f980b06f93add34d7c11719"
+    },
+    {
+      "stableId": "ico_fg_029_mail",
+      "name": "mail",
+      "label": "Mail",
+      "category": "Communication",
+      "description": "Represents an email message or a contact address.",
+      "tags": [
+        "mail",
+        "email",
+        "envelope",
+        "contact"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "email message",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "contact email",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "envelope",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/mail/solid.svg",
+      "bytes": 292,
+      "sha256": "7989dea8515d63f7cd7c890a0efb1d996ae23f71c25c054ca4046e4c5d373bb2"
+    },
+    {
+      "stableId": "ico_fg_030_message",
+      "name": "message",
+      "label": "Message",
+      "category": "Communication",
+      "description": "Opens a conversation or shows a text comment.",
+      "tags": [
+        "message",
+        "chat",
+        "comment",
+        "conversation"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "chat bubble",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "add comment",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "conversation",
+          "reviewed": true
+        }
+      ],
+      "directionality": "mirrored-safe",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/message/regular.svg",
+      "bytes": 309,
+      "sha256": "f3791ea17736c103049207655e591f6404797d2f91ee103b9adace34e64364be"
+    },
+    {
+      "stableId": "ico_fg_030_message",
+      "name": "message",
+      "label": "Message",
+      "category": "Communication",
+      "description": "Opens a conversation or shows a text comment.",
+      "tags": [
+        "message",
+        "chat",
+        "comment",
+        "conversation"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "chat bubble",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "add comment",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "conversation",
+          "reviewed": true
+        }
+      ],
+      "directionality": "mirrored-safe",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/message/solid.svg",
+      "bytes": 279,
+      "sha256": "fc9dbfa116805ed304bf2241fa5b81f0da934899ee8c0216dc17adfe322c6bef"
+    },
+    {
+      "stableId": "ico_fg_031_bell",
+      "name": "bell",
+      "label": "Bell",
+      "category": "Communication",
+      "description": "Shows notifications or alerts that are waiting for attention.",
+      "tags": [
+        "bell",
+        "notification",
+        "alert",
+        "reminder"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "notifications",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "notification bell",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "alert reminder",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/bell/regular.svg",
+      "bytes": 283,
+      "sha256": "7e402dd637ef01a2d4068ce84c940915ca81529c234cd8c2ac52aea14271d20e"
+    },
+    {
+      "stableId": "ico_fg_031_bell",
+      "name": "bell",
+      "label": "Bell",
+      "category": "Communication",
+      "description": "Shows notifications or alerts that are waiting for attention.",
+      "tags": [
+        "bell",
+        "notification",
+        "alert",
+        "reminder"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "notifications",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "notification bell",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "alert reminder",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/bell/solid.svg",
+      "bytes": 274,
+      "sha256": "f20007ecdeea1269680617082ed6dd2adc4f0685b2724264efa809f56b73b9f8"
+    },
+    {
+      "stableId": "ico_fg_032_microphone",
+      "name": "microphone",
+      "label": "Microphone",
+      "category": "Communication",
+      "description": "Records audio or enables voice input.",
+      "tags": [
+        "microphone",
+        "voice",
+        "audio",
+        "record",
+        "speak"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "voice input",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "record audio",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "mic",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/microphone/regular.svg",
+      "bytes": 319,
+      "sha256": "8f8e3684aceaa4d1dd075fa4e7d9f4201be8a1aea06cb78b18babfb7e1d2477f"
+    },
+    {
+      "stableId": "ico_fg_032_microphone",
+      "name": "microphone",
+      "label": "Microphone",
+      "category": "Communication",
+      "description": "Records audio or enables voice input.",
+      "tags": [
+        "microphone",
+        "voice",
+        "audio",
+        "record",
+        "speak"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "voice input",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "record audio",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "mic",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/microphone/solid.svg",
+      "bytes": 304,
+      "sha256": "041c88416d5e5ca9f0e1d4ca713bb9a4e61e082e60653f3ecbc120af6b9ea45a"
+    },
+    {
+      "stableId": "ico_fg_033_calendar",
+      "name": "calendar",
+      "label": "Calendar",
+      "category": "Time",
+      "description": "Selects a date or shows scheduled events.",
+      "tags": [
+        "calendar",
+        "date",
+        "schedule",
+        "event"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "choose date",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "scheduled events",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "date picker",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/calendar/regular.svg",
+      "bytes": 314,
+      "sha256": "c3f24fccb6d5177448aa670df47b41c8613031681a63a550be901776f8c6143a"
+    },
+    {
+      "stableId": "ico_fg_033_calendar",
+      "name": "calendar",
+      "label": "Calendar",
+      "category": "Time",
+      "description": "Selects a date or shows scheduled events.",
+      "tags": [
+        "calendar",
+        "date",
+        "schedule",
+        "event"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "choose date",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "scheduled events",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "date picker",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/calendar/solid.svg",
+      "bytes": 314,
+      "sha256": "91476bae07fe27f16b67b9ca01d5ea5d1442106146a94b5a5d2c0aa8b9e39243"
+    },
+    {
+      "stableId": "ico_fg_034_clock",
+      "name": "clock",
+      "label": "Clock",
+      "category": "Time",
+      "description": "Represents time, duration, or recently changed content.",
+      "tags": [
+        "clock",
+        "time",
+        "duration",
+        "recent",
+        "history"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "time of day",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "recent activity",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "duration",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/clock/regular.svg",
+      "bytes": 263,
+      "sha256": "3cfc27a389831fe3ed086d733c8c942015fb443bc12f76e1c3f1ad421ad0412b"
+    },
+    {
+      "stableId": "ico_fg_034_clock",
+      "name": "clock",
+      "label": "Clock",
+      "category": "Time",
+      "description": "Represents time, duration, or recently changed content.",
+      "tags": [
+        "clock",
+        "time",
+        "duration",
+        "recent",
+        "history"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "time of day",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "recent activity",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "duration",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/clock/solid.svg",
+      "bytes": 246,
+      "sha256": "83e162d07d1266d20b518b15da5ed538ef6c255f07556ce6adc45b973c0c4027"
+    },
+    {
+      "stableId": "ico_fg_035_bookmark",
+      "name": "bookmark",
+      "label": "Bookmark",
+      "category": "Actions",
+      "description": "Saves an item for quick access later.",
+      "tags": [
+        "bookmark",
+        "save",
+        "later",
+        "reading"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "save for later",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "reading list",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "saved item",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/bookmark/regular.svg",
+      "bytes": 270,
+      "sha256": "685ce2d7103b4eedd48e8de4b3940857de615e1095cfc0ace32bf36d0e998f43"
+    },
+    {
+      "stableId": "ico_fg_035_bookmark",
+      "name": "bookmark",
+      "label": "Bookmark",
+      "category": "Actions",
+      "description": "Saves an item for quick access later.",
+      "tags": [
+        "bookmark",
+        "save",
+        "later",
+        "reading"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "save for later",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "reading list",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "saved item",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/bookmark/solid.svg",
+      "bytes": 222,
+      "sha256": "a5ff7d3d9eb6633b836ad901614b961b28dc13042209748ac3fd1afe32e6042a"
+    },
+    {
+      "stableId": "ico_fg_036_star",
+      "name": "star",
+      "label": "Star",
+      "category": "Actions",
+      "description": "Marks a favourite or highlights a featured item.",
+      "tags": [
+        "star",
+        "favourite",
+        "favorite",
+        "rating",
+        "featured"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "mark favourite",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "rate item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "featured star",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/star/regular.svg",
+      "bytes": 294,
+      "sha256": "b326de8a8f60a705fa07a37ec5a71b37e8ad2deff372bc69daa1f1c501a5a416"
+    },
+    {
+      "stableId": "ico_fg_036_star",
+      "name": "star",
+      "label": "Star",
+      "category": "Actions",
+      "description": "Marks a favourite or highlights a featured item.",
+      "tags": [
+        "star",
+        "favourite",
+        "favorite",
+        "rating",
+        "featured"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "mark favourite",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "rate item",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "featured star",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/star/solid.svg",
+      "bytes": 243,
+      "sha256": "a04b60cc46cabc7fcc33569c42cffa3f7aee03f858034734dfa4b9141f102305"
+    },
+    {
+      "stableId": "ico_fg_037_file",
+      "name": "file",
+      "label": "File",
+      "category": "Files",
+      "description": "Represents a document or an individual file.",
+      "tags": [
+        "file",
+        "document",
+        "page",
+        "text"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "document file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "text document",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "single file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/file/regular.svg",
+      "bytes": 257,
+      "sha256": "75fe98eca67c7893cc539d77e22206f53e37d73e885e6c6b17ab64abc06f8529"
+    },
+    {
+      "stableId": "ico_fg_037_file",
+      "name": "file",
+      "label": "File",
+      "category": "Files",
+      "description": "Represents a document or an individual file.",
+      "tags": [
+        "file",
+        "document",
+        "page",
+        "text"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "document file",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "text document",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "single file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/file/solid.svg",
+      "bytes": 238,
+      "sha256": "23bb3fc36a06e58cfda4cf65c4a64e52b5a509f73db8b54e73c5018dc539c642"
+    },
+    {
+      "stableId": "ico_fg_038_folder",
+      "name": "folder",
+      "label": "Folder",
+      "category": "Files",
+      "description": "Groups files into a browsable collection.",
+      "tags": [
+        "folder",
+        "directory",
+        "files",
+        "collection"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "file directory",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "file collection",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "browse folder",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/folder/regular.svg",
+      "bytes": 272,
+      "sha256": "e9e75fd8a46ceb996ce4f4a826e0577e1ea6c1fd4c21b471e17620a5c5d1eab9"
+    },
+    {
+      "stableId": "ico_fg_038_folder",
+      "name": "folder",
+      "label": "Folder",
+      "category": "Files",
+      "description": "Groups files into a browsable collection.",
+      "tags": [
+        "folder",
+        "directory",
+        "files",
+        "collection"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "file directory",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "file collection",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "browse folder",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/folder/solid.svg",
+      "bytes": 263,
+      "sha256": "2924193466a98c2fa0437188fa523d9f9969acc3741dcdac75f6f44c8a1ec4c0"
+    },
+    {
+      "stableId": "ico_fg_039_image",
+      "name": "image",
+      "label": "Image",
+      "category": "Media",
+      "description": "Represents a photograph or a visual asset.",
+      "tags": [
+        "image",
+        "photo",
+        "picture",
+        "media",
+        "landscape"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "photo asset",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "picture",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "image file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/image/regular.svg",
+      "bytes": 317,
+      "sha256": "2663de31127720a166c87ccfe455f0d87764235736429caa0174d55054b4320f"
+    },
+    {
+      "stableId": "ico_fg_039_image",
+      "name": "image",
+      "label": "Image",
+      "category": "Media",
+      "description": "Represents a photograph or a visual asset.",
+      "tags": [
+        "image",
+        "photo",
+        "picture",
+        "media",
+        "landscape"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "photo asset",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "picture",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "image file",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/image/solid.svg",
+      "bytes": 304,
+      "sha256": "97bdad05fe7fe4415149e3b9d6de0d65434247e1b036203863fc15fd5fd054e1"
+    },
+    {
+      "stableId": "ico_fg_040_camera",
+      "name": "camera",
+      "label": "Camera",
+      "category": "Media",
+      "description": "Captures a photograph or opens image capture.",
+      "tags": [
+        "camera",
+        "photo",
+        "capture",
+        "photograph"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "take photo",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "image capture",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "camera capture",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/camera/regular.svg",
+      "bytes": 305,
+      "sha256": "088a9d2e58e283055dd94510f40659cbf35fc0d65141930d086f4e9c483c3570"
+    },
+    {
+      "stableId": "ico_fg_040_camera",
+      "name": "camera",
+      "label": "Camera",
+      "category": "Media",
+      "description": "Captures a photograph or opens image capture.",
+      "tags": [
+        "camera",
+        "photo",
+        "capture",
+        "photograph"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "take photo",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "image capture",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "camera capture",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/camera/solid.svg",
+      "bytes": 311,
+      "sha256": "0d3d2448c6d84c17934f7397bd21510a37330ccbc97fea054454d900ac32f8e3"
+    },
+    {
+      "stableId": "ico_fg_041_lock",
+      "name": "lock",
+      "label": "Lock",
+      "category": "Security",
+      "description": "Indicates private content or restricted access.",
+      "tags": [
+        "lock",
+        "private",
+        "secure",
+        "protected"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "locked access",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "private content",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "padlock",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/lock/regular.svg",
+      "bytes": 297,
+      "sha256": "1775b867828072baec8c8315412eb0f9524fbca5ef78daa3b7df6c8cd63fcac1"
+    },
+    {
+      "stableId": "ico_fg_041_lock",
+      "name": "lock",
+      "label": "Lock",
+      "category": "Security",
+      "description": "Indicates private content or restricted access.",
+      "tags": [
+        "lock",
+        "private",
+        "secure",
+        "protected"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "locked access",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "private content",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "padlock",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/lock/solid.svg",
+      "bytes": 273,
+      "sha256": "8b8bff3cde3be8c8cde5b5c822d9aaf8034642bdf97356d55560d8d2be2db632"
+    },
+    {
+      "stableId": "ico_fg_042_unlock",
+      "name": "unlock",
+      "label": "Unlock",
+      "category": "Security",
+      "description": "Indicates available access or removes an access restriction.",
+      "tags": [
+        "unlock",
+        "open",
+        "access",
+        "permission"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "unlocked access",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "open padlock",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "allow access",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/unlock/regular.svg",
+      "bytes": 297,
+      "sha256": "0c451c1e605d4756dda682e78c622e3cdfdf60b43fbb924d147def0ea9a924f5"
+    },
+    {
+      "stableId": "ico_fg_042_unlock",
+      "name": "unlock",
+      "label": "Unlock",
+      "category": "Security",
+      "description": "Indicates available access or removes an access restriction.",
+      "tags": [
+        "unlock",
+        "open",
+        "access",
+        "permission"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "unlocked access",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "open padlock",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "allow access",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/unlock/solid.svg",
+      "bytes": 272,
+      "sha256": "7e47646771980f14fb7189d798b77ea20bb304ab5a25b7863be063cbf7f3d0aa"
+    },
+    {
+      "stableId": "ico_fg_043_shield_check",
+      "name": "shield-check",
+      "label": "Shield check",
+      "category": "Security",
+      "description": "Confirms that a safety or security check passed.",
+      "tags": [
+        "shield",
+        "check",
+        "security",
+        "verified",
+        "safe"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "security verified",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "safe content",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "protection passed",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/shield-check/regular.svg",
+      "bytes": 284,
+      "sha256": "e4fd10da9ff74a99f87bf11f7ef3f2278a4849d536c48c340f2499b240364705"
+    },
+    {
+      "stableId": "ico_fg_043_shield_check",
+      "name": "shield-check",
+      "label": "Shield check",
+      "category": "Security",
+      "description": "Confirms that a safety or security check passed.",
+      "tags": [
+        "shield",
+        "check",
+        "security",
+        "verified",
+        "safe"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "security verified",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "safe content",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "protection passed",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/shield-check/solid.svg",
+      "bytes": 268,
+      "sha256": "c18f537d2e500409ea5a89dec4e1adc3205b74a451dd2fd2db535971f9e5f097"
+    },
+    {
+      "stableId": "ico_fg_044_key",
+      "name": "key",
+      "label": "Key",
+      "category": "Security",
+      "description": "Represents credentials, authentication, or an access key.",
+      "tags": [
+        "key",
+        "credentials",
+        "authentication",
+        "access",
+        "password"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "access key",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "api credential",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "authentication key",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/key/regular.svg",
+      "bytes": 299,
+      "sha256": "b1cbcec156cc70937cbcfc11b2c70489bc27dea2677d66628fa8b5f3067e81f1"
+    },
+    {
+      "stableId": "ico_fg_044_key",
+      "name": "key",
+      "label": "Key",
+      "category": "Security",
+      "description": "Represents credentials, authentication, or an access key.",
+      "tags": [
+        "key",
+        "credentials",
+        "authentication",
+        "access",
+        "password"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "access key",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "api credential",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "authentication key",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/key/solid.svg",
+      "bytes": 278,
+      "sha256": "82b07d6d72e1f548151299aa9f39c6dcedf675fdbd2e3a0967bd41c5d22d9eb8"
+    },
+    {
+      "stableId": "ico_fg_045_credit_card",
+      "name": "credit-card",
+      "label": "Credit card",
+      "category": "Payments",
+      "description": "Represents a payment card or a billing method.",
+      "tags": [
+        "credit",
+        "card",
+        "payment",
+        "billing",
+        "debit"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "payment card",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "billing method",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "debit card",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/credit-card/regular.svg",
+      "bytes": 285,
+      "sha256": "5413004d05633e87bfea9868185b77954c972d99fa983f8307ea7b2c65220976"
+    },
+    {
+      "stableId": "ico_fg_045_credit_card",
+      "name": "credit-card",
+      "label": "Credit card",
+      "category": "Payments",
+      "description": "Represents a payment card or a billing method.",
+      "tags": [
+        "credit",
+        "card",
+        "payment",
+        "billing",
+        "debit"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "payment card",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "billing method",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "debit card",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/credit-card/solid.svg",
+      "bytes": 269,
+      "sha256": "ab3cba6000b2753b575c7bd16632f10a51179d90eabf277677440457c61fe2fa"
+    },
+    {
+      "stableId": "ico_fg_046_shopping_bag",
+      "name": "shopping-bag",
+      "label": "Shopping bag",
+      "category": "Payments",
+      "description": "Represents a purchase, basket, or shopping collection.",
+      "tags": [
+        "shopping",
+        "bag",
+        "purchase",
+        "basket",
+        "store"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "shopping basket",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "purchase items",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "store bag",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/shopping-bag/regular.svg",
+      "bytes": 258,
+      "sha256": "20d57bae9d9a6c59b4b527e98ed3c2cf1f3d06c2a182326c18215e5d680548fa"
+    },
+    {
+      "stableId": "ico_fg_046_shopping_bag",
+      "name": "shopping-bag",
+      "label": "Shopping bag",
+      "category": "Payments",
+      "description": "Represents a purchase, basket, or shopping collection.",
+      "tags": [
+        "shopping",
+        "bag",
+        "purchase",
+        "basket",
+        "store"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "shopping basket",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "purchase items",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "store bag",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/shopping-bag/solid.svg",
+      "bytes": 253,
+      "sha256": "9b5232c1ccba1392b4a4aa1859a358998a626693ae486ac820632129a5df73fd"
+    },
+    {
+      "stableId": "ico_fg_047_chart_bars",
+      "name": "chart-bars",
+      "label": "Chart bars",
+      "category": "Data",
+      "description": "Compares values or shows an analytics summary.",
+      "tags": [
+        "chart",
+        "bars",
+        "analytics",
+        "statistics",
+        "data"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "bar chart",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "analytics report",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "compare values",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/chart-bars/regular.svg",
+      "bytes": 264,
+      "sha256": "ab7efa2a757d170bc0099a1e575f9a747238da13ea4a13afd0ce9b6237d9580e"
+    },
+    {
+      "stableId": "ico_fg_047_chart_bars",
+      "name": "chart-bars",
+      "label": "Chart bars",
+      "category": "Data",
+      "description": "Compares values or shows an analytics summary.",
+      "tags": [
+        "chart",
+        "bars",
+        "analytics",
+        "statistics",
+        "data"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "bar chart",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "analytics report",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "compare values",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/chart-bars/solid.svg",
+      "bytes": 207,
+      "sha256": "fad79ca00b15df0863fe0ad92e1ea4abe605524f405144145eb87bc354b3116e"
+    },
+    {
+      "stableId": "ico_fg_048_globe",
+      "name": "globe",
+      "label": "Globe",
+      "category": "Navigation",
+      "description": "Represents worldwide access, language, or the web.",
+      "tags": [
+        "globe",
+        "world",
+        "language",
+        "web",
+        "international"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "change language",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "worldwide",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "internet",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "regular",
+      "version": "0.2.0",
+      "path": "assets/globe/regular.svg",
+      "bytes": 306,
+      "sha256": "482db7d60ae8494f88c9dc6df1ae7eaffb61fcce40b38d78b9f473d9d5dd8044"
+    },
+    {
+      "stableId": "ico_fg_048_globe",
+      "name": "globe",
+      "label": "Globe",
+      "category": "Navigation",
+      "description": "Represents worldwide access, language, or the web.",
+      "tags": [
+        "globe",
+        "world",
+        "language",
+        "web",
+        "international"
+      ],
+      "aliases": [
+        {
+          "locale": "en",
+          "value": "change language",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "worldwide",
+          "reviewed": true
+        },
+        {
+          "locale": "en",
+          "value": "internet",
+          "reviewed": true
+        }
+      ],
+      "directionality": "neutral",
+      "licence": "MIT",
+      "provenance": {
+        "kind": "original",
+        "source": "Formaglyph geometry source",
+        "sourceRevision": "core-0.2",
+        "disclosed": true
+      },
+      "variant": "solid",
+      "version": "0.2.0",
+      "path": "assets/globe/solid.svg",
+      "bytes": 698,
+      "sha256": "d816f90068b6540b6b3bd90032d3f1686bf683bf19a5ddf8e3233a4799dcd60d"
     }
   ]
 }

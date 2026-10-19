@@ -3,14 +3,21 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   optimizeDeps: {
-    include: ["react", "react-dom/client"],
+    noDiscovery: true,
+    include: [
+      "react",
+      "react-dom/client",
+      "react-dom/server",
+      "react-router-dom",
+      "@supabase/supabase-js",
+      "@formaglyph/validators > @xmldom/xmldom",
+      "morphicons/adapters",
+      "morphicons/react",
+    ],
   },
   server: {
     host: "0.0.0.0",
     allowedHosts: ["terminal.local"],
-    warmup: {
-      clientFiles: ["./src/main.tsx"],
-    },
   },
   build: {
     rollupOptions: {

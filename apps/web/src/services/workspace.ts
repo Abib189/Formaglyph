@@ -2,10 +2,12 @@ import type { WorkspaceIcon, WorkspaceStatus } from "../domain/types";
 
 const allowedTransitions: Readonly<Record<WorkspaceStatus, readonly WorkspaceStatus[]>> = {
   draft: ["in_review", "archived"],
-  in_review: ["changes_requested", "approved", "archived"],
-  changes_requested: ["in_review", "archived"],
+  in_review: ["changes_requested", "approved", "rejected", "archived"],
+  changes_requested: ["in_review", "rejected", "archived"],
   approved: ["published", "archived"],
-  published: ["archived"],
+  rejected: ["archived"],
+  published: ["deprecated"],
+  deprecated: [],
   archived: ["draft"],
 };
 

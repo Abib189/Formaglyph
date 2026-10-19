@@ -1,0 +1,43 @@
+{
+  "brand": "Formaglyph",
+  "date": "2026-10-19",
+  "deck_title": "Counterpair identity kit",
+  "label": "Selected C — Counterpair",
+  "tagline": "An icon library for discovery. A workbench for accountable releases.",
+  "brief": "Preserve the chosen two-piece silhouette and build a quiet, usable identity for designers, developers and design-system teams. The website, README and platform examples in this deck are illustrative brand placements, not a statement of released functionality.",
+  "adjectives": ["crafted", "clear", "systematic", "independent", "quietly confident"],
+  "criteria": "One-colour first; readable small; genuine transparent counters; outlined type; light and dark parity. Black and white dominate, with burgundy used sparingly.",
+  "industry": "software",
+  "mockups": ["readme", "app-icon", "website", "favicon-tab", "sticker", "social"],
+  "nav": ["Explore", "Workspace", "Review"],
+  "brand_color": "#A10232",
+  "tile_color": "#000000",
+  "greyscale": false,
+  "final": true,
+  "round": 3,
+  "concepts": [{
+    "name": "Counterpair",
+    "symbol": "svg/formaglyph-symbol-black.svg",
+    "avatar": "svg/formaglyph-symbol-black.svg",
+    "lockup": "svg/formaglyph-horizontal-black.svg",
+    "stacked": "svg/formaglyph-stacked-black.svg",
+    "symbol_on_tile": "svg/formaglyph-symbol-white.svg",
+    "symbol_on_dark": "svg/formaglyph-symbol-white.svg",
+    "lockup_on_dark": "svg/formaglyph-horizontal-white.svg",
+    "stacked_on_dark": "svg/formaglyph-stacked-white.svg",
+    "idea": "Two independent forms become one recognisable signature.",
+    "rationale": [
+      "The chosen two-piece asymmetry is preserved; no generic cube, sparkle or AI motif.",
+      "A restrained title-case wordmark balances the assertive symbol. The F shoulder is redrawn and all letters are outlined.",
+      "Separate standard, reverse and small-size drawings address weight and counter clarity.",
+      "Possible numeral-5 reading remains a known risk; build name association rather than inventing a literal story."
+    ]
+  }],
+  "recommendation": "C is the selected logo direction. This kit lives in the Glyph Workbench; production has not been changed. Use the supplied masters instead of recreating the mark.",
+  "next_steps": [
+    "Review the identity in the Workbench pages 07–09.",
+    "Complete a professional trademark/name and reverse-image search before a public identity rollout.",
+    "Physically proof any print application; CMYK values are starting conversions, not certified matches.",
+    "Approve a separate implementation step before replacing live application assets."
+  ]
+}
