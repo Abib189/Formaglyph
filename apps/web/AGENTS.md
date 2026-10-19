@@ -25,6 +25,7 @@ When implementing from a selected generated mock, treat that image as the source
 - Glyph Workbench uses grid-first Explore, compact task hierarchy, a contextual inspector with actual-size proof specimens, readable sans UI with mono identifiers, and exact Regular/Solid revision comparisons. Keep approval distinct from publication and label current comments as proposal-level discussion.
 - Figcraft uses Inter and an explicitly documented Menlo fallback because JetBrains Mono is unavailable in that app. Preserve the intended JetBrains Mono role during implementation; do not silently treat the fallback as a brand-font replacement.
 - Preserve white/black, rare `#A10232`, light/dark themes, responsive iPad/mobile use, truthful capability states and the paired Regular/Solid workflow. Model generation remains paused.
+- The owner selected logo **C — Counterpair** on 19 October 2026; its refinement baseline is [the v2 symbol](../../docs/design/logo-concepts/c-counterpair-v2.svg), with the decision in [logo research](../../docs/design/logo-concepts/RESEARCH.md). This is separate from UI direction A. Keep its two-part silhouette; no production logo replacement or full-kit approval has occurred yet.
 
 ## Production foundation rules
 
