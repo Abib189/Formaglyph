@@ -1,6 +1,6 @@
 # Formaglyph logo exploration — 19 October 2026
 
-Status: owner selected **C — Counterpair** on 19 October 2026. Direction approved for refinement; full kit and production rollout not yet approved.
+Status: owner selected **C — Counterpair** on 19 October 2026 and subsequently approved its [full kit](../counterpair-kit/README.md). The kit is built into the Glyph Workbench. Production rollout remains unapproved/separate.
 
 ## Brief and assumptions
 
@@ -86,10 +86,14 @@ The separate Figcraft file preserves the approved UI design unchanged. It contai
 
 Four semantic variables support Light/Dark proofs. Native inspection covered 351 page/layer entries and found no checked text outside its immediate frame. The six v2 artwork masters are paths without live text, rasters, filters or masks. Neutral Inter labels in the presentation are live text, not final proposed A–D wordmarks; no font binary is redistributed. Final supporting typeface choice/licence review belongs to the approved kit stage.
 
-The logo skill shaped this work through a written brief, category/cliché research, ten scored idea statements, five genuinely different selected types, preserved iterations, two render/audit rounds, small-size proofs and this explicit concept checkpoint. No logo was selected on the owner's behalf or applied to production. The owner subsequently chose C; final lockups, colour versions, refined reverse art, favicon/app-icon assets and a usage guide remain the next stage.
+The logo skill shaped this work through a written brief, category/cliché research, ten scored idea statements, five genuinely different selected types, preserved iterations, two render/audit rounds, small-size proofs and an explicit concept checkpoint. No logo was selected on the owner's behalf or applied to production. The owner subsequently chose C and approved the full kit, delivered separately as recorded below.
 
 ## Owner selection
 
-The owner's answer was “c”. The selected logo direction is **C — Counterpair**, currently represented by `c-counterpair-v2.svg`. Preserve its two-part silhouette as the refinement baseline; do not silently revert to the designer's initial A recommendation. The Figcraft overview now marks C as selected while retaining all other studies.
+The owner's answer was “c”. The selected logo direction is **C — Counterpair**, represented at the concept checkpoint by `c-counterpair-v2.svg`. Its two-part silhouette is preserved in the full kit's V3 refinements; do not silently revert to the designer's initial A recommendation. The Figcraft concept overview marks C as selected while retaining all other studies.
 
 This logo choice is distinct from UI direction **A — Glyph Workbench**. It does not authorize changing the live application's logo or establish trademark clearance. The abstract mark's possible numeral-5 reading and small-size/optical refinement remain explicit considerations for the next stage.
+
+## Full-kit approval and delivery
+
+The owner subsequently said: “yes go for it build the full logo kit for C in the workbench”. The [Counterpair kit](../counterpair-kit/README.md) supplies standard/reverse/small V3 drawings, a 24-family type study, a redrawn-F outlined title-case wordmark, fixed lockups, web/raster exports, proof boards and usage guidance. Pages 07–09 are added to the main Glyph Workbench, and its 20 header pairs now use the new semantic components. The earlier exploration remains intact. This approval is for the design kit; no application code, live assets or production settings were changed.

@@ -15,7 +15,7 @@ The owner approved direction A after the [Refero product research](2026-10-19-re
 - [Mobile grid and inspector preview](glyph-workbench-mobile.png)
 - [Exported semantic CSS variables](formaglyph-semantic-tokens.css) — a handoff artifact, not wired into the app.
 
-The native document has seven pages, 26 top-level boards/screens/overlays, 65 components, eight semantic color variables with Light/Dark modes, and five text styles. Text and vectors remain editable. The existing app favicon supplies the app mark; no new logo was generated. All icon artwork in the document comes from Formaglyph's own Core assets or the existing local-geometry source, not from upstream reference brands.
+The native document now has ten pages, 32 top-level boards/screens/overlays, 75 components, eight semantic color variables with Light/Dark modes, and five text styles. Text and vectors remain editable. Following the separate logo selection, the owner approved the [C — Counterpair identity kit](counterpair-kit/README.md); its semantic small mark and outlined wordmark now replace the prototype favicon/name in 20 design-header pairs. The former favicon master is retained. All library icon artwork comes from Formaglyph's own Core assets or the existing local-geometry source, not from upstream reference brands.
 
 ## Page inventory
 
@@ -28,6 +28,9 @@ The native document has seven pages, 26 top-level boards/screens/overlays, 65 co
 | 04 · Responsive & states | 390 px grid/inspector/review/offline-decision/search-empty/search-error; 1024 px iPad landscape, 768 px portrait and 320 px stress layouts |
 | 05 · Workspace & Create | Compact lifecycle list, import-first complete-pair Create, incomplete-pair mobile state and exact-submission confirmation |
 | 06 · Settings & access | Account/project/role, appearance choices, paused generation and honest handoff availability; wrong-account recovery; explicit-email account popover |
+| 07 · Counterpair logo kit | Identity overview, fixed lockups, black/white/burgundy palette, ten reusable brand masters |
+| 08 · Brand proofs & usage | Usage guide, six native product-placement studies, optical/scale/mirror/rotation/blur tests and maskable safe-zone proof |
+| 09 · Wordmark type study | 24-family case study, live Inter construction, base outlines and custom-F final wordmark |
 
 The workbench removes decorative panel numbering and oversized repeated introductions. Its technical personality comes from icon geometry, stable object context, measurements and meaningful mono labels. Burgundy is rare; selected dark specimens use a white boundary rather than relying on low-contrast burgundy against black.
 
@@ -56,6 +59,7 @@ Evidence: Figcraft native layer inspections plus rendered screenshots of desktop
 
 - Inspected the deep document tree (2,096 layer/page entries). No checked text exceeded its immediate frame bounds in the recorded check. This is a geometric check, not full text legibility or accessibility certification.
 - Corrected two over-wide text boxes, a queue filter/result inconsistency, a crowded Create heading/label, duplicated default-grid proof instances and the unselected grid's inherited selected marker.
+- Counterpair kit follow-up: checked the expanded 2,645-entry native tree before the final maskable proof addition; no visible text boxes exceeded their immediate frames. Checked 20 symbol and 20 wordmark instances, plus rendered dark/mobile headers. The separate kit test suite and SVG audit cover export integrity; no app runtime claims are added.
 - Checked both variants and revision identities in static comparison; the baseline is explicitly a previous submission, not a fabricated published release.
 - Verified Light/Dark semantic inversion and the non-burgundy dark selection boundary.
 - Set the drawn touch action buttons to at least 44 px and provided 44 px header-menu hit frames. Native device browser, keyboard, VoiceOver, touch and reduced-motion behavior still require implementation testing.
