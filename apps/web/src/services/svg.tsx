@@ -3,16 +3,21 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { Icon } from "@phosphor-icons/react/lib";
 import type { CatalogVariant, PreviewWeight } from "../domain/types";
 
-export function renderIconSvg(IconComponent: Icon, weight: PreviewWeight = "regular") {
-  return renderToStaticMarkup(createElement(IconComponent, {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: 24,
-    height: 24,
-    viewBox: "0 0 256 256",
-    weight,
-    color: "currentColor",
-    "aria-hidden": "true",
-  }));
+export function renderIconSvg(
+  IconComponent: Icon,
+  weight: PreviewWeight = "regular",
+) {
+  return renderToStaticMarkup(
+    createElement(IconComponent, {
+      xmlns: "http://www.w3.org/2000/svg",
+      width: 24,
+      height: 24,
+      viewBox: "0 0 256 256",
+      weight,
+      color: "currentColor",
+      "aria-hidden": "true",
+    }),
+  );
 }
 
 export async function copyText(text: string) {
@@ -45,6 +50,8 @@ export interface DesignHandoffMetadata {
   contentHash?: string;
   library?: string;
   sourceUrl?: string;
+  sourceContentHash?: string;
+  exportColour?: string;
 }
 
 function escapeXml(value: string) {
@@ -55,11 +62,17 @@ function escapeXml(value: string) {
     .replaceAll(">", "&gt;");
 }
 
-export function prepareDesignSvg(svg: string, metadata: DesignHandoffMetadata, target: "figma" | "penpot") {
+export function prepareDesignSvg(
+  svg: string,
+  metadata: DesignHandoffMetadata,
+  target: "figma" | "penpot",
+) {
   const opening = svg.match(/<svg\b[^>]*>/i)?.[0];
   if (!opening) throw new Error("The selected asset is not valid SVG markup.");
-  const cleanOpening = opening
-    .replace(/\s(?:aria-hidden|role|id|width|height|data-formaglyph-[\w-]+)=("[^"]*"|'[^']*')/gi, "");
+  const cleanOpening = opening.replace(
+    /\s(?:aria-hidden|role|id|width|height|data-formaglyph-[\w-]+)=("[^"]*"|'[^']*')/gi,
+    "",
+  );
   const safeId = metadata.name.replace(/[^a-z0-9_-]+/gi, "-");
   const attributes = [
     `id="formaglyph-${escapeXml(safeId)}"`,
@@ -72,23 +85,46 @@ export function prepareDesignSvg(svg: string, metadata: DesignHandoffMetadata, t
     `data-formaglyph-variant="${escapeXml(metadata.variant)}"`,
     `data-formaglyph-licence="${escapeXml(metadata.licence)}"`,
     `data-formaglyph-target="${target}"`,
-    metadata.library ? `data-formaglyph-library="${escapeXml(metadata.library)}"` : "",
-    metadata.sourceUrl ? `data-formaglyph-source="${escapeXml(metadata.sourceUrl)}"` : "",
-    metadata.contentHash ? `data-formaglyph-sha256="${escapeXml(metadata.contentHash)}"` : "",
-  ].filter(Boolean).join(" ");
+    metadata.library
+      ? `data-formaglyph-library="${escapeXml(metadata.library)}"`
+      : "",
+    metadata.sourceUrl
+      ? `data-formaglyph-source="${escapeXml(metadata.sourceUrl)}"`
+      : "",
+    metadata.contentHash
+      ? `data-formaglyph-sha256="${escapeXml(metadata.contentHash)}"`
+      : "",
+    metadata.sourceContentHash
+      ? `data-formaglyph-source-sha256="${escapeXml(metadata.sourceContentHash)}"`
+      : "",
+    metadata.exportColour
+      ? `data-formaglyph-colour="${escapeXml(metadata.exportColour)}"`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const enrichedOpening = `${cleanOpening.slice(0, -1)} ${attributes}>`;
   const withoutTitle = svg.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i, "");
-  return withoutTitle.replace(opening, `${enrichedOpening}<title>${escapeXml(metadata.label)}</title>`);
+  return withoutTitle.replace(
+    opening,
+    `${enrichedOpening}<title>${escapeXml(metadata.label)}</title>`,
+  );
 }
 
-export async function copyDesignSvg(svg: string, metadata: DesignHandoffMetadata, target: "figma" | "penpot") {
+export async function copyDesignSvg(
+  svg: string,
+  metadata: DesignHandoffMetadata,
+  target: "figma" | "penpot",
+) {
   const enriched = prepareDesignSvg(svg, metadata, target);
   if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
     try {
-      await navigator.clipboard.write([new ClipboardItem({
-        "image/svg+xml": new Blob([enriched], { type: "image/svg+xml" }),
-        "text/plain": new Blob([enriched], { type: "text/plain" }),
-      })]);
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "image/svg+xml": new Blob([enriched], { type: "image/svg+xml" }),
+          "text/plain": new Blob([enriched], { type: "text/plain" }),
+        }),
+      ]);
       return;
     } catch {
       // Some browsers expose ClipboardItem but reject SVG MIME data.

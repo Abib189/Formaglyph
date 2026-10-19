@@ -27,6 +27,13 @@ import {
   weightLabel,
 } from "../services/externalCatalog";
 import { CatalogMotionPreview } from "../components/CatalogMotionPreview";
+import { IconColourControl } from "../components/IconColourControl";
+import {
+  colourIconSvg,
+  iconProofBackground,
+  normalizeIconColour,
+} from "../services/iconColour";
+import { sha256Text } from "../services/candidateAsset";
 import {
   EXTERNAL_LIBRARY_IDS,
   LIBRARY_SOURCES,
@@ -86,14 +93,38 @@ const sourceOptions = [
 export function CatalogGlyph({
   icon,
   size = 32,
+  colour = null,
 }: {
   icon: CatalogIcon;
   size?: number;
+  colour?: string | null;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  if (icon.svg) return <SvgIcon svg={icon.svg} size={size} />;
-  if (icon.assetUrl && failedUrl !== icon.assetUrl)
-    return (
+  const background = colour ? iconProofBackground(colour) : undefined;
+  let content;
+  if (icon.svg)
+    content = <SvgIcon svg={colourIconSvg(icon.svg, colour)} size={size} />;
+  else if (icon.assetUrl && failedUrl !== icon.assetUrl)
+    content = colour ? (
+      <>
+        <span
+          className="catalog-colour-mask"
+          style={{
+            maskImage: `url(${JSON.stringify(icon.assetUrl)})`,
+            WebkitMaskImage: `url(${JSON.stringify(icon.assetUrl)})`,
+          }}
+        />
+        <img
+          className="catalog-mask-source"
+          src={icon.assetUrl}
+          width={size}
+          height={size}
+          loading="lazy"
+          alt=""
+          onError={() => setFailedUrl(icon.assetUrl!)}
+        />
+      </>
+    ) : (
       <img
         className="catalog-asset"
         src={icon.assetUrl}
@@ -105,10 +136,26 @@ export function CatalogGlyph({
         onError={() => setFailedUrl(icon.assetUrl!)}
       />
     );
-  return icon.Icon ? (
-    <WeightIcon Icon={icon.Icon} size={size} weight={icon.previewWeight} />
-  ) : (
-    <span className="asset-unavailable">Asset unavailable</span>
+  else
+    content = icon.Icon ? (
+      <WeightIcon Icon={icon.Icon} size={size} weight={icon.previewWeight} />
+    ) : (
+      <span className="asset-unavailable">Asset unavailable</span>
+    );
+  return (
+    <span
+      className="catalog-glyph"
+      style={{
+        width: size,
+        height: size,
+        color: colour ?? undefined,
+        backgroundColor: background,
+        boxShadow: background ? `0 0 0 6px ${background}` : undefined,
+      }}
+      aria-hidden="true"
+    >
+      {content}
+    </span>
   );
 }
 
@@ -117,11 +164,15 @@ function CatalogInspector({
   siblings,
   onSelect,
   onClose,
+  colour,
+  onColourChange,
 }: {
   selected: CatalogIcon;
   siblings: CatalogIcon[];
   onSelect: (icon: CatalogIcon) => void;
   onClose: () => void;
+  colour: string | null;
+  onColourChange: (colour: string | null) => void;
 }) {
   const [loaded, setLoaded] = useState<{ id: string; svg: string } | null>(
     null,
@@ -159,19 +210,25 @@ function CatalogInspector({
   }, [selected.id, selected.assetUrl, selected.svg]);
   const displayIcon =
     loaded?.id === selected.id ? { ...selected, svg: loaded.svg } : selected;
+  useEffect(() => {
+    setCopyState("");
+  }, [colour]);
   const act = async (
     action: "copy" | "download" | "pair" | "figma" | "penpot",
   ) => {
     setBusy(true);
     setError("");
     try {
-      const svg = await fetchCatalogSvg(selected);
+      // Verify the immutable source before making a colour-only export derivative.
+      const sourceSvg = await fetchCatalogSvg(selected);
+      const svg = colourIconSvg(sourceSvg, colour);
+      const colourSuffix = colour ? `-${colour.slice(1)}` : "";
       if (action === "copy") {
         await copyText(svg);
         setCopyState(`${weightLabel(selected.variant)} SVG copied`);
       } else if (action === "download")
         downloadSvg(
-          `${selected.name}-${selected.variant}-${selected.version}.svg`,
+          `${selected.name}-${selected.variant}-${selected.version}${colourSuffix}.svg`,
           svg,
         );
       else if (action === "pair") {
@@ -181,12 +238,15 @@ function CatalogInspector({
         const assets = await Promise.all(
           pair.map(async (icon) => ({
             icon,
-            svg: await fetchCatalogSvg(icon),
+            svg:
+              icon.id === selected.id
+                ? svg
+                : colourIconSvg(await fetchCatalogSvg(icon), colour),
           })),
         );
         for (const asset of assets)
           downloadSvg(
-            `${asset.icon.name}-${asset.icon.variant}-${asset.icon.version}.svg`,
+            `${asset.icon.name}-${asset.icon.variant}-${asset.icon.version}${colourSuffix}.svg`,
             asset.svg,
           );
         setCopyState("Regular and Solid downloaded");
@@ -200,7 +260,11 @@ function CatalogInspector({
             version: selected.version,
             variant: selected.variant,
             licence: selected.licenceLabel ?? selected.licence,
-            contentHash: selected.contentHash,
+            contentHash: colour ? await sha256Text(svg) : selected.contentHash,
+            sourceContentHash: colour
+              ? (selected.contentHash ?? (await sha256Text(sourceSvg)))
+              : undefined,
+            exportColour: colour ?? undefined,
             library: libraryLabel(selected),
             sourceUrl: selected.sourceUrl,
           },
@@ -217,6 +281,9 @@ function CatalogInspector({
     }
   };
   const hasPair =
+    (!selected.library ||
+      selected.library === "core" ||
+      selected.library === "projects") &&
     siblings.some((icon) => icon.variant === "regular") &&
     siblings.some((icon) => icon.variant === "solid");
   const content = (
@@ -259,14 +326,24 @@ function CatalogInspector({
             <CatalogGlyph
               icon={icon.id === selected.id ? displayIcon : icon}
               size={56}
+              colour={colour}
             />
             <span>{weightLabel(icon.variant)}</span>
           </button>
         ))}
       </div>
       <FamilyProof
-        render={(size) => <CatalogGlyph icon={displayIcon} size={size} />}
+        render={(size) => (
+          <CatalogGlyph icon={displayIcon} size={size} colour={colour} />
+        )}
       />
+      <div className="inspector-colour-control">
+        <IconColourControl
+          colour={colour}
+          onChange={onColourChange}
+          label="Change icon colour"
+        />
+      </div>
       <dl className="inspector-facts">
         <div>
           <dt>Licence</dt>
@@ -345,7 +422,7 @@ function CatalogInspector({
           </dd>
           {selected.contentHash && (
             <>
-              <dt>SHA-256</dt>
+              <dt>Source SHA-256</dt>
               <dd>
                 <code>{selected.contentHash}</code>
               </dd>
@@ -381,7 +458,7 @@ function CatalogInspector({
           </button>
         </div>
         <p>Clipboard handoff, not live design-tool synchronization.</p>
-        <CatalogMotionPreview svg={displayIcon.svg} />
+        <CatalogMotionPreview svg={displayIcon.svg} colour={colour} />
       </details>
     </aside>
   );
@@ -417,6 +494,7 @@ export function ExplorePage() {
   const size = [24, 32, 40, 48].includes(Number(params.get("size")))
     ? Number(params.get("size"))
     : 32;
+  const colour = normalizeIconColour(params.get("color"));
   const [projects, setProjects] = useState<CatalogIcon[]>([]);
   const [libraries, setLibraries] = useState<
     Partial<Record<ExternalLibraryId, CatalogIcon[]>>
@@ -607,6 +685,8 @@ export function ExplorePage() {
   const relevantFailures = failed.filter(
     (id) => library === "all" || id === library,
   );
+  const onColourChange = (next: string | null) =>
+    set({ color: next?.slice(1) ?? null }, true);
   const controls = (
     <>
       <label>
@@ -640,6 +720,7 @@ export function ExplorePage() {
           ))}
         </select>
       </label>
+      <IconColourControl colour={colour} onChange={onColourChange} />
       <label className="mobile-category-select">
         <span>Category</span>
         <select
@@ -811,7 +892,7 @@ export function ExplorePage() {
                 }}
               >
                 <span className="specimen-stage">
-                  <CatalogGlyph icon={icon} size={size} />
+                  <CatalogGlyph icon={icon} size={size} colour={colour} />
                 </span>
                 <span className="specimen-name">{icon.name}</span>
                 {library === "all" && <small>{libraryLabel(icon)}</small>}
@@ -890,6 +971,8 @@ export function ExplorePage() {
               set({ icon: icon.id, weight: icon.variant }, true)
             }
             onClose={closeInspector}
+            colour={colour}
+            onColourChange={onColourChange}
           />
         )}
       </div>
