@@ -29,6 +29,7 @@ When implementing from a selected generated mock, treat that image as the source
 - Preserve actual library names, counts, grids, weights and licences instead of copying illustrative design-file metadata. Pair submission applies to Formaglyph releases, not to invented variants for upstream libraries.
 - Generation is paused in Create and Settings. Import Regular and Solid into one candidate; never infer the missing sibling. Keep exact proposal routes, immutable submission history, explicit comment resolution, historical read-only decisions and separate publication confirmation.
 - Keep local demo snapshots and hosted repositories separate. Local publication creates no hosted Storage asset. Do not expose hosted lifecycle actions that lack a persisted repository operation.
+- Keep Explore's desktop filter sidebar viewport-bounded and independently scrollable. Long upstream category lists must not stretch the paginated icon grid or create a large blank tail below it. Preserve keyboard access and the mobile filter dialog.
 
 ## Production foundation rules
 

@@ -711,7 +711,11 @@ export function ExplorePage() {
         </button>
       </div>
       <div className="catalog-workbench">
-        <aside className="catalog-sidebar">
+        <aside
+          className="catalog-sidebar"
+          aria-label="Catalog filters"
+          tabIndex={0}
+        >
           <nav aria-label="Icon categories">
             <h2>Categories</h2>
             {categories.map((item) => (

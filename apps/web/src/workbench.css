@@ -565,7 +565,19 @@ summary {
   grid-template-columns: 168px minmax(0, 1fr) 336px;
 }
 .catalog-sidebar {
-  padding-top: 24px;
+  /* Long upstream taxonomies must not set the results column's page height. */
+  position: sticky;
+  top: 88px;
+  align-self: stretch;
+  contain: size;
+  max-height: calc(100dvh - 112px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  padding: 24px 8px 8px;
+  margin-left: -8px;
+  width: calc(100% + 8px);
   min-width: 0;
 }
 .catalog-sidebar nav {
