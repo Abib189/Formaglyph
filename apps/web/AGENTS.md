@@ -17,6 +17,13 @@ When implementing from a selected generated mock, treat that image as the source
 - Explore is the complete published catalog. Workspace is the durable home for user and team icons across draft, review, approval, publication, and archive states.
 - Settings owns appearance, generation policy, local and hosted adapter controls, MCP and API access, design-tool integrations, and privacy. Keep the header theme toggle as a quick control.
 
+## Research-first redesign request — 19 October 2026
+
+- The owner likes the current identity but finds the UI/UX too generic. Improve hierarchy, task focus and interaction craft; do not substitute another generic visual template.
+- Use the explicitly requested Refero design skill/MCP as the research authority, then design in Figcraft before implementing substantial visual changes.
+- Research and proposed reference locks are in [the research/Figcraft handoff](../../docs/design/2026-10-19-refero-research.md). Its three directions and new token/type suggestions are proposals, not approved replacements for the visual baseline above.
+- Preserve white/black, rare `#A10232`, light/dark themes, responsive iPad/mobile use, truthful capability states and the paired Regular/Solid workflow. Model generation remains paused.
+
 ## Production foundation rules
 
 - Keep application code strict TypeScript and preserve the current domain/component/page/service separation.
