@@ -2,7 +2,7 @@
 
 Date: 19 October 2026
 
-Status: editable design exploration delivered; app implementation and end-user validation pending.
+Status: editable design delivered and approved; Glyph Workbench and Counterpair are now implemented in the app. Hosted deployment and real-device acceptance remain separate checks.
 
 The owner approved direction A after the [Refero product research](2026-10-19-refero-research.md). That reference lock governs this file: Linear's compact work-product hierarchy, Phosphor's grid-first discovery, and Hello Ivy's asset/version/discussion grouping. These are bounded structural references, not copied branding or an official retrieved design system. Refero style search had returned no results; that limitation remains visible on the foundations board.
 
@@ -78,3 +78,15 @@ No unresolved P0/P1/P2 findings were identified in the rendered states inspected
 7. Then run typecheck, unit/repository/database tests, build and browser QA against the implementation, including keyboard, real iPad/mobile, session restoration, screen-reader names, dark focus, offline recovery and safe deployment.
 
 No app code, production Supabase/Railway settings, user records, Docker services or live deployments were changed by this design pass. Application tests/builds were not rerun because application source was not modified. The repository changes are design assets, this handoff and durable design-direction documentation only.
+
+## Approved application implementation
+
+The owner subsequently requested implementation of this Workbench and the selected Counterpair kit. The app now uses the exact exported small symbol/outlined wordmark, inverse theme assets, favicon, Apple icon and social card. `apps/web/src/workbench.css` is the explicit migration layer over the older functional control styles; UI text uses Inter and identifiers use JetBrains Mono.
+
+Explore keeps an unselected grid until an explicit selection, source/weight/search/page/selection URL state, a contextual inspector, actual CSS-size proof specimens, verified SVG copy and paired download. Workspace uses a compact lifecycle list. Create imports two independently sanitized SVGs into one candidate. Review separates its queue from exact proposal detail, freezes submitted Regular/Solid snapshots, compares revision history and makes discussion resolution explicit. Review approval and admin publication use separate confirmation dialogs. Settings exposes actual account/project access and Light/Dark/System preferences. Generation remains paused; existing API/MCP capabilities remain intact rather than being replaced by mock controls.
+
+Intentional differences from illustrative boards: live repository names/counts/versions/categories and source-specific native grids/weights/licences replace design samples; large upstream catalogs use 48-item pagination; provenance and existing design-handoff/motion controls remain available in collapsed detail sections. Native semantic dialogs provide focus containment, Escape and inert background content. Hosted archive/restore is not offered without a persisted repository operation. The local demo stores drafts and immutable submission snapshots separately and explicitly does not claim to create hosted assets.
+
+Implementation evidence: TypeScript checks, all 84 web tests (serial rerun after a resource-related timeout), schema/validator/icon/CLI tests, production build and package dry runs passed. Chromium exercised local import → submission → requested changes → resubmission → R1/R2 comparison → approval → separate publication → Explore after reload, plus upstream copy, two-variant download, retry, themes, invalid proposal recovery and keyboard focus return. Desktop, 320/390 px mobile and 768/1024 px iPad-sized layouts were inspected. The built local preview also passed a cold-load smoke test without console errors. These are local browser and repository checks, not hosted multi-user authorization, database-security, physical iPad/Safari, screen-reader, trademark or live-deployment certification. No schema or hosted records were changed for this implementation.
+
+A separate dependency audit reported 54 existing advisories (3 critical, 25 high, 24 moderate, 2 low) across the existing toolchain/MCP dependency tree. The UI dependency addition is pinned Inter; this change does not upgrade those existing packages. Functional/visual QA passing is not security clearance. Review applicability and perform a dedicated dependency upgrade/security pass before treating this as a production-approved rollout.

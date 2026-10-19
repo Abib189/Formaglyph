@@ -15,46 +15,155 @@ import { SlidersHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
 import { Trash } from "@phosphor-icons/react/Trash";
 import { UserCircle } from "@phosphor-icons/react/UserCircle";
 import type { IntegrationName } from "../domain/types";
-import type { IssuedProjectToken, ProjectTokenSummary } from "../services/repositories/types";
-import { PageIntro, Panel, PanelHeader } from "../components/Layout";
+import type {
+  IssuedProjectToken,
+  ProjectTokenSummary,
+} from "../services/repositories/types";
+import {
+  PageIntro,
+  Panel,
+  PanelHeader,
+  RouteLoading,
+} from "../components/Layout";
+import { Dialog } from "../components/Dialog";
 import { useAppState } from "../state/AppState";
 import { repository } from "../services/repositories";
 import { copyText } from "../services/svg";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthState } from "../state/AuthState";
 
-function Toggle({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (value: boolean) => void; label: string; disabled?: boolean }) {
-  return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} className={checked ? "settings-toggle active" : "settings-toggle"} onClick={() => onChange(!checked)}><span /></button>;
+function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      className={checked ? "settings-toggle active" : "settings-toggle"}
+      onClick={() => onChange(!checked)}
+    >
+      <span />
+    </button>
+  );
 }
 
-function SettingRow({ icon, title, description, children }: { icon: ReactNode; title: string; description: string; children: ReactNode }) {
-  return <div className="setting-row"><div className="setting-row-icon">{icon}</div><div className="setting-row-copy"><strong>{title}</strong><p>{description}</p></div><div className="setting-control">{children}</div></div>;
+function SettingRow({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="setting-row">
+      <div className="setting-row-icon">{icon}</div>
+      <div className="setting-row-copy">
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+      <div className="setting-control">{children}</div>
+    </div>
+  );
 }
 
-const integrationDetails: Record<IntegrationName, { label: string; description: string; icon: ReactNode; available: boolean }> = {
-  github: { label: "GitHub", description: "Pull request automation and release commits are planned for a later milestone.", icon: <GithubLogo size={19} />, available: false },
-  figma: { label: "Figma", description: "Copy a named vector with stable ID, version, licence, and hash metadata from Explore.", icon: <FigmaLogo size={19} />, available: true },
-  penpot: { label: "Penpot", description: "Copy the same reviewed SVG handoff for an open design-system library.", icon: <SlidersHorizontal size={19} />, available: true },
+const integrationDetails: Record<
+  IntegrationName,
+  { label: string; description: string; icon: ReactNode; available: boolean }
+> = {
+  github: {
+    label: "GitHub",
+    description:
+      "Pull request automation and release commits are planned for a later milestone.",
+    icon: <GithubLogo size={19} />,
+    available: false,
+  },
+  figma: {
+    label: "Figma",
+    description:
+      "Copy a named vector with stable ID, version, licence, and hash metadata from Explore.",
+    icon: <FigmaLogo size={19} />,
+    available: true,
+  },
+  penpot: {
+    label: "Penpot",
+    description:
+      "Copy the same reviewed SVG handoff for an open design-system library.",
+    icon: <SlidersHorizontal size={19} />,
+    available: true,
+  },
 };
 
-export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (value: boolean) => void }) {
-  const { state, updateSetting, role, project, refreshWorkspace } = useAppState();
+export function SettingsPage({
+  dark,
+  onSetDark,
+  theme,
+  onSetTheme,
+}: {
+  dark: boolean;
+  onSetDark: (value: boolean) => void;
+  theme: "light" | "dark" | "system";
+  onSetTheme: (value: "light" | "dark" | "system") => void;
+}) {
+  const {
+    state,
+    updateSetting,
+    role,
+    project,
+    refreshWorkspace,
+    backendLoading,
+    backendError,
+  } = useAppState();
   const { user, signOut } = useAuthState();
   const { projectSlug = "core" } = useParams();
   const navigate = useNavigate();
-  const [accountCopyState, setAccountCopyState] = useState<"idle" | "email" | "id" | "error">("idle");
+  const [accountCopyState, setAccountCopyState] = useState<
+    "idle" | "email" | "id" | "error"
+  >("idle");
   const [signingOut, setSigningOut] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
-  const [mcpCopyState, setMcpCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [mcpCopyState, setMcpCopyState] = useState<"idle" | "copied" | "error">(
+    "idle",
+  );
   const [tokens, setTokens] = useState<ProjectTokenSummary[]>([]);
   const [tokenName, setTokenName] = useState("Codex draft handoff");
-  const [issuedToken, setIssuedToken] = useState<IssuedProjectToken | null>(null);
+  const [issuedToken, setIssuedToken] = useState<IssuedProjectToken | null>(
+    null,
+  );
   const [tokenBusy, setTokenBusy] = useState(false);
+  const [revokeId, setRevokeId] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState(
+    () => window.location.hash.slice(1) || "account",
+  );
+  useEffect(() => {
+    const update = () =>
+      setActiveSection(window.location.hash.slice(1) || "account");
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [visibilityBusy, setVisibilityBusy] = useState(false);
   const [visibilityError, setVisibilityError] = useState<string | null>(null);
-  const [visibilitySuccess, setVisibilitySuccess] = useState<string | null>(null);
-  const publicOrigin = import.meta.env.DEV ? "https://formaglyph.com" : window.location.origin;
+  const [visibilitySuccess, setVisibilitySuccess] = useState<string | null>(
+    null,
+  );
+  const publicOrigin = import.meta.env.DEV
+    ? "https://formaglyph.com"
+    : window.location.origin;
   const publicApiEndpoint = `${publicOrigin}/api/v1`;
   const publicMcpEndpoint = `${publicOrigin}/mcp`;
   const signedInEmail = user?.email ?? "Email unavailable";
@@ -74,7 +183,9 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
       await signOut();
       navigate("/sign-in", { replace: true });
     } catch (error) {
-      setAccountError(error instanceof Error ? error.message : "Could not sign out.");
+      setAccountError(
+        error instanceof Error ? error.message : "Could not sign out.",
+      );
       setSigningOut(false);
     }
   };
@@ -92,10 +203,22 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
     if (repository.mode !== "supabase" || role !== "admin") return;
     let active = true;
     setTokenError(null);
-    void repository.listProjectTokens(projectSlug)
-      .then((records) => { if (active) setTokens(records); })
-      .catch((error: unknown) => { if (active) setTokenError(error instanceof Error ? error.message : "Could not load project tokens."); });
-    return () => { active = false; };
+    void repository
+      .listProjectTokens(projectSlug)
+      .then((records) => {
+        if (active) setTokens(records);
+      })
+      .catch((error: unknown) => {
+        if (active)
+          setTokenError(
+            error instanceof Error
+              ? error.message
+              : "Could not load project tokens.",
+          );
+      });
+    return () => {
+      active = false;
+    };
   }, [projectSlug, role]);
 
   const issueToken = async () => {
@@ -106,11 +229,19 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
     setTokenBusy(true);
     setTokenError(null);
     try {
-      const issued = await repository.issueProjectToken(projectSlug, tokenName.trim(), 30);
+      const issued = await repository.issueProjectToken(
+        projectSlug,
+        tokenName.trim(),
+        30,
+      );
       setIssuedToken(issued);
       setTokens((current) => [issued, ...current]);
     } catch (error) {
-      setTokenError(error instanceof Error ? error.message : "Could not issue the project token.");
+      setTokenError(
+        error instanceof Error
+          ? error.message
+          : "Could not issue the project token.",
+      );
     } finally {
       setTokenBusy(false);
     }
@@ -121,10 +252,17 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
     setTokenError(null);
     try {
       const revoked = await repository.revokeProjectToken(tokenId);
-      setTokens((current) => current.map((token) => token.id === revoked.id ? revoked : token));
+      setTokens((current) =>
+        current.map((token) => (token.id === revoked.id ? revoked : token)),
+      );
       if (issuedToken?.id === revoked.id) setIssuedToken(null);
+      setRevokeId(null);
     } catch (error) {
-      setTokenError(error instanceof Error ? error.message : "Could not revoke the project token.");
+      setTokenError(
+        error instanceof Error
+          ? error.message
+          : "Could not revoke the project token.",
+      );
     } finally {
       setTokenBusy(false);
     }
@@ -133,7 +271,13 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
   const changeVisibility = async () => {
     if (repository.mode !== "supabase" || role !== "admin" || !project) return;
     const next = project.visibility === "public" ? "private" : "public";
-    if (next === "public" && !window.confirm("Make this project public? Every complete published Regular/Solid release will become available through Explore, the REST API, and MCP. Drafts and review records remain private.")) return;
+    if (
+      next === "public" &&
+      !window.confirm(
+        "Make this project public? Every complete published Regular/Solid release will become available through Explore, the REST API, and MCP. Drafts and review records remain private.",
+      )
+    )
+      return;
     setVisibilityBusy(true);
     setVisibilityError(null);
     setVisibilitySuccess(null);
@@ -141,100 +285,474 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
       await repository.setProjectVisibility(projectSlug, next);
       try {
         await refreshWorkspace();
-        setVisibilitySuccess(next === "public" ? "Project is public. Complete published icons are available in the public catalog." : "Project is private. Public access to its releases has been revoked.");
+        setVisibilitySuccess(
+          next === "public"
+            ? "Project is public. Complete published icons are available in the public catalog."
+            : "Project is private. Public access to its releases has been revoked.",
+        );
       } catch {
-        setVisibilitySuccess("Visibility changed, but the workspace could not refresh. Reload this page to see the new status.");
+        setVisibilitySuccess(
+          "Visibility changed, but the workspace could not refresh. Reload this page to see the new status.",
+        );
       }
     } catch (error) {
-      setVisibilityError(error instanceof Error ? error.message : "Could not change project visibility.");
+      setVisibilityError(
+        error instanceof Error
+          ? error.message
+          : "Could not change project visibility.",
+      );
     } finally {
       setVisibilityBusy(false);
     }
   };
 
+  if (backendLoading)
+    return <RouteLoading label="Loading account and project" />;
+  if (backendError)
+    return (
+      <main className="page-shell settings-page">
+        <PageIntro title="Settings unavailable">{backendError}</PageIntro>
+      </main>
+    );
   return (
     <main className="page-shell settings-page">
-      <PageIntro number="01" title="Configure Formaglyph." aside={<div className="settings-scope"><span>Storage boundary</span><strong>{repository.mode === "supabase" ? "Supabase project" : "Local browser"}</strong><p>{repository.mode === "supabase" ? "Project records use RLS-backed PostgreSQL; appearance remains on this device." : "Preferences and demo connection states stay on this device."}</p></div>}>
-        Manage your account, appearance, generation policy, agent access, integrations, and privacy defaults for this workspace.
+      <PageIntro title="Settings">
+        Your account, this project, and the tools that are actually available.
       </PageIntro>
 
       <div className="settings-layout">
         <nav className="settings-index" aria-label="Settings sections">
-          <a href="#account">Account</a><a href="#appearance">Appearance</a><a href="#generation">Generation</a><a href="#agents">Agents and API</a><a href="#integrations">Integrations</a><a href="#data">Data and privacy</a>
+          <span className="settings-nav-label">Personal</span>
+          {[
+            ["account", "Account"],
+            ["appearance", "Appearance"],
+          ].map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              onClick={() => setActiveSection(id)}
+              aria-current={activeSection === id ? "location" : undefined}
+            >
+              {label}
+            </a>
+          ))}
+          <span className="settings-nav-label">
+            {project?.name ?? "Project"}
+          </span>
+          {[
+            ["generation", "Generation"],
+            ["agents", "Agents & API"],
+            ["integrations", "Integrations"],
+            ["data", "Data & privacy"],
+          ].map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              onClick={() => setActiveSection(id)}
+              aria-current={activeSection === id ? "location" : undefined}
+            >
+              {label}
+            </a>
+          ))}
         </nav>
 
         <div className="settings-panels">
           <Panel className="settings-panel account-panel">
             <div id="account" className="settings-anchor" />
-            <PanelHeader number="02" title="Account and access" meta={repository.mode === "supabase" ? "AUTHENTICATED" : "LOCAL DEMO"} accent />
+            <PanelHeader
+              number="02"
+              title="Account"
+              meta={
+                repository.mode === "supabase" ? "AUTHENTICATED" : "LOCAL DEMO"
+              }
+              accent
+            />
             <div className="account-profile">
-              <div className="account-avatar"><UserCircle size={30} weight="thin" /></div>
-              <div className="account-identity"><span>{repository.mode === "supabase" ? "Signed in as" : "Demo account"}</span><strong>{signedInEmail}</strong><p>{repository.mode === "supabase" ? "Your secure email magic-link session is active." : "This address identifies the local demonstration session."}</p></div>
+              <div className="account-avatar">
+                <UserCircle size={30} weight="thin" />
+              </div>
+              <div className="account-identity">
+                <span>
+                  {repository.mode === "supabase"
+                    ? "Signed in as"
+                    : "Demo account"}
+                </span>
+                <strong>{signedInEmail}</strong>
+                <p>
+                  {repository.mode === "supabase"
+                    ? "Your secure email magic-link session is active."
+                    : "This address identifies the local demonstration session."}
+                </p>
+              </div>
               <div className="account-actions">
-                <button type="button" onClick={() => void copyAccountValue(signedInEmail, "email")} disabled={!user?.email}><Copy size={15} />{accountCopyState === "email" ? "Email copied" : "Copy email"}</button>
-                <button type="button" className="account-sign-out" onClick={() => void handleSignOut()} disabled={repository.mode !== "supabase" || signingOut}><SignOut size={15} />{repository.mode !== "supabase" ? "Demo session" : signingOut ? "Signing out…" : "Sign out"}</button>
+                <button
+                  type="button"
+                  onClick={() => void copyAccountValue(signedInEmail, "email")}
+                  disabled={!user?.email}
+                >
+                  <Copy size={15} />
+                  {accountCopyState === "email" ? "Email copied" : "Copy email"}
+                </button>
+                <button
+                  type="button"
+                  className="account-sign-out"
+                  onClick={() => void handleSignOut()}
+                  disabled={repository.mode !== "supabase" || signingOut}
+                >
+                  <SignOut size={15} />
+                  {repository.mode !== "supabase"
+                    ? "Demo session"
+                    : signingOut
+                      ? "Signing out…"
+                      : "Sign out"}
+                </button>
               </div>
             </div>
             <dl className="account-access-grid">
-              <div><dt>User ID</dt><dd><code>{user?.id ?? "Unavailable"}</code>{user?.id && <button type="button" onClick={() => void copyAccountValue(user.id, "id")}><Copy size={13} />{accountCopyState === "id" ? "Copied" : "Copy"}</button>}</dd></div>
-              <div><dt>Project</dt><dd><strong>{project?.name ?? projectSlug}</strong><span>/{project?.slug ?? projectSlug}</span></dd></div>
-              <div><dt>Organization ID</dt><dd><code>{project?.organizationId ?? "Loading project…"}</code></dd></div>
-              <div><dt>Project role</dt><dd><span className={`account-role ${role}`}>{role}</span></dd></div>
+              <div>
+                <dt>User ID</dt>
+                <dd>
+                  <code>{user?.id ?? "Unavailable"}</code>
+                  {user?.id && (
+                    <button
+                      type="button"
+                      onClick={() => void copyAccountValue(user.id, "id")}
+                    >
+                      <Copy size={13} />
+                      {accountCopyState === "id" ? "Copied" : "Copy"}
+                    </button>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Project</dt>
+                <dd>
+                  <strong>{project?.name ?? projectSlug}</strong>
+                  <span>/{project?.slug ?? projectSlug}</span>
+                </dd>
+              </div>
+              <div>
+                <dt>Organization ID</dt>
+                <dd>
+                  <code>{project?.organizationId ?? "Loading project…"}</code>
+                </dd>
+              </div>
+              <div>
+                <dt>Project role</dt>
+                <dd>
+                  <span className={`account-role ${role}`}>{role}</span>
+                </dd>
+              </div>
             </dl>
-            <p className="account-session-note" role="status" aria-live="polite">{accountCopyState === "error" ? "Clipboard access is unavailable." : accountError ?? (repository.mode === "supabase" ? "Your email comes from the authenticated Supabase session and cannot be changed from project settings." : "This demo account is local to your browser.")}</p>
+            <p
+              className="account-session-note"
+              role="status"
+              aria-live="polite"
+            >
+              {accountCopyState === "error"
+                ? "Clipboard access is unavailable."
+                : (accountError ??
+                  (repository.mode === "supabase"
+                    ? "Your email comes from the authenticated Supabase session and cannot be changed from project settings."
+                    : "This demo account is local to your browser."))}
+            </p>
           </Panel>
 
-          <Panel className="settings-panel" >
+          <Panel className="settings-panel">
             <div id="appearance" className="settings-anchor" />
-            <PanelHeader number="03" title="Appearance and defaults" meta="SAVED LOCALLY" />
-            <SettingRow icon={<Palette size={19} />} title="Interface theme" description="Switch the complete application between its light and inverse modes.">
-              <div className="segmented-control"><button className={!dark ? "active" : ""} onClick={() => onSetDark(false)}>Light</button><button className={dark ? "active" : ""} onClick={() => onSetDark(true)}>Dark</button></div>
+            <PanelHeader number="03" title="Appearance" meta="SAVED LOCALLY" />
+            <SettingRow
+              icon={<Palette size={19} />}
+              title="Interface theme"
+              description="Switch the complete application between its light and inverse modes."
+            >
+              <div
+                className="segmented-control"
+                aria-label="Appearance preference"
+              >
+                <button
+                  aria-pressed={theme === "light"}
+                  className={theme === "light" ? "active" : ""}
+                  onClick={() => onSetDark(false)}
+                >
+                  Light
+                </button>
+                <button
+                  aria-pressed={theme === "dark"}
+                  className={theme === "dark" ? "active" : ""}
+                  onClick={() => onSetDark(true)}
+                >
+                  Dark
+                </button>
+                <button
+                  aria-pressed={theme === "system"}
+                  className={theme === "system" ? "active" : ""}
+                  onClick={() => onSetTheme("system")}
+                >
+                  System
+                </button>
+              </div>
             </SettingRow>
-            <SettingRow icon={<SlidersHorizontal size={19} />} title="Project style profile" description="Use these construction rules when generating and validating icons.">
-              <select value={state.settings.projectProfile} onChange={(event) => updateSetting("projectProfile", event.target.value)}><option>Formaglyph core</option><option>Commerce kit</option><option>Desktop set</option></select>
+            <SettingRow
+              icon={<SlidersHorizontal size={19} />}
+              title="Project style profile"
+              description="Use these construction rules when generating and validating icons."
+            >
+              <select
+                value={state.settings.projectProfile}
+                onChange={(event) =>
+                  updateSetting("projectProfile", event.target.value)
+                }
+              >
+                <option>Formaglyph core</option>
+                <option>Commerce kit</option>
+                <option>Desktop set</option>
+              </select>
             </SettingRow>
-            <SettingRow icon={<SlidersHorizontal size={19} />} title="Default variant" description="Choose the first style shown for a new draft.">
-              <div className="segmented-control"><button className={state.settings.defaultVariant === "regular" ? "active" : ""} onClick={() => updateSetting("defaultVariant", "regular")}>Regular</button><button className={state.settings.defaultVariant === "solid" ? "active" : ""} onClick={() => updateSetting("defaultVariant", "solid")}>Solid</button></div>
+            <SettingRow
+              icon={<SlidersHorizontal size={19} />}
+              title="Default variant"
+              description="Choose the first style shown for a new draft."
+            >
+              <div className="segmented-control">
+                <button
+                  className={
+                    state.settings.defaultVariant === "regular" ? "active" : ""
+                  }
+                  onClick={() => updateSetting("defaultVariant", "regular")}
+                >
+                  Regular
+                </button>
+                <button
+                  className={
+                    state.settings.defaultVariant === "solid" ? "active" : ""
+                  }
+                  onClick={() => updateSetting("defaultVariant", "solid")}
+                >
+                  Solid
+                </button>
+              </div>
             </SettingRow>
           </Panel>
 
           <Panel className="settings-panel">
             <div id="generation" className="settings-anchor" />
-            <PanelHeader number="04" title="Generation policy" meta="LOCAL ADAPTER LIVE" accent />
-            <div className="adapter-options">
-              <button className={state.settings.generationAdapter === "local" ? "active" : ""} onClick={() => updateSetting("generationAdapter", "local")}><HardDrives size={22} /><span><strong>Local Geometry</strong><small>Deterministic, open, and processed in this browser.</small></span><i /></button>
-              <button disabled className={state.settings.generationAdapter === "hosted" ? "active" : ""}><Robot size={22} /><span><strong>OmniSVG worker</strong><small>Requires a separately deployed GPU worker and project opt-in.</small></span><i /></button>
-            </div>
-            <SettingRow icon={<ShieldCheck size={19} />} title="Enable hosted generation" description="Disabled until an administrator connects and approves a disclosed model provider."><Toggle disabled checked={state.settings.hostedGeneration} onChange={() => undefined} label="Enable hosted generation" /></SettingRow>
-            <SettingRow icon={<Check size={19} />} title="Automatic validation" description="Run geometry, naming, provenance, and licence checks after generation."><Toggle checked={state.settings.automaticValidation} onChange={(value) => updateSetting("automaticValidation", value)} label="Enable automatic validation" /></SettingRow>
-            <SettingRow icon={<Database size={19} />} title="Retain generation prompts" description="Off stores only a SHA-256 hash for provenance. On stores the complete brief in project history."><Toggle checked={state.settings.retainPrompts} onChange={(value) => updateSetting("retainPrompts", value)} label="Retain generation prompts" /></SettingRow>
+            <PanelHeader
+              title="Generation is paused"
+              meta="Server milestone pending"
+            />
+            <p className="settings-section-description">
+              Import original SVG pairs in Create. Model-provider controls stay
+              unavailable for now. No prompts are sent to a provider from this
+              interface.
+            </p>
+            <SettingRow
+              icon={<ShieldCheck size={19} />}
+              title="SVG safety validation"
+              description="Required for imported candidates and server-side submission. It cannot be bypassed."
+            >
+              <span className="status-label">Always required</span>
+            </SettingRow>
           </Panel>
 
           <Panel className="settings-panel">
             <div id="agents" className="settings-anchor" />
-            <PanelHeader number="05" title="Agents and API" meta="MCP + API LIVE" accent />
-            <div className="connection-field"><label>Public REST endpoint</label><div><code>{publicApiEndpoint}</code><button onClick={() => window.open(publicApiEndpoint, "_blank", "noopener,noreferrer")}>Open</button></div><p>Read-only Core and reviewed public-project catalog, metadata, OpenAPI, and versioned SVG delivery. No key required.</p></div>
-            <SettingRow icon={<PlugsConnected size={19} />} title="Public MCP server" description="Live read-only tools, resources, and prompts for agent clients."><Toggle disabled checked onChange={() => undefined} label="Public MCP server enabled" /></SettingRow>
-            <div className="connection-field"><label>Streamable HTTP MCP endpoint</label><div><code>{publicMcpEndpoint}</code><button onClick={() => void copyMcpEndpoint()}>{mcpCopyState === "copied" ? <><Check size={13} />Copied</> : <><Copy size={13} />{mcpCopyState === "error" ? "Copy failed" : "Copy"}</>}</button></div><p>Connect an MCP client directly. Search and retrieve Core and complete public-project SVGs without a key; private project records stay protected.</p></div>
-            <SettingRow icon={<Key size={19} />} title="Project token scope" description="Tokens can create text-only drafts. They cannot upload SVGs, submit, review, approve, publish, or read private records."><select disabled value="drafts:write"><option value="drafts:write">drafts:write</option></select></SettingRow>
+            <PanelHeader
+              number="05"
+              title="Agents and API"
+              meta="MCP + API LIVE"
+              accent
+            />
+            <div className="connection-field">
+              <label>Public REST endpoint</label>
+              <div>
+                <code>{publicApiEndpoint}</code>
+                <button
+                  onClick={() =>
+                    window.open(
+                      publicApiEndpoint,
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
+                  }
+                >
+                  Open
+                </button>
+              </div>
+              <p>
+                Read-only Core and reviewed public-project catalog, metadata,
+                OpenAPI, and versioned SVG delivery. No key required.
+              </p>
+            </div>
+            <SettingRow
+              icon={<PlugsConnected size={19} />}
+              title="Public MCP server"
+              description="Live read-only tools, resources, and prompts for agent clients."
+            >
+              <Toggle
+                disabled
+                checked
+                onChange={() => undefined}
+                label="Public MCP server enabled"
+              />
+            </SettingRow>
+            <div className="connection-field">
+              <label>Streamable HTTP MCP endpoint</label>
+              <div>
+                <code>{publicMcpEndpoint}</code>
+                <button onClick={() => void copyMcpEndpoint()}>
+                  {mcpCopyState === "copied" ? (
+                    <>
+                      <Check size={13} />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      {mcpCopyState === "error" ? "Copy failed" : "Copy"}
+                    </>
+                  )}
+                </button>
+              </div>
+              <p>
+                Connect an MCP client directly. Search and retrieve Core and
+                complete public-project SVGs without a key; private project
+                records stay protected.
+              </p>
+            </div>
+            <SettingRow
+              icon={<Key size={19} />}
+              title="Project token scope"
+              description="Tokens can create text-only drafts. They cannot upload SVGs, submit, review, approve, publish, or read private records."
+            >
+              <select disabled value="drafts:write">
+                <option value="drafts:write">drafts:write</option>
+              </select>
+            </SettingRow>
             {repository.mode !== "supabase" ? (
-              <div className="api-key-block"><div><strong>Project tokens</strong><p>Switch to the Supabase data mode to issue scoped credentials.</p></div><button className="secondary-action" disabled>Unavailable locally</button></div>
+              <div className="api-key-block">
+                <div>
+                  <strong>Project tokens</strong>
+                  <p>
+                    Switch to the Supabase data mode to issue scoped
+                    credentials.
+                  </p>
+                </div>
+                <button className="secondary-action" disabled>
+                  Unavailable locally
+                </button>
+              </div>
             ) : role !== "admin" ? (
-              <div className="api-key-block"><div><strong>Project tokens</strong><p>Only a project admin can issue or revoke agent credentials.</p></div><button className="secondary-action" disabled>Admin required</button></div>
+              <div className="api-key-block">
+                <div>
+                  <strong>Project tokens</strong>
+                  <p>
+                    Only a project admin can issue or revoke agent credentials.
+                  </p>
+                </div>
+                <button className="secondary-action" disabled>
+                  Admin required
+                </button>
+              </div>
             ) : (
               <div className="agent-token-manager">
-                <form className="agent-token-form" onSubmit={(event) => { event.preventDefault(); void issueToken(); }}>
+                <form
+                  className="agent-token-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void issueToken();
+                  }}
+                >
                   <label htmlFor="agent-token-name">Token name</label>
-                  <div><input id="agent-token-name" value={tokenName} maxLength={80} onChange={(event) => setTokenName(event.target.value)} /><button className="primary-action" disabled={tokenBusy} type="submit">Issue 30-day token</button></div>
-                  <p>The secret is shown once. Store it in your MCP client, never in source control.</p>
+                  <div>
+                    <input
+                      id="agent-token-name"
+                      value={tokenName}
+                      maxLength={80}
+                      onChange={(event) => setTokenName(event.target.value)}
+                    />
+                    <button
+                      className="primary-action"
+                      disabled={tokenBusy}
+                      type="submit"
+                    >
+                      Issue 30-day token
+                    </button>
+                  </div>
+                  <p>
+                    The secret is shown once. Store it in your MCP client, never
+                    in source control.
+                  </p>
                 </form>
-                {issuedToken && <div className="connection-field token-secret" role="status"><label>New project token</label><div><code>{issuedToken.token}</code><button onClick={() => void copyText(issuedToken.token)}><Copy size={13} />Copy once</button></div><p>Created for {issuedToken.name}. Close this value after copying it.</p></div>}
-                {tokenError && <p className="token-error" role="alert">{tokenError}</p>}
+                {issuedToken && (
+                  <div className="connection-field token-secret" role="status">
+                    <label>New project token</label>
+                    <div>
+                      <code>{issuedToken.token}</code>
+                      <button
+                        onClick={() =>
+                          void copyText(issuedToken.token).catch(() =>
+                            setTokenError(
+                              "Clipboard unavailable. Store the token securely before closing it.",
+                            ),
+                          )
+                        }
+                      >
+                        <Copy size={13} />
+                        Copy once
+                      </button>
+                      <button onClick={() => setIssuedToken(null)}>
+                        Hide secret
+                      </button>
+                    </div>
+                    <p>
+                      Created for {issuedToken.name}. Close this value after
+                      copying it.
+                    </p>
+                  </div>
+                )}
+                {tokenError && (
+                  <p className="token-error" role="alert">
+                    {tokenError}
+                  </p>
+                )}
                 <div className="token-list" aria-label="Project tokens">
-                  {tokens.length === 0 ? <p>No project tokens issued.</p> : tokens.map((token) => {
-                    const inactive = Boolean(token.revokedAt) || new Date(token.expiresAt).getTime() <= Date.now();
-                    return <article key={token.id}><div><strong>{token.name}</strong><code>{token.tokenPrefix}••••</code><small>{inactive ? token.revokedAt ? "Revoked" : "Expired" : `Expires ${new Date(token.expiresAt).toLocaleDateString("en-GB")}`} · {token.lastUsedAt ? `Last used ${new Date(token.lastUsedAt).toLocaleDateString("en-GB")}` : "Never used"}</small></div><button type="button" disabled={inactive || tokenBusy} onClick={() => void revokeToken(token.id)}><Trash size={15} />Revoke</button></article>;
-                  })}
+                  {tokens.length === 0 ? (
+                    <p>No project tokens issued.</p>
+                  ) : (
+                    tokens.map((token) => {
+                      const inactive =
+                        Boolean(token.revokedAt) ||
+                        new Date(token.expiresAt).getTime() <= Date.now();
+                      return (
+                        <article key={token.id}>
+                          <div>
+                            <strong>{token.name}</strong>
+                            <code>{token.tokenPrefix}••••</code>
+                            <small>
+                              {inactive
+                                ? token.revokedAt
+                                  ? "Revoked"
+                                  : "Expired"
+                                : `Expires ${new Date(token.expiresAt).toLocaleDateString("en-GB")}`}{" "}
+                              ·{" "}
+                              {token.lastUsedAt
+                                ? `Last used ${new Date(token.lastUsedAt).toLocaleDateString("en-GB")}`
+                                : "Never used"}
+                            </small>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={inactive || tokenBusy}
+                            onClick={() => setRevokeId(token.id)}
+                          >
+                            <Trash size={15} />
+                            Revoke
+                          </button>
+                        </article>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
@@ -242,26 +760,154 @@ export function SettingsPage({ dark, onSetDark }: { dark: boolean; onSetDark: (v
 
           <Panel className="settings-panel">
             <div id="integrations" className="settings-anchor" />
-            <PanelHeader number="06" title="Design handoff" meta="COPY/EXPORT LIVE" accent />
-            {(Object.keys(integrationDetails) as IntegrationName[]).map((name) => {
-              const detail = integrationDetails[name];
-              return <SettingRow key={name} icon={detail.icon} title={detail.label} description={detail.description}>{detail.available ? <a className="connection-button" href="/explore"><Copy size={15} />Open Explore</a> : <button disabled className="connection-button"><PlugsConnected size={15} />Planned</button>}</SettingRow>;
-            })}
+            <PanelHeader
+              number="06"
+              title="Design handoff"
+              meta="COPY/EXPORT LIVE"
+              accent
+            />
+            {(Object.keys(integrationDetails) as IntegrationName[]).map(
+              (name) => {
+                const detail = integrationDetails[name];
+                return (
+                  <SettingRow
+                    key={name}
+                    icon={detail.icon}
+                    title={detail.label}
+                    description={detail.description}
+                  >
+                    {detail.available ? (
+                      <a className="connection-button" href="/explore">
+                        <Copy size={15} />
+                        Open Explore
+                      </a>
+                    ) : (
+                      <button disabled className="connection-button">
+                        <PlugsConnected size={15} />
+                        Planned
+                      </button>
+                    )}
+                  </SettingRow>
+                );
+              },
+            )}
           </Panel>
 
           <Panel className="settings-panel">
             <div id="data" className="settings-anchor" />
-            <PanelHeader number="07" title="Data and privacy" meta={repository.mode === "supabase" ? "RLS BACKED" : "DEVICE ONLY"} />
-            <SettingRow icon={<ShieldCheck size={19} />} title="Project visibility" description={project?.visibility === "public" ? "Complete published releases are discoverable in Explore, the REST API, and MCP." : "Only project members can access published project releases."}>
-              <button className="secondary-action" type="button" disabled={repository.mode !== "supabase" || role !== "admin" || visibilityBusy || !project} onClick={() => void changeVisibility()}>{visibilityBusy ? "Updating…" : repository.mode !== "supabase" ? "Demo only" : role !== "admin" ? "Admin required" : project?.visibility === "public" ? "Make private" : "Make public"}</button>
+            <PanelHeader
+              number="07"
+              title="Data and privacy"
+              meta={
+                repository.mode === "supabase" ? "RLS BACKED" : "DEVICE ONLY"
+              }
+            />
+            <SettingRow
+              icon={<ShieldCheck size={19} />}
+              title="Project visibility"
+              description={
+                project?.visibility === "public"
+                  ? "Complete published releases are discoverable in Explore, the REST API, and MCP."
+                  : "Only project members can access published project releases."
+              }
+            >
+              <button
+                className="secondary-action"
+                type="button"
+                disabled={
+                  repository.mode !== "supabase" ||
+                  role !== "admin" ||
+                  visibilityBusy ||
+                  !project
+                }
+                onClick={() => void changeVisibility()}
+              >
+                {visibilityBusy
+                  ? "Updating…"
+                  : repository.mode !== "supabase"
+                    ? "Demo only"
+                    : role !== "admin"
+                      ? "Admin required"
+                      : project?.visibility === "public"
+                        ? "Make private"
+                        : "Make public"}
+              </button>
             </SettingRow>
-            {(visibilityError || visibilitySuccess) && <p className={visibilityError ? "token-error" : "account-session-note"} role="status" aria-live="polite">{visibilityError ?? visibilitySuccess}</p>}
-            <SettingRow icon={<HardDrives size={19} />} title="Local backups" description="Keep a recoverable browser copy of drafts, reviews, and settings."><Toggle checked={state.settings.localBackups} onChange={(value) => updateSetting("localBackups", value)} label="Enable local backups" /></SettingRow>
-            <SettingRow icon={<Database size={19} />} title="Anonymous diagnostics" description="Share non-content performance and error signals when a backend is connected."><Toggle checked={state.settings.anonymousDiagnostics} onChange={(value) => updateSetting("anonymousDiagnostics", value)} label="Share anonymous diagnostics" /></SettingRow>
-            <div className="privacy-note"><ShieldCheck size={21} /><div><strong>Private by default</strong><p>{repository.mode === "supabase" ? "Private projects, drafts, and reviews are protected by membership-scoped RLS. Public API and MCP reads include only Core and complete releases in explicitly public projects." : "This demo stores data in local browser storage. Public API and MCP access never reads browser drafts."}</p></div></div>
+            {(visibilityError || visibilitySuccess) && (
+              <p
+                className={
+                  visibilityError ? "token-error" : "account-session-note"
+                }
+                role="status"
+                aria-live="polite"
+              >
+                {visibilityError ?? visibilitySuccess}
+              </p>
+            )}
+            <SettingRow
+              icon={<HardDrives size={19} />}
+              title="Local backups"
+              description="Local demonstration records stay on this device; hosted project data stays in protected PostgreSQL."
+            >
+              <span className="status-label">
+                {repository.mode === "local"
+                  ? "Demo on this device"
+                  : "Hosted project records"}
+              </span>
+            </SettingRow>
+            <SettingRow
+              icon={<Database size={19} />}
+              title="Anonymous diagnostics"
+              description="No diagnostics collection is connected from these settings."
+            >
+              <button className="connection-button" disabled>
+                Not connected
+              </button>
+            </SettingRow>
+            <div className="privacy-note">
+              <ShieldCheck size={21} />
+              <div>
+                <strong>Private by default</strong>
+                <p>
+                  {repository.mode === "supabase"
+                    ? "Private projects, drafts, and reviews are protected by membership-scoped RLS. Public API and MCP reads include only Core and complete releases in explicitly public projects."
+                    : "This demo stores data in local browser storage. Public API and MCP access never reads browser drafts."}
+                </p>
+              </div>
+            </div>
           </Panel>
         </div>
       </div>
+      {revokeId && (
+        <Dialog
+          title="Revoke project token?"
+          onClose={() => {
+            if (!tokenBusy) setRevokeId(null);
+          }}
+        >
+          <p>
+            Clients using this token will immediately lose draft access. This
+            cannot be undone; issue a replacement if needed.
+          </p>
+          {tokenError && <p role="alert">{tokenError}</p>}
+          <div className="dialog-actions">
+            <button
+              className="secondary-action"
+              disabled={tokenBusy}
+              onClick={() => setRevokeId(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className="primary-action"
+              disabled={tokenBusy}
+              onClick={() => void revokeToken(revokeId)}
+            >
+              {tokenBusy ? "Revoking…" : "Revoke token"}
+            </button>
+          </div>
+        </Dialog>
+      )}
     </main>
   );
 }

@@ -1,260 +1,903 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
+import { ArrowUpRight } from "@phosphor-icons/react/ArrowUpRight";
 import { Check } from "@phosphor-icons/react/Check";
 import { Copy } from "@phosphor-icons/react/Copy";
 import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
-import { FigmaLogo } from "@phosphor-icons/react/FigmaLogo";
 import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
 import { SlidersHorizontal } from "@phosphor-icons/react/SlidersHorizontal";
 import { X } from "@phosphor-icons/react/X";
-import { CloudArrowUp } from "@phosphor-icons/react/CloudArrowUp";
-import { iconResults, workspaceIconLibrary } from "../data/catalog";
-import { ConstructionIcon, SvgIcon, WeightIcon } from "../components/IconPreview";
-import { PageIntro, Panel, PanelHeader } from "../components/Layout";
+import { iconResults } from "../data/catalog";
+import { SvgIcon, WeightIcon } from "../components/IconPreview";
+import { FamilyProof } from "../components/FamilyProof";
+import { Dialog } from "../components/Dialog";
 import { searchIcons } from "../services/search";
-import { copyDesignSvg, copyText, downloadSvg, renderIconSvg } from "../services/svg";
-import { useAppState } from "../state/AppState";
+import { copyDesignSvg, copyText, downloadSvg } from "../services/svg";
 import { repository } from "../services/repositories";
-import { useSearchParams } from "react-router-dom";
-import type { CatalogIcon, CatalogLibrary, CatalogVariant } from "../domain/types";
-import { CATALOG_WEIGHTS, fetchCatalogSvg, loadExternalCatalog, weightLabel } from "../services/externalCatalog";
+import type {
+  CatalogIcon,
+  CatalogLibrary,
+  CatalogVariant,
+} from "../domain/types";
+import {
+  CATALOG_WEIGHTS,
+  fetchCatalogSvg,
+  loadExternalCatalog,
+  weightLabel,
+} from "../services/externalCatalog";
 import { CatalogMotionPreview } from "../components/CatalogMotionPreview";
-import { EXTERNAL_LIBRARY_IDS, LIBRARY_SOURCES, isExternalLibrary, weightsForLibrary, type ExternalLibraryId } from "../data/librarySources";
+import {
+  EXTERNAL_LIBRARY_IDS,
+  LIBRARY_SOURCES,
+  weightsForLibrary,
+  type ExternalLibraryId,
+} from "../data/librarySources";
 
-const coreConceptCount = new Set(iconResults.map((icon) => icon.stableId)).size;
 const PAGE_SIZE = 48;
-const libraryLabel = (icon: CatalogIcon) => icon.libraryLabel ?? (icon.library === "projects" ? "Team releases" : "Formaglyph Core");
+// Approved specimen order; searches still use ranked results, upstream families keep their order.
+const coreSpecimenOrder = new Map(
+  [
+    "cloud-upload",
+    "cloud-sync",
+    "file",
+    "folder",
+    "file-lock",
+    "folder-spark",
+    "download-tray",
+    "image",
+    "camera",
+    "home",
+    "grid-four",
+    "search",
+    "copy",
+    "mail",
+    "message",
+    "message-sent",
+    "bell",
+    "calendar",
+    "bookmark",
+    "star",
+    "globe",
+    "credit-card",
+    "card-check",
+    "receipt-search",
+    "key",
+    "lock",
+    "shield-check",
+    "user-shield",
+    "link",
+    "archive-box",
+  ].map((name, index) => [name, index]),
+);
+const libraryLabel = (icon: CatalogIcon) =>
+  icon.libraryLabel ??
+  (icon.library === "projects" ? "Team releases" : "Formaglyph Core");
+const sourceOptions = [
+  { id: "all", label: "All libraries" },
+  { id: "core", label: "Formaglyph Core" },
+  { id: "projects", label: "Team releases" },
+  ...EXTERNAL_LIBRARY_IDS.map((id) => ({
+    id,
+    label: LIBRARY_SOURCES[id].label,
+  })),
+];
 
-function CatalogGlyph({ icon, size = 25, weight = icon.previewWeight }: { icon: CatalogIcon; size?: number; weight?: "regular" | "fill" }) {
-  const [assetFailed, setAssetFailed] = useState(false);
+export function CatalogGlyph({
+  icon,
+  size = 32,
+}: {
+  icon: CatalogIcon;
+  size?: number;
+}) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   if (icon.svg) return <SvgIcon svg={icon.svg} size={size} />;
-  if (icon.assetUrl && !assetFailed) return <img className="catalog-asset" src={icon.assetUrl} width={size} height={size} loading="lazy" decoding="async" alt="" onError={() => setAssetFailed(true)} />;
-  return icon.Icon ? <WeightIcon Icon={icon.Icon} size={size} weight={weight} /> : <span className="microcopy">Unavailable</span>;
+  if (icon.assetUrl && failedUrl !== icon.assetUrl)
+    return (
+      <img
+        className="catalog-asset"
+        src={icon.assetUrl}
+        width={size}
+        height={size}
+        loading="lazy"
+        decoding="async"
+        alt=""
+        onError={() => setFailedUrl(icon.assetUrl!)}
+      />
+    );
+  return icon.Icon ? (
+    <WeightIcon Icon={icon.Icon} size={size} weight={icon.previewWeight} />
+  ) : (
+    <span className="asset-unavailable">Asset unavailable</span>
+  );
+}
+
+function CatalogInspector({
+  selected,
+  siblings,
+  onSelect,
+  onClose,
+}: {
+  selected: CatalogIcon;
+  siblings: CatalogIcon[];
+  onSelect: (icon: CatalogIcon) => void;
+  onClose: () => void;
+}) {
+  const [loaded, setLoaded] = useState<{ id: string; svg: string } | null>(
+    null,
+  );
+  const [error, setError] = useState("");
+  const [copyState, setCopyState] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [compact, setCompact] = useState(
+    () => window.matchMedia("(max-width: 1100px)").matches,
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1100px)");
+    const update = () => setCompact(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const inspectorTitle = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    inspectorTitle.current?.focus({ preventScroll: true });
+  }, []);
+  useEffect(() => {
+    setError("");
+    setCopyState("");
+    if (selected.svg || !selected.assetUrl) return;
+    const controller = new AbortController();
+    void fetchCatalogSvg(selected, controller.signal)
+      .then((svg) => {
+        if (!controller.signal.aborted) setLoaded({ id: selected.id, svg });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setError("Could not verify this SVG. Try selecting it again.");
+      });
+    return () => controller.abort();
+  }, [selected.id, selected.assetUrl, selected.svg]);
+  const displayIcon =
+    loaded?.id === selected.id ? { ...selected, svg: loaded.svg } : selected;
+  const act = async (
+    action: "copy" | "download" | "pair" | "figma" | "penpot",
+  ) => {
+    setBusy(true);
+    setError("");
+    try {
+      const svg = await fetchCatalogSvg(selected);
+      if (action === "copy") {
+        await copyText(svg);
+        setCopyState(`${weightLabel(selected.variant)} SVG copied`);
+      } else if (action === "download")
+        downloadSvg(
+          `${selected.name}-${selected.variant}-${selected.version}.svg`,
+          svg,
+        );
+      else if (action === "pair") {
+        const pair = siblings.filter(
+          (icon) => icon.variant === "regular" || icon.variant === "solid",
+        );
+        const assets = await Promise.all(
+          pair.map(async (icon) => ({
+            icon,
+            svg: await fetchCatalogSvg(icon),
+          })),
+        );
+        for (const asset of assets)
+          downloadSvg(
+            `${asset.icon.name}-${asset.icon.variant}-${asset.icon.version}.svg`,
+            asset.svg,
+          );
+        setCopyState("Regular and Solid downloaded");
+      } else {
+        await copyDesignSvg(
+          svg,
+          {
+            stableId: selected.stableId,
+            name: selected.name,
+            label: selected.label,
+            version: selected.version,
+            variant: selected.variant,
+            licence: selected.licenceLabel ?? selected.licence,
+            contentHash: selected.contentHash,
+            library: libraryLabel(selected),
+            sourceUrl: selected.sourceUrl,
+          },
+          action,
+        );
+        setCopyState(`Copied for ${action === "figma" ? "Figma" : "Penpot"}`);
+      }
+    } catch {
+      setError(
+        "That action failed. Check your connection and try again; your selection is retained.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  const hasPair =
+    siblings.some((icon) => icon.variant === "regular") &&
+    siblings.some((icon) => icon.variant === "solid");
+  const content = (
+    <aside
+      className="catalog-inspector"
+      aria-label={`Selected icon: ${selected.name}`}
+    >
+      <div className="inspector-mobile-back">
+        <button onClick={onClose}>
+          <ArrowLeft size={16} />
+          Back to Explore
+        </button>
+      </div>
+      <header className="inspector-heading">
+        <span className="eyebrow">Selected icon</span>
+        <button
+          className="icon-action inspector-close"
+          onClick={onClose}
+          aria-label="Close icon details"
+        >
+          <X size={18} />
+        </button>
+        <h2 ref={inspectorTitle} tabIndex={-1}>
+          {selected.name}
+        </h2>
+        <p>
+          {libraryLabel(selected)} / {selected.category}
+        </p>
+      </header>
+      <div
+        className={`inspector-variants${siblings.length > 4 ? " many-variants" : ""}`}
+        aria-label="Available icon weights"
+      >
+        {siblings.map((icon) => (
+          <button
+            key={icon.id}
+            aria-pressed={selected.id === icon.id}
+            onClick={() => onSelect(icon)}
+          >
+            <CatalogGlyph
+              icon={icon.id === selected.id ? displayIcon : icon}
+              size={56}
+            />
+            <span>{weightLabel(icon.variant)}</span>
+          </button>
+        ))}
+      </div>
+      <FamilyProof
+        render={(size) => <CatalogGlyph icon={displayIcon} size={size} />}
+      />
+      <dl className="inspector-facts">
+        <div>
+          <dt>Licence</dt>
+          <dd>
+            {selected.licenseUrl ? (
+              <a href={selected.licenseUrl} target="_blank" rel="noreferrer">
+                {selected.licenceLabel ?? selected.licence}
+                <ArrowUpRight size={12} />
+              </a>
+            ) : (
+              selected.licence
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>Native grid</dt>
+          <dd>
+            {selected.gridSize ?? 24} × {selected.gridSize ?? 24}
+          </dd>
+        </div>
+        <div>
+          <dt>{selected.distribution ? "Snapshot" : "Version"}</dt>
+          <dd>{selected.version}</dd>
+        </div>
+        <div>
+          <dt>Origin</dt>
+          <dd>
+            {selected.provenance.kind === "third-party"
+              ? "Third-party library"
+              : selected.library === "core" ||
+                  selected.provenance.kind === "original"
+                ? "Original geometry"
+                : "Human-reviewed release"}
+          </dd>
+        </div>
+      </dl>
+      <div className="inspector-primary-actions">
+        <button
+          className="primary-action"
+          disabled={busy}
+          onClick={() => void act("copy")}
+        >
+          {copyState.includes("copied") ? (
+            <Check size={16} />
+          ) : (
+            <Copy size={16} />
+          )}
+          Copy {weightLabel(selected.variant)} SVG
+        </button>
+        <button
+          className="secondary-action"
+          disabled={busy}
+          onClick={() => void act(hasPair ? "pair" : "download")}
+        >
+          <DownloadSimple size={16} />
+          {hasPair
+            ? "Download pair"
+            : `Download ${weightLabel(selected.variant)} SVG`}
+        </button>
+        <span role="status" className="action-feedback">
+          {copyState}
+        </span>
+        {error && (
+          <p role="alert" className="field-error">
+            {error}
+          </p>
+        )}
+      </div>
+      <details className="inspector-details">
+        <summary>Details & provenance</summary>
+        <p>{selected.description}</p>
+        <dl>
+          <dt>Stable ID</dt>
+          <dd>
+            <code>{selected.stableId}</code>
+          </dd>
+          {selected.contentHash && (
+            <>
+              <dt>SHA-256</dt>
+              <dd>
+                <code>{selected.contentHash}</code>
+              </dd>
+            </>
+          )}
+        </dl>
+        {selected.sourceUrl && (
+          <p>
+            <a href={selected.sourceUrl} target="_blank" rel="noreferrer">
+              Original source <ArrowUpRight size={12} />
+            </a>
+            . Source-specific licence notices are retained in copied SVGs. No
+            affiliation is implied.
+          </p>
+        )}
+      </details>
+      <details className="inspector-details">
+        <summary>Design handoff & motion</summary>
+        <div className="design-handoff-actions">
+          <button
+            className="secondary-action"
+            disabled={busy}
+            onClick={() => void act("figma")}
+          >
+            Copy for Figma
+          </button>
+          <button
+            className="secondary-action"
+            disabled={busy}
+            onClick={() => void act("penpot")}
+          >
+            Copy for Penpot
+          </button>
+        </div>
+        <p>Clipboard handoff, not live design-tool synchronization.</p>
+        <CatalogMotionPreview svg={displayIcon.svg} />
+      </details>
+    </aside>
+  );
+  return compact ? (
+    <Dialog
+      title={`Icon details: ${selected.name}`}
+      className="catalog-inspector-dialog"
+      onClose={onClose}
+    >
+      {content}
+    </Dialog>
+  ) : (
+    content
+  );
 }
 
 export function ExplorePage() {
-  const { state } = useAppState();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") ?? "");
-  const [category, setCategory] = useState(searchParams.get("category") ?? "all");
-  const [variantFilter, setVariantFilter] = useState<"all" | CatalogVariant>(() => {
-    const weight = searchParams.get("weight");
-    const source = searchParams.get("library") ?? "all";
-    const supported = source === "all" || (!isExternalLibrary(source) && !["core", "projects"].includes(source)) ? CATALOG_WEIGHTS : weightsForLibrary(source);
-    return weight === "all" || supported.includes(weight as CatalogVariant) ? weight as "all" | CatalogVariant : "regular";
-  });
-  const [library, setLibrary] = useState<"all" | CatalogLibrary>(() => { const value = searchParams.get("library") ?? ""; return ["core", "projects"].includes(value) || isExternalLibrary(value) ? value as CatalogLibrary : "all"; });
-  const [page, setPage] = useState(1);
-  const [selectedId, setSelectedId] = useState("");
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
-  const [designCopyState, setDesignCopyState] = useState<"idle" | "figma" | "penpot" | "error">("idle");
-  const [downloadError, setDownloadError] = useState(false);
-  const [repositoryCatalog, setRepositoryCatalog] = useState<CatalogIcon[]>([]);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [catalogLoading, setCatalogLoading] = useState(repository.mode === "supabase");
-  const [libraries, setLibraries] = useState<Partial<Record<ExternalLibraryId, CatalogIcon[]>>>({});
-  const [failedLibraries, setFailedLibraries] = useState<ExternalLibraryId[]>([]);
-  const [pendingLibraries, setPendingLibraries] = useState<ExternalLibraryId[]>(EXTERNAL_LIBRARY_IDS);
-  const [retry, setRetry] = useState(0);
-  const [loadedSelection, setLoadedSelection] = useState<{ id: string; svg: string } | null>(null);
-  const [selectionError, setSelectionError] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const query = params.get("q") ?? "";
   const deferredQuery = useDeferredValue(query);
-  const externalCatalog = useMemo(() => EXTERNAL_LIBRARY_IDS.flatMap((id) => libraries[id] ?? []), [libraries]);
-  const externalConceptCount = useMemo(() => new Set(externalCatalog.map((icon) => icon.stableId)).size, [externalCatalog]);
-  const externalLoading = pendingLibraries.length > 0;
-  const externalError = failedLibraries.length ? `Could not load: ${failedLibraries.map((id) => LIBRARY_SOURCES[id].label).join(", ")}. Other loaded libraries remain available.` : null;
-  const availableWeights = library === "all" ? CATALOG_WEIGHTS : weightsForLibrary(library);
-
-  const changeLibrary = (value: "all" | CatalogLibrary) => {
-    setLibrary(value);
-    setCategory("all");
-    if (variantFilter !== "all" && value !== "all" && !weightsForLibrary(value).includes(variantFilter)) setVariantFilter("regular");
-  };
-
+  const category = params.get("category") ?? "all";
+  const libraryParam = params.get("library") ?? "core";
+  const library = sourceOptions.some((source) => source.id === libraryParam)
+    ? (libraryParam as "all" | CatalogLibrary)
+    : "core";
+  const weights =
+    library === "all" ? CATALOG_WEIGHTS : weightsForLibrary(library);
+  const weightParam = params.get("weight") ?? "regular";
+  const variant =
+    weightParam === "all" || weights.includes(weightParam as CatalogVariant)
+      ? (weightParam as "all" | CatalogVariant)
+      : "regular";
+  const size = [24, 32, 40, 48].includes(Number(params.get("size")))
+    ? Number(params.get("size"))
+    : 32;
+  const [projects, setProjects] = useState<CatalogIcon[]>([]);
+  const [libraries, setLibraries] = useState<
+    Partial<Record<ExternalLibraryId, CatalogIcon[]>>
+  >({});
+  const [failed, setFailed] = useState<string[]>([]);
+  const [pending, setPending] = useState<string[]>([]);
+  const [retry, setRetry] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const lastTile = useRef<HTMLButtonElement | null>(null);
+  const set = (updates: Record<string, string | null>, replace = false) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        for (const [key, value] of Object.entries(updates))
+          value == null ? next.delete(key) : next.set(key, value);
+        return next;
+      },
+      { replace },
+    );
+  const changeLibrary = (value: string) =>
+    set({
+      library: value,
+      category: null,
+      weight:
+        value !== "all" &&
+        variant !== "all" &&
+        !weightsForLibrary(value as CatalogLibrary).includes(variant)
+          ? null
+          : params.get("weight"),
+      page: null,
+      icon: null,
+    });
   useEffect(() => {
-    let active = true;
-    setPendingLibraries(EXTERNAL_LIBRARY_IDS);
-    setFailedLibraries([]);
-    // Start independent requests together; each catalogue is usable as soon as it arrives.
-    for (const id of EXTERNAL_LIBRARY_IDS) {
-      void loadExternalCatalog(id).then((icons) => { if (active) setLibraries((previous) => ({ ...previous, [id]: icons })); }).catch(() => { if (active) setFailedLibraries((previous) => [...previous, id]); }).finally(() => { if (active) setPendingLibraries((previous) => previous.filter((pending) => pending !== id)); });
-    }
-    return () => { active = false; };
-  }, [retry]);
-
-  useEffect(() => {
-    let active = true;
-    void repository.listPublishedIcons().then((icons) => { if (active) setRepositoryCatalog(icons); }).catch((error: unknown) => { if (active) setCatalogError(error instanceof Error ? error.message : "Could not load the published catalog."); }).finally(() => { if (active) setCatalogLoading(false); });
-    return () => { active = false; };
+    const shortcut = (event: KeyboardEvent) => {
+      if (
+        event.key === "/" &&
+        !(
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement ||
+          (event.target as HTMLElement)?.isContentEditable
+        )
+      ) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", shortcut);
+    return () => document.removeEventListener("keydown", shortcut);
   }, []);
-
-  const publishedWorkspaceIcons = useMemo<CatalogIcon[]>(() => state.workspace.filter((icon) => icon.status === "published").map((icon) => ({
-    id: icon.id,
-    stableId: icon.stableId,
-    name: icon.name,
-    label: icon.label,
-    category: icon.category,
-    description: icon.description,
-    Icon: workspaceIconLibrary[icon.visualKey as keyof typeof workspaceIconLibrary] ?? CloudArrowUp,
-    tags: icon.tags,
-    aliases: [{ locale: "en", value: icon.label.toLowerCase(), reviewed: true }],
-    version: icon.version,
-    variant: icon.variant,
-    previewWeight: icon.variant === "solid" ? "fill" as const : "regular" as const,
-    directionality: "neutral" as const,
-    licence: "MIT" as const,
-    status: "published" as const,
-    provenance: { kind: "generated" as const, source: "Formaglyph Workspace", adapter: "local-svg", disclosed: true },
-    library: "projects" as const,
-  })), [state.workspace]);
+  useEffect(() => {
+    let active = true;
+    setPending([...EXTERNAL_LIBRARY_IDS, "projects"]);
+    setFailed([]);
+    for (const id of EXTERNAL_LIBRARY_IDS)
+      void loadExternalCatalog(id)
+        .then((icons) => {
+          if (active) setLibraries((current) => ({ ...current, [id]: icons }));
+        })
+        .catch(() => {
+          if (active) setFailed((current) => [...current, id]);
+        })
+        .finally(() => {
+          if (active)
+            setPending((current) => current.filter((item) => item !== id));
+        });
+    void repository
+      .listPublishedIcons()
+      .then((icons) => {
+        if (active)
+          setProjects(
+            icons.filter(
+              (icon) =>
+                icon.library === "projects" || repository.mode !== "local",
+            ),
+          );
+      })
+      .catch(() => {
+        if (active) setFailed((current) => [...current, "projects"]);
+      })
+      .finally(() => {
+        if (active)
+          setPending((current) =>
+            current.filter((item) => item !== "projects"),
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [retry]);
   const catalog = useMemo(() => {
-    const merged = new Map(iconResults.map((icon) => [`${icon.stableId}:${icon.variant}`, icon]));
-    // The local repository returns the same Core fixtures; don't relabel them as team releases.
-    const projectIcons = repository.mode === "local" ? publishedWorkspaceIcons : repositoryCatalog;
-    for (const icon of [...projectIcons, ...externalCatalog]) merged.set(`${icon.stableId}:${icon.variant}`, { ...icon, library: icon.library ?? "projects" });
+    const merged = new Map(
+      iconResults.map((icon) => [`${icon.stableId}:${icon.variant}`, icon]),
+    );
+    for (const icon of [
+      ...projects,
+      ...EXTERNAL_LIBRARY_IDS.flatMap((id) => libraries[id] ?? []),
+    ])
+      merged.set(`${icon.stableId}:${icon.variant}`, {
+        ...icon,
+        library: icon.library ?? "projects",
+      });
     return [...merged.values()];
-  }, [publishedWorkspaceIcons, repositoryCatalog, externalCatalog]);
-  const categories = useMemo(() => ["all", ...[...new Set(catalog.filter((icon) => library === "all" || (icon.library ?? "core") === library).flatMap((icon) => icon.categories ?? [icon.category]))].sort()], [catalog, library]);
-  const filtered = useMemo(() => searchIcons(catalog, deferredQuery, { category, variant: variantFilter, library }), [catalog, deferredQuery, category, variantFilter, library]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const visibleIcons = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const selected = catalog.find((icon) => icon.id === selectedId) ?? filtered[0] ?? catalog[0];
-  const matchingWeights = useMemo(() => selected ? CATALOG_WEIGHTS.flatMap((weight) => catalog.filter((icon) => icon.stableId === selected.stableId && icon.variant === weight)) : [], [catalog, selected?.stableId]);
-  const selectedPreview = selected && loadedSelection?.id === selected.id ? { ...selected, svg: loadedSelection.svg } : selected;
-
-  useEffect(() => { setPage(1); }, [query, category, variantFilter, library]);
+  }, [projects, libraries]);
+  const categories = useMemo(
+    () =>
+      [
+        "all",
+        ...new Set(
+          catalog
+            .filter(
+              (icon) =>
+                library === "all" || (icon.library ?? "core") === library,
+            )
+            .flatMap((icon) => icon.categories ?? [icon.category]),
+        ),
+      ].sort((a, b) =>
+        a === "all" ? -1 : b === "all" ? 1 : a.localeCompare(b),
+      ),
+    [catalog, library],
+  );
+  const filtered = useMemo(() => {
+    const results = searchIcons(catalog, deferredQuery, {
+      library,
+      category,
+      variant,
+    });
+    return library === "core" && !deferredQuery && category === "all"
+      ? results.sort(
+          (left, right) =>
+            (coreSpecimenOrder.get(left.name) ?? 99) -
+            (coreSpecimenOrder.get(right.name) ?? 99),
+        )
+      : results;
+  }, [catalog, deferredQuery, library, category, variant]);
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(
+    pages,
+    Math.max(1, Number(params.get("page")) || 1),
+  );
+  const visible = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+  const selected = catalog.find((icon) => icon.id === params.get("icon"));
+  const siblings = useMemo(
+    () =>
+      selected
+        ? CATALOG_WEIGHTS.flatMap((weight) =>
+            catalog.filter(
+              (icon) =>
+                icon.stableId === selected.stableId && icon.variant === weight,
+            ),
+          )
+        : [],
+    [catalog, selected?.stableId],
+  );
+  const closeInspector = () => {
+    set({ icon: null }, true);
+  };
   useEffect(() => {
-    if (!selected || selected.svg || !selected.assetUrl) return;
-    const controller = new AbortController();
-    setSelectionError(false);
-    void fetchCatalogSvg(selected, controller.signal).then((svg) => { if (!controller.signal.aborted) setLoadedSelection({ id: selected.id, svg }); }).catch(() => { if (!controller.signal.aborted) setSelectionError(true); });
-    return () => controller.abort();
-  }, [selected]);
-
-  useEffect(() => {
-    if (filtered.length && !filtered.some((icon) => icon.id === selectedId)) setSelectedId(filtered[0].id);
-  }, [filtered, selectedId]);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    if (category !== "all") params.set("category", category);
-    if (variantFilter !== "regular") params.set("weight", variantFilter);
-    if (library !== "all") params.set("library", library);
-    setSearchParams(params, { replace: true });
-  }, [category, query, setSearchParams, variantFilter, library]);
-
-  if (!selected) {
-    return <main className="page-shell explore-page"><PageIntro number="01" title="Search the icon system.">Search by intent. Compare styles. Copy production-ready SVG with consistent sizing, alignment, and semantics.</PageIntro><Panel className="workspace-list-panel"><PanelHeader number="02" title="Published catalog" meta={catalogError ? "OFFLINE" : "LOADING"} accent={Boolean(catalogError)} /><div className="workspace-empty"><MagnifyingGlass size={30} /><strong>{catalogError ? "Catalog unavailable" : "Loading published icons…"}</strong><p>{catalogError ?? "Restoring immutable icon versions from PostgreSQL."}</p></div></Panel></main>;
-  }
-
-  const selectedSvg = async () => {
-    const svg = selected.svg ?? (selected.assetUrl ? await fetchCatalogSvg(selected) : selected.Icon ? renderIconSvg(selected.Icon, selected.previewWeight) : null);
-    if (!svg) throw new Error("Asset unavailable");
-    return svg;
-  };
-
-  const handleCopy = async () => {
-    try {
-      const svg = await selectedSvg();
-      await copyText(svg);
-      setCopyState("copied");
-    } catch {
-      setCopyState("error");
+    if (!selected && lastTile.current?.isConnected) {
+      const frame = window.requestAnimationFrame(() =>
+        lastTile.current?.focus({ preventScroll: true }),
+      );
+      return () => window.cancelAnimationFrame(frame);
     }
-    window.setTimeout(() => setCopyState("idle"), 1800);
-  };
-
-  const handleDownload = async () => {
-    setDownloadError(false);
-    try {
-      downloadSvg(`${selected.library && isExternalLibrary(selected.library) ? selected.library : "formaglyph"}-${selected.name}-${selected.variant}-${selected.version}.svg`, await selectedSvg());
-    } catch {
-      setDownloadError(true);
-    }
-  };
-
-  const handleDesignCopy = async (target: "figma" | "penpot") => {
-    try {
-      await copyDesignSvg(await selectedSvg(), {
-        stableId: selected.stableId,
-        name: selected.name,
-        label: selected.label,
-        version: selected.version,
-        variant: selected.variant,
-        licence: selected.licenceLabel ?? selected.licence,
-        contentHash: selected.contentHash,
-        library: libraryLabel(selected),
-        sourceUrl: selected.sourceUrl,
-      }, target);
-      setDesignCopyState(target);
-    } catch {
-      setDesignCopyState("error");
-    }
-    window.setTimeout(() => setDesignCopyState("idle"), 1800);
-  };
-
+  }, [selected?.id]);
+  const loading =
+    library === "all" ? pending.length > 0 : pending.includes(library);
+  const relevantFailures = failed.filter(
+    (id) => library === "all" || id === library,
+  );
+  const controls = (
+    <>
+      <label>
+        <span>Weight</span>
+        <select
+          aria-label="Weight"
+          value={variant}
+          onChange={(event) =>
+            set({ weight: event.target.value, page: null, icon: null })
+          }
+        >
+          <option value="all">All weights</option>
+          {weights.map((weight) => (
+            <option key={weight} value={weight}>
+              {weightLabel(weight)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>Size</span>
+        <select
+          aria-label="Icon size"
+          value={size}
+          onChange={(event) => set({ size: event.target.value }, true)}
+        >
+          {[24, 32, 40, 48].map((value) => (
+            <option key={value} value={value}>
+              Size {value} px
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="mobile-category-select">
+        <span>Category</span>
+        <select
+          aria-label="Category"
+          value={category}
+          onChange={(event) =>
+            set({
+              category:
+                event.target.value === "all" ? null : event.target.value,
+              page: null,
+              icon: null,
+            })
+          }
+        >
+          {categories.map((item) => (
+            <option key={item} value={item}>
+              {item === "all" ? "All categories" : item}
+            </option>
+          ))}
+        </select>
+      </label>
+    </>
+  );
   return (
-    <main className="page-shell explore-page">
-      <PageIntro number="01" title="Search the icon system." aside={
-        <label className="hero-search"><MagnifyingGlass size={22} /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search icons" placeholder="Describe an intent…" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={19} /></button>}</label>
-      }>
-        Search by intent. Compare styles. Copy production-ready SVG with consistent sizing, alignment, and semantics.
-      </PageIntro>
-
-      <div className="explore-grid">
-        <Panel className="result-panel">
-          <PanelHeader number="02" title={`Results (${filtered.length})`} meta={catalogLoading || externalLoading ? "SYNCING" : query ? "RANKED" : "ALL ICONS"} accent={Boolean(query || catalogError || externalError)} />
-          <div className="catalog-summary"><span>{coreConceptCount} Core + {externalConceptCount.toLocaleString()} upstream concepts</span>{(query || category !== "all" || library !== "all" || variantFilter !== "regular") && <button onClick={() => { setQuery(""); setCategory("all"); setLibrary("all"); setVariantFilter("regular"); }}>Browse all icons <ArrowRight size={14} /></button>}</div>
-          <div className="catalog-library-filter"><label><span>Library</span><select aria-label="Library" value={library} onChange={(event) => changeLibrary(event.target.value as "all" | CatalogLibrary)}><option value="all">All libraries</option><option value="core">Formaglyph Core</option><option value="projects">Team releases</option>{EXTERNAL_LIBRARY_IDS.map((id) => <option key={id} value={id}>{LIBRARY_SOURCES[id].label}</option>)}</select></label><a href="/libraries/NOTICE.txt" target="_blank" rel="noreferrer">Licence notices</a></div>
-          <div className="result-filters">
-            <label><span>Category</span><select aria-label="Category" value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((item) => <option key={item} value={item}>{item === "all" ? "All categories" : item}</option>)}</select></label>
-            <label><span>Weight</span><select aria-label="Weight" value={variantFilter} onChange={(event) => setVariantFilter(event.target.value as "all" | CatalogVariant)}><option value="all">All weights</option>{availableWeights.map((weight) => <option key={weight} value={weight}>{weightLabel(weight)}</option>)}</select></label>
-          </div>
-          <div className="result-columns" aria-hidden="true"><span>Icon</span><span>Name</span></div>
-          <div className="result-list">
-            {catalogError && <div className="catalog-notice" role="status">Team catalog unavailable. Open-source libraries remain available.</div>}
-            {externalError && <div className="catalog-notice" role="status">{externalError} <button onClick={() => setRetry((value) => value + 1)}>Retry library</button></div>}
-            {filtered.length ? visibleIcons.map((icon, index) => (
-              <button key={icon.id} className={selected.id === icon.id ? "result-row selected" : "result-row"} onClick={() => setSelectedId(icon.id)} aria-pressed={selected.id === icon.id}>
-                <span className="result-number">{String((currentPage - 1) * PAGE_SIZE + index + 1).padStart(2, "0")}</span><CatalogGlyph icon={icon} /><span>{icon.name}<small>{libraryLabel(icon)} · {icon.variant}</small></span><ArrowRight size={16} />
-              </button>
-            )) : (
-              <div className="empty-state"><MagnifyingGlass size={28} /><strong>{externalLoading ? "Loading libraries…" : "No exact icon found"}</strong><p>Try another library, weight, or broader intent.</p><a href="/projects/core/create">Create a draft <ArrowRight size={15} /></a></div>
-            )}
-          </div>
-          <nav className="catalog-pagination" aria-label="Icon result pages"><button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button><span aria-live="polite">Page {currentPage} / {totalPages}</span><button disabled={currentPage === totalPages} onClick={() => setPage((value) => value + 1)}>Next</button></nav>
-        </Panel>
-
-        <Panel className="preview-panel">
-          <PanelHeader number="03" title={`Preview: ${selected.name}`} meta="COMPARE" accent />
-          <div className={`catalog-weight-previews ${matchingWeights.length > 4 ? "many-weights" : matchingWeights.length === 1 ? "single-weight" : ""}`} aria-label="Available icon weights">{matchingWeights.map((icon) => <button key={icon.id} aria-pressed={selected.id === icon.id} onClick={() => { setSelectedId(icon.id); setVariantFilter(icon.variant); }}><span>{weightLabel(icon.variant)}</span><CatalogGlyph icon={icon} size={matchingWeights.length > 2 ? 64 : 96} /></button>)}</div>
-          <div className="catalog-construction"><ConstructionIcon Icon={selected.Icon} svg={selectedPreview?.svg} assetUrl={selected.assetUrl} weight={selected.previewWeight} /></div>
-          <p className="preview-note">{libraryLabel(selected)} · native {selected.gridSize ?? 24}px grid. Weights and source geometry stay with their original library.</p>
-          <CatalogMotionPreview svg={selectedPreview?.svg} />
-        </Panel>
-
-        <Panel className="inspector-panel">
-          <PanelHeader number="04" title={`Selected: ${selected.name}`} meta="READY" accent />
-          <dl className="metadata-list">
-            <div><dt>Library</dt><dd>{libraryLabel(selected)}</dd></div><div><dt>Stable ID</dt><dd>{selected.stableId}</dd></div><div><dt>Name</dt><dd>{selected.name}</dd></div><div><dt>{selected.distribution ? "Snapshot" : "Version"}</dt><dd>{selected.version}</dd></div>{selected.upstreamVersion && <div><dt>Upstream</dt><dd>{selected.upstreamVersion}</dd></div>}<div><dt>Category</dt><dd>{selected.category}</dd></div><div><dt>Direction</dt><dd>{selected.provenance.kind === "third-party" ? "Not specified upstream" : selected.directionality}</dd></div><div><dt>Grid</dt><dd>{selected.gridSize ?? 24} × {selected.gridSize ?? 24}</dd></div><div><dt>Licence</dt><dd>{selected.licenseUrl ? <a href={selected.licenseUrl} target="_blank" rel="noreferrer">{selected.licenceLabel ?? selected.licence} · notice</a> : selected.licence}</dd></div><div><dt>Safety</dt><dd>{selectionError ? "Asset check failed" : "Validated SVG"}</dd></div>
-          </dl>
-          <div className="inspector-copy">
-            <p>{selected.description}</p>
-            <button className="primary-action" onClick={handleCopy}>{copyState === "copied" ? <Check size={20} /> : <Copy size={20} />}{copyState === "copied" ? "SVG copied" : copyState === "error" ? "Copy failed" : "Copy SVG"}</button>
-            <button className="secondary-action catalog-download" onClick={() => void handleDownload()}><DownloadSimple size={20} />Download {weightLabel(selected.variant)} SVG</button>
-            {downloadError && <p className="microcopy" role="alert">Download failed. Please try again.</p>}
-            <div className="design-handoff-actions" aria-label="Design tool handoff">
-              <button className="secondary-action" onClick={() => void handleDesignCopy("figma")}>{designCopyState === "figma" ? <Check size={17} /> : <FigmaLogo size={17} />}{designCopyState === "figma" ? "Copied" : "For Figma"}</button>
-              <button className="secondary-action" onClick={() => void handleDesignCopy("penpot")}>{designCopyState === "penpot" ? <Check size={17} /> : <SlidersHorizontal size={17} />}{designCopyState === "penpot" ? "Copied" : "For Penpot"}</button>
-            </div>
-            <p className="microcopy" aria-live="polite">{designCopyState === "error" ? "Design copy failed. Copy the SVG directly instead." : "Design copies include stable ID, version, variant, licence, and content hash metadata."}</p>
-            {selected.sourceUrl && <p className="microcopy">Third-party geometry, not Formaglyph-authored. <a href={selected.sourceUrl} target="_blank" rel="noreferrer">Original source</a>. Upstream licence is embedded in copied and downloaded SVGs.</p>}
-            {selected.distribution && <p className="microcopy">Distribution: {selected.distribution}. Brand symbols may have separate usage requirements; no affiliation is implied.</p>}
-          </div>
-        </Panel>
+    <main
+      className={`page-shell explore-page workbench-explore${selected ? " has-inspector" : ""}`}
+    >
+      <section className="catalog-page-heading">
+        <div>
+          <h1>Explore</h1>
+          <p>Find the right glyph. Check the details. Make it yours.</p>
+        </div>
+        <button className="text-action" onClick={() => setGuideOpen(true)}>
+          Library guide <ArrowUpRight size={14} />
+        </button>
+      </section>
+      <div className="catalog-toolbar">
+        <label className="catalog-search">
+          <MagnifyingGlass size={19} />
+          <input
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(event) =>
+              set(
+                { q: event.target.value || null, page: null, icon: null },
+                true,
+              )
+            }
+            aria-label="Search icons"
+            placeholder="Search icons, aliases or intent…"
+          />
+          {query ? (
+            <button
+              onClick={() => set({ q: null, page: null, icon: null })}
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          ) : (
+            <kbd>/</kbd>
+          )}
+        </label>
+        <label className="catalog-library-select">
+          <span className="sr-only">Library</span>
+          <select
+            aria-label="Library"
+            value={library}
+            onChange={(event) => changeLibrary(event.target.value)}
+          >
+            {sourceOptions.map((source) => (
+              <option key={source.id} value={source.id}>
+                {source.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="catalog-desktop-filters">{controls}</div>
+        <button
+          className="catalog-mobile-filters secondary-action"
+          onClick={() => setFiltersOpen(true)}
+        >
+          <SlidersHorizontal size={17} />
+          Filters
+        </button>
       </div>
+      <div className="catalog-workbench">
+        <aside className="catalog-sidebar">
+          <nav aria-label="Icon categories">
+            <h2>Categories</h2>
+            {categories.map((item) => (
+              <button
+                key={item}
+                aria-pressed={category === item}
+                onClick={() =>
+                  set({
+                    category: item === "all" ? null : item,
+                    page: null,
+                    icon: null,
+                  })
+                }
+              >
+                {item === "all" ? "All icons" : item}
+              </button>
+            ))}
+          </nav>
+          <nav aria-label="Source libraries">
+            <h2>Source libraries</h2>
+            {sourceOptions
+              .filter((source) => source.id !== "all")
+              .map((source) => (
+                <button
+                  key={source.id}
+                  aria-pressed={library === source.id}
+                  onClick={() => changeLibrary(source.id)}
+                >
+                  {source.label}
+                </button>
+              ))}
+          </nav>
+          <a
+            className="licence-note"
+            href="/libraries/NOTICE.txt"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Licences stay with each source library.
+          </a>
+        </aside>
+        <section
+          className="catalog-results"
+          aria-label="Icon results"
+          aria-busy={loading}
+        >
+          <header className="catalog-results-header">
+            <strong>
+              {filtered.length.toLocaleString()}{" "}
+              {variant === "all" ? "variants" : "icons"}
+            </strong>
+            <span>
+              {weightLabel(variant === "all" ? "regular" : variant)} / {size} px
+            </span>
+          </header>
+          {relevantFailures.length > 0 && (
+            <div className="catalog-notice" role="status">
+              Some libraries could not load. Your filters are retained.{" "}
+              <button onClick={() => setRetry((value) => value + 1)}>
+                Retry
+              </button>
+            </div>
+          )}
+          <div className="catalog-tile-grid">
+            {visible.map((icon) => (
+              <button
+                key={icon.id}
+                className={`icon-specimen-tile${selected?.id === icon.id ? " selected" : ""}`}
+                aria-label={`Inspect ${icon.name}, ${weightLabel(icon.variant)}, ${libraryLabel(icon)}`}
+                aria-pressed={selected?.id === icon.id}
+                onClick={(event) => {
+                  lastTile.current = event.currentTarget;
+                  set({ icon: icon.id });
+                }}
+              >
+                <span className="specimen-stage">
+                  <CatalogGlyph icon={icon} size={size} />
+                </span>
+                <span className="specimen-name">{icon.name}</span>
+                {library === "all" && <small>{libraryLabel(icon)}</small>}
+              </button>
+            ))}
+          </div>
+          {!visible.length && (
+            <div className="empty-state">
+              <MagnifyingGlass size={28} />
+              <h2>
+                {loading
+                  ? "Loading library…"
+                  : relevantFailures.length
+                    ? "Library unavailable"
+                    : "No icons match this search"}
+              </h2>
+              <p>
+                {loading
+                  ? "Your selected library will appear here."
+                  : "Try a broader term, another library or a different weight."}
+              </p>
+              <button
+                className="secondary-action"
+                onClick={() =>
+                  set({
+                    q: null,
+                    category: null,
+                    weight: null,
+                    page: null,
+                    icon: null,
+                  })
+                }
+              >
+                Clear filters
+              </button>
+              <Link to="/projects/core/create">Create a draft</Link>
+            </div>
+          )}
+          {visible.length > 0 && (
+            <nav className="catalog-pagination" aria-label="Icon result pages">
+              <span>
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+                {Math.min(currentPage * PAGE_SIZE, filtered.length)} of{" "}
+                {filtered.length.toLocaleString()}
+              </span>
+              <div>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    set({ page: String(currentPage - 1), icon: null })
+                  }
+                >
+                  Previous
+                </button>
+                <span>
+                  Page {currentPage} / {pages}
+                </span>
+                <button
+                  disabled={currentPage === pages}
+                  onClick={() =>
+                    set({ page: String(currentPage + 1), icon: null })
+                  }
+                >
+                  Next
+                </button>
+              </div>
+            </nav>
+          )}
+        </section>
+        {selected && (
+          <CatalogInspector
+            key={selected.stableId}
+            selected={selected}
+            siblings={siblings}
+            onSelect={(icon) =>
+              set({ icon: icon.id, weight: icon.variant }, true)
+            }
+            onClose={closeInspector}
+          />
+        )}
+      </div>
+      {filtersOpen && (
+        <Dialog title="Catalog filters" onClose={() => setFiltersOpen(false)}>
+          <div className="filter-sheet-controls">{controls}</div>
+          <button
+            className="primary-action"
+            onClick={() => setFiltersOpen(false)}
+          >
+            Show results
+          </button>
+        </Dialog>
+      )}
+      {guideOpen && (
+        <Dialog title="Library guide" onClose={() => setGuideOpen(false)}>
+          <p>
+            Formaglyph Core contains original 24 px Regular and Solid pairs.
+            Open-source families keep their own geometry, native grids, weights
+            and licence terms.
+          </p>
+          <p>
+            Select an icon to compare available weights and inspect actual-size
+            Family Proof specimens. Copy and download preserve source metadata;
+            design handoff is clipboard-based, not live synchronization.
+          </p>
+          <a href="/libraries/NOTICE.txt" target="_blank" rel="noreferrer">
+            Read third-party licence notices <ArrowUpRight size={14} />
+          </a>
+        </Dialog>
+      )}
     </main>
   );
 }

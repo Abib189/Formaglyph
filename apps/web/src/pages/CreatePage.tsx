@@ -1,144 +1,543 @@
-import { useState, type ChangeEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowClockwise } from "@phosphor-icons/react/ArrowClockwise";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight } from "@phosphor-icons/react/ArrowRight";
-import { CaretDown } from "@phosphor-icons/react/CaretDown";
-import { Check } from "@phosphor-icons/react/Check";
 import { CheckCircle } from "@phosphor-icons/react/CheckCircle";
 import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
 import { FloppyDisk } from "@phosphor-icons/react/FloppyDisk";
-import { HardDrives } from "@phosphor-icons/react/HardDrives";
 import { UploadSimple } from "@phosphor-icons/react/UploadSimple";
 import { WarningCircle } from "@phosphor-icons/react/WarningCircle";
-import { X } from "@phosphor-icons/react/X";
 import type { RouteName } from "../domain/types";
 import { SvgIcon } from "../components/IconPreview";
-import { PageFooter, PageIntro, Panel, PanelHeader, RouteLoading } from "../components/Layout";
+import { Dialog } from "../components/Dialog";
+import {
+  PageFooter,
+  PageIntro,
+  Panel,
+  PanelHeader,
+  RouteLoading,
+} from "../components/Layout";
 import { downloadSvg } from "../services/svg";
 import { isSupabaseMode } from "../services/dataMode";
 import { iconNameError } from "../services/iconName";
 import { useAppState } from "../state/AppState";
 
-function WorkflowSteps({ active }: { active: number }) {
-  const steps = ["Brief", "Candidates", "Validate", "Review"];
-  return <ol className="workflow-steps">{steps.map((step, index) => <li key={step} className={index + 1 === active ? "active" : index + 1 < active ? "complete" : ""}><span>{index + 1 < active ? <Check size={15} /> : index + 1}</span><strong>{step}</strong>{index < steps.length - 1 && <i />}</li>)}</ol>;
+function PairImport({ onClose }: { onClose: () => void }) {
+  const { importPair } = useAppState();
+  const [name, setName] = useState("Imported pair");
+  const [regular, setRegular] = useState<File | null>(null);
+  const [solid, setSolid] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      if ([regular, solid].some((file) => file && file.size > 256_000))
+        throw new Error("Each SVG must be smaller than 256 KB.");
+      const [regularSvg, solidSvg] = await Promise.all([
+        regular?.text() ?? null,
+        solid?.text() ?? null,
+      ]);
+      if (importPair({ name, regular: regularSvg, solid: solidSvg })) onClose();
+      else
+        setError(
+          "Import could not be validated. Check the SVG files and try again.",
+        );
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Could not read the selected files.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Dialog title="Import SVG pair" onClose={onClose}>
+      <p>
+        One candidate, two variants. Files are sanitized and validated locally.
+        A partial import can be saved, but both variants are required for
+        review.
+      </p>
+      <form onSubmit={(event) => void submit(event)}>
+        <label>
+          Candidate name
+          <input
+            value={name}
+            maxLength={80}
+            onChange={(event) => setName(event.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Regular SVG
+          <input
+            type="file"
+            accept=".svg,image/svg+xml"
+            onChange={(event) => setRegular(event.target.files?.[0] ?? null)}
+          />
+        </label>
+        <label>
+          Solid SVG
+          <input
+            type="file"
+            accept=".svg,image/svg+xml"
+            onChange={(event) => setSolid(event.target.files?.[0] ?? null)}
+          />
+        </label>
+        {error && (
+          <p role="alert" className="field-error">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button className="secondary-action" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="primary-action"
+            disabled={busy || !name.trim() || (!regular && !solid)}
+          >
+            {busy ? "Importing…" : "Import candidate"}
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
 }
 
-function ValidationGroup({ title, checks, defaultOpen = true, failedChecks = [] }: { title: string; checks: string[]; defaultOpen?: boolean; failedChecks?: string[] }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return <div className="validation-group"><button onClick={() => setOpen(!open)} aria-expanded={open}><strong>{title}</strong><span>{checks.length} checks <CaretDown size={14} className={open ? "rotated" : ""} /></span></button>{open && <ul>{checks.map((check) => <li key={check} className={failedChecks.includes(check) ? "failed" : ""}>{failedChecks.includes(check) ? <X size={14} /> : <Check size={14} />}{check}</li>)}</ul>}</div>;
-}
-
-function CandidatePreview({ svg, label }: { svg: string | null; label: string }) {
-  return <span className="candidate-svg-cell" aria-label={svg ? `${label} preview` : `${label} unavailable`}>{svg ? <SvgIcon svg={svg} size={78} /> : <small>Not supplied</small>}</span>;
-}
-
-export function CreatePage({ onNavigate, dark }: { onNavigate: (route: RouteName) => void; dark: boolean }) {
-  const { state, backendLoading, backendError, updateDraft, selectCandidate, generateCandidates, importCandidate, cancelGeneration, saveDraft, submitForReview } = useAppState();
+export function CreatePage({
+  dark,
+}: {
+  onNavigate: (route: RouteName) => void;
+  dark: boolean;
+}) {
+  const {
+    state,
+    backendLoading,
+    backendError,
+    updateDraft,
+    selectCandidate,
+    saveDraft,
+    submitForReview,
+  } = useAppState();
   const navigate = useNavigate();
   const { projectSlug = "core" } = useParams();
-  const [submitting, setSubmitting] = useState(false);
   const [importing, setImporting] = useState(false);
-  const selected = state.candidates.find((candidate) => candidate.id === state.draft.selectedCandidateId) ?? state.candidates[0];
-  const generationRunning = state.generationJob?.status === "queued" || state.generationJob?.status === "running";
-  const activeStep = state.proposal.status === "in_review" || state.proposal.status === "approved" ? 4 : state.proposal.status === "changes_requested" ? 2 : state.candidates.length ? 3 : 1;
-  const selectedSvg = selected?.variants[state.settings.defaultVariant] ?? selected?.variants.regular ?? selected?.variants.solid ?? null;
-  const hasRequiredVariants = Boolean(selected?.variants.regular && selected.variants.solid);
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const selected =
+    state.candidates.find(
+      (candidate) => candidate.id === state.draft.selectedCandidateId,
+    ) ?? state.candidates[0];
+  const fingerprint = JSON.stringify([
+    state.draft.name,
+    state.draft.description,
+    state.draft.keywords,
+    selected?.id,
+  ]);
+  const [savedFingerprint, setSavedFingerprint] = useState(fingerprint);
+  useEffect(() => {
+    if (!backendLoading)
+      setSavedFingerprint(fingerprint); /* restore, not an automatic save */
+  }, [backendLoading]);
+  const dirty = savedFingerprint !== fingerprint;
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+  const hasPair = Boolean(
+    selected?.variants.regular && selected.variants.solid,
+  );
   const nameError = iconNameError(state.draft.name);
-  const submissionLocked = state.proposal.status === "in_review" || state.proposal.status === "approved";
-  const submissionLabel = state.proposal.status === "in_review"
-    ? "Awaiting review"
-    : state.proposal.status === "approved"
-      ? "Review complete"
-      : state.proposal.status === "changes_requested"
-        ? "Resubmit for review"
-        : state.proposal.status === "published" || state.proposal.status === "rejected"
-          ? "Submit new review"
-          : "Submit for review";
-
+  const locked =
+    state.proposal.status === "in_review" ||
+    state.proposal.status === "approved";
+  const canSubmit =
+    hasPair &&
+    !nameError &&
+    !selected?.issue &&
+    Boolean(state.draft.description.trim()) &&
+    !locked;
+  const save = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const id = await saveDraft();
+      setSavedFingerprint(fingerprint);
+      if (isSupabaseMode)
+        navigate(
+          `/projects/${encodeURIComponent(projectSlug)}/create?draft=${encodeURIComponent(id)}`,
+          { replace: true },
+        );
+    } catch {
+      setSaveError(
+        "Could not save. Your brief and selected pair are retained. Check your connection and retry.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
   const submit = async () => {
     setSubmitting(true);
-    const accepted = await submitForReview();
-    if (accepted) window.setTimeout(() => onNavigate("review"), 650);
-    window.setTimeout(() => setSubmitting(false), 900);
-  };
-
-  const exportCandidate = () => {
-    if (selectedSvg) downloadSvg(`${state.draft.name || "formaglyph-draft"}-${state.settings.defaultVariant}.svg`, selectedSvg);
-  };
-
-  const save = async () => {
+    setSaveError("");
     try {
-      const draftId = await saveDraft();
-      if (isSupabaseMode) navigate(`/projects/${encodeURIComponent(projectSlug)}/create?draft=${encodeURIComponent(draftId)}`, { replace: true });
-    } catch {
-      // The shared state displays the repository error as a notice.
-    }
-  };
-
-  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setImporting(true);
-    try {
-      importCandidate(await file.text(), state.settings.defaultVariant, file.name);
+      if (await submitForReview()) setSavedFingerprint(fingerprint);
+      else
+        setSaveError(
+          "Submission was not completed. Your current candidate is retained; check the notification and retry.",
+        );
     } finally {
-      setImporting(false);
+      setSubmitting(false);
     }
   };
-
-  const promptRetained = state.settings.retainPrompts ? "Prompt retained in project history" : "Only a SHA-256 prompt hash is retained";
-  const adapterLabel = selected?.provenance.adapter === "manual_import" ? "Manual import" : selected?.provenance.model ?? "Local geometry";
-
   if (backendLoading) return <RouteLoading label="Loading icon draft" />;
-  if (backendError) return <main className="page-shell create-page"><PageIntro number="01" title="Draft unavailable.">{backendError}</PageIntro></main>;
-
+  if (backendError)
+    return (
+      <main className="page-shell create-page">
+        <PageIntro title="Draft unavailable">{backendError}</PageIntro>
+        <Link to={`/projects/${projectSlug}/workspace`}>Back to Workspace</Link>
+      </main>
+    );
   return (
     <main className="page-shell create-page">
-      <PageIntro number="01" title="Create the missing glyph.">Write the brief, generate or import real SVG candidates, validate the system rules, then submit the Regular and Solid pair for human review.</PageIntro>
-      <WorkflowSteps active={activeStep} />
+      <Link
+        className="review-breadcrumb"
+        to={`/projects/${projectSlug}/workspace`}
+      >
+        <ArrowRight size={14} className="back-arrow" />
+        Workspace <span>/</span>New icon
+      </Link>
+      <PageIntro
+        title="Create an icon pair"
+        aside={
+          <span
+            className={`draft-save-state${saveError ? " error" : ""}`}
+            role="status"
+          >
+            {saving
+              ? "Saving…"
+              : saveError
+                ? "Save or submission failed"
+                : dirty
+                  ? "Unsaved changes"
+                  : state.draft.name
+                    ? "Draft restored"
+                    : "New draft"}
+          </span>
+        }
+      >
+        Write a brief, import both variants, then submit one candidate for
+        review.
+      </PageIntro>
+      {locked && (
+        <div className="submission-receipt" role="status">
+          <CheckCircle size={22} />
+          <div>
+            <strong>
+              {state.proposal.status === "approved"
+                ? "Pair approved — not yet published"
+                : "Submitted for review"}
+            </strong>
+            <p>
+              {selected?.name} · {state.proposal.id} ·{" "}
+              {hasPair
+                ? "Regular + Solid are part of this submission."
+                : "Legacy incomplete pair — an admin must return it for both variants."}
+            </p>
+          </div>
+          <Link
+            className="secondary-action"
+            to={`/projects/${projectSlug}/review/${state.proposal.id}`}
+          >
+            Open proposal <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
       <div className="create-grid">
         <Panel className="brief-panel">
-          <PanelHeader number="01" title="Brief" meta="PERSISTED" />
+          <PanelHeader title="Brief" />
           <div className="brief-fields">
-            <label>Icon name<input value={state.draft.name} onChange={(event) => updateDraft("name", event.target.value)} aria-invalid={Boolean(state.draft.name && nameError)} aria-describedby="icon-name-help" required /><small id="icon-name-help" className={state.draft.name && nameError ? "field-error" : "field-help"}>{state.draft.name && nameError ? nameError : "Use kebab-case. To revise an existing icon, open its draft from Workspace."}</small></label>
-            <label>Description<textarea value={state.draft.description} onChange={(event) => updateDraft("description", event.target.value)} required /></label>
-            <label>Keywords<input value={state.draft.keywords} onChange={(event) => updateDraft("keywords", event.target.value)} /></label>
-            <div className="brief-static"><span>Style alignment</span><p>24px grid, rounded joins, currentColor only.</p></div>
+            <label>
+              Icon name
+              <input
+                aria-label="Icon name"
+                value={state.draft.name}
+                disabled={locked || saving || submitting}
+                onChange={(event) => updateDraft("name", event.target.value)}
+                aria-invalid={Boolean(state.draft.name && nameError)}
+                aria-describedby="icon-name-help"
+                placeholder="e.g. cloud-upload"
+                required
+              />
+              <small id="icon-name-help" className="field-help">
+                {state.draft.name && nameError
+                  ? nameError
+                  : "Kebab-case. Open an existing draft from Workspace to revise it."}
+              </small>
+            </label>
+            <label>
+              Description
+              <textarea
+                disabled={locked || saving || submitting}
+                value={state.draft.description}
+                onChange={(event) =>
+                  updateDraft("description", event.target.value)
+                }
+                placeholder="What should this icon communicate?"
+                required
+              />
+            </label>
+            <label>
+              Keywords
+              <input
+                disabled={locked || saving || submitting}
+                value={state.draft.keywords}
+                onChange={(event) =>
+                  updateDraft("keywords", event.target.value)
+                }
+                placeholder="cloud, upload, file"
+              />
+            </label>
+            <div className="brief-static">
+              <span>Formaglyph Core</span>
+              <p>24 px grid · currentColor · Regular + Solid</p>
+            </div>
           </div>
-          <div className="creation-tools">
-            <button className="primary-action" onClick={() => void generateCandidates()} disabled={generationRunning}><HardDrives size={17} />{generationRunning ? "Generating" : "Generate 3 candidates"}</button>
-            <label className="secondary-action import-action"><UploadSimple size={17} />{importing ? "Importing" : "Import SVG"}<input type="file" accept="image/svg+xml,.svg" onChange={(event) => void handleImport(event)} disabled={importing || generationRunning} /></label>
-            <p>Local Geometry runs in this browser. It does not send the brief to a model provider.</p>
+          <div className="generation-paused">
+            <strong>Generation paused</strong>Model generation will return after
+            the server milestone. Import your own SVGs to continue.
           </div>
-          {state.generationJob && <div className={`generation-status ${state.generationJob.status}`} role="status">
-            <div><strong>{state.generationJob.status === "completed" ? "Generation complete" : state.generationJob.status === "failed" ? "Generation failed" : state.generationJob.status === "cancelled" ? "Generation cancelled" : "Local generation running"}</strong><span>{state.generationJob.progress}%</span></div>
-            <progress value={state.generationJob.progress} max="100" />
-            <p>{state.generationJob.error ?? promptRetained}</p>
-            {generationRunning ? <button onClick={() => void cancelGeneration()}><X size={14} />Cancel</button> : <button onClick={() => void generateCandidates()}><ArrowClockwise size={14} />Run again</button>}
-          </div>}
         </Panel>
-
         <Panel className="candidate-panel">
-          <PanelHeader number="02" title="Candidate drafts" meta={selected ? `${selected.name} selected` : "EMPTY"} accent={Boolean(selected)} />
-          <div className="candidate-head" aria-hidden="true"><span>Candidate</span><span>Regular</span><span>Solid</span></div>
-          <div className="candidate-list">{state.candidates.length ? state.candidates.map((candidate, index) => <button key={candidate.id} className={selected?.id === candidate.id ? "candidate-row selected" : "candidate-row"} onClick={() => selectCandidate(candidate.id)} aria-pressed={selected?.id === candidate.id}><span className="radio-mark">{selected?.id === candidate.id && <i />}</span><span className="candidate-copy"><b>{String(index + 1).padStart(2, "0")}</b><strong>{candidate.name}</strong><small>{candidate.description}</small></span><CandidatePreview svg={candidate.variants.regular} label="Regular" /><CandidatePreview svg={candidate.variants.solid} label="Solid" /></button>) : <div className="candidate-empty"><HardDrives size={28} /><strong>No candidates yet</strong><p>Generate a local set or import an SVG to begin.</p></div>}</div>
-          <footer className="candidate-footer"><span>Grid: 24px</span><span>Variant: {state.settings.defaultVariant}</span><span>{adapterLabel}</span><button onClick={exportCandidate} disabled={!selectedSvg}><DownloadSimple size={16} /> Export SVG</button></footer>
+          <header className="selected-candidate-heading">
+            <div>
+              <h2>Selected candidate</h2>
+              <p>{selected?.name ?? "No candidate selected"}</p>
+            </div>
+            <button
+              className="secondary-action"
+              onClick={() => setImporting(true)}
+              disabled={locked || saving || submitting}
+            >
+              <UploadSimple size={16} />
+              Import SVG pair
+            </button>
+          </header>
+          <div className="candidate-list">
+            {state.candidates.length ? (
+              state.candidates
+                .filter((candidate) => candidate.id === selected?.id)
+                .map((candidate) => (
+                  <button
+                    key={candidate.id}
+                    disabled={locked || saving || submitting}
+                    className={`candidate-row${selected?.id === candidate.id ? " selected" : ""}`}
+                    onClick={() => selectCandidate(candidate.id)}
+                    aria-pressed={selected?.id === candidate.id}
+                  >
+                    <span className="radio-mark">
+                      {selected?.id === candidate.id && <i />}
+                    </span>
+                    <span className="candidate-copy">
+                      <strong>{candidate.name}</strong>
+                      <small>{candidate.description}</small>
+                    </span>
+                    {(["regular", "solid"] as const).map((variant) => (
+                      <span
+                        key={variant}
+                        className="candidate-svg-cell"
+                        aria-label={`${variant} ${candidate.variants[variant] ? "preview" : "not supplied"}`}
+                      >
+                        {candidate.variants[variant] ? (
+                          <SvgIcon
+                            svg={candidate.variants[variant]!}
+                            size={96}
+                          />
+                        ) : (
+                          <small>Not supplied</small>
+                        )}
+                        <span className="candidate-variant-label">
+                          {variant === "regular" ? "Regular" : "Solid"}
+                        </span>
+                      </span>
+                    ))}
+                  </button>
+                ))
+            ) : (
+              <div className="workspace-empty">
+                <UploadSimple size={28} />
+                <strong>Import your first pair</strong>
+                <p>Regular and Solid are reviewed together as one candidate.</p>
+                <button
+                  className="secondary-action"
+                  onClick={() => setImporting(true)}
+                >
+                  Choose SVG files
+                </button>
+              </div>
+            )}
+          </div>
+          {state.candidates.length > 1 && (
+            <div className="candidate-chooser">
+              <label>
+                Choose candidate
+                <select
+                  aria-label="Choose candidate"
+                  disabled={locked || saving || submitting}
+                  value={selected?.id ?? ""}
+                  onChange={(event) => selectCandidate(event.target.value)}
+                >
+                  {state.candidates.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+          <footer className="candidate-footer">
+            <span>24 px native grid</span>
+            <span>
+              {selected?.provenance.adapter === "manual_import"
+                ? "Manual SVG import"
+                : "Stored candidate"}
+            </span>
+            {selected?.variants.regular && (
+              <button
+                onClick={() =>
+                  downloadSvg(
+                    `${state.draft.name || "draft"}-regular.svg`,
+                    selected.variants.regular!,
+                  )
+                }
+              >
+                <DownloadSimple size={16} />
+                Regular
+              </button>
+            )}
+            {selected?.variants.solid && (
+              <button
+                onClick={() =>
+                  downloadSvg(
+                    `${state.draft.name || "draft"}-solid.svg`,
+                    selected.variants.solid!,
+                  )
+                }
+              >
+                <DownloadSimple size={16} />
+                Solid
+              </button>
+            )}
+          </footer>
         </Panel>
-
         <Panel className="validation-panel">
-          <PanelHeader number="03" title="Validation" meta={!selected ? "WAITING" : selected.issue || nameError || !hasRequiredVariants ? "1 ISSUE" : "PASSED"} accent={Boolean(selected?.issue || (state.draft.name && nameError))} />
-          <ValidationGroup title="Geometry" checks={["24 × 24 canvas", "Safe SVG elements", "currentColor paint", "Complexity limits"]} />
-          <ValidationGroup title="Naming" checks={["Kebab-case", "Project uniqueness", "Semantic keywords present"]} failedChecks={nameError ? ["Kebab-case"] : []} />
-          <ValidationGroup title="Provenance" checks={[adapterLabel, selected?.provenance.promptHash ? "Prompt hash recorded" : "Source import recorded", "Human review required"]} defaultOpen={false} />
-          <ValidationGroup title="Licence" checks={["Project asset licence", "Attribution metadata retained"]} defaultOpen={false} />
-          <div className={!selected || nameError || selected.issue || !hasRequiredVariants ? "issue-box" : "issue-box passed"}>{!selected || nameError || selected.issue || !hasRequiredVariants ? <WarningCircle size={18} /> : <CheckCircle size={18} />}<div><strong>{!selected ? "Candidate required" : nameError ? "Icon name invalid" : selected.issue ? "Review required" : !hasRequiredVariants ? "Both variants required" : "All checks passed"}</strong><p>{!selected ? "Generate or import a candidate before saving." : nameError ?? selected.issue ?? (!hasRequiredVariants ? "Regular and Solid must both be present before review." : "Regular and Solid are ready to submit together for human review.")}</p></div></div>
+          <PanelHeader
+            title="Validation"
+            meta={
+              hasPair && !selected?.issue ? "Pair complete" : "Action needed"
+            }
+          />
+          <div className={`issue-box${canSubmit ? " passed" : ""}`}>
+            {canSubmit ? (
+              <CheckCircle size={20} />
+            ) : (
+              <WarningCircle size={20} />
+            )}
+            <div>
+              <strong>
+                {!selected
+                  ? "Import a candidate"
+                  : !hasPair
+                    ? "Both variants required"
+                    : nameError
+                      ? "Check the icon name"
+                      : selected.issue
+                        ? "Revise this candidate"
+                        : !state.draft.description.trim()
+                          ? "Add a description"
+                          : locked
+                            ? "Review in progress"
+                            : "Ready for review"}
+              </strong>
+              <p>
+                {selected?.issue ??
+                  (!hasPair
+                    ? "Regular and Solid must both be present before review."
+                    : (nameError ??
+                      "Approval and publication remain separate steps."))}
+              </p>
+            </div>
+          </div>
+          <details className="validation-rules" open={Boolean(selected?.issue)}>
+            <summary>Geometry & safety checks</summary>
+            <p>
+              {selected
+                ? "Imported assets pass through SVG sanitization, native-grid, paint and complexity checks. See any candidate issue above."
+                : "Checks run after import. Nothing has been validated yet."}
+            </p>
+          </details>
+          <details className="validation-rules">
+            <summary>Naming & provenance</summary>
+            <p>
+              Kebab-case is checked locally. Project name uniqueness and
+              publication permissions are checked by the server. Stored
+              provenance and the project licence travel with the submission.
+            </p>
+          </details>
+          <p className="validation-reminder">
+            Human review is required. The author cannot approve their own
+            proposal.
+          </p>
         </Panel>
       </div>
-
-      <div className="sticky-actions"><span>Draft ID: {state.proposal.draftId || "NEW"}</span><span>Updated: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(state.draft.updatedAt))} UTC</span><div><button className="secondary-action" onClick={() => void save()} disabled={!selectedSvg || generationRunning}><FloppyDisk size={18} />Save draft</button><button className="primary-action" onClick={() => void submit()} disabled={submitting || !hasRequiredVariants || generationRunning || submissionLocked}>{submitting ? <Check size={19} /> : null}{submitting ? "Submitting" : submissionLabel}<ArrowRight size={18} /></button></div></div>
+      {saveError && (
+        <p className="inline-request-error" role="alert">
+          {saveError}
+        </p>
+      )}
+      <div className="sticky-actions">
+        <div className="submission-context">
+          <strong>{selected?.name ?? "No candidate"}</strong>
+          <span>
+            {hasPair ? "Regular + Solid" : "Incomplete pair"} ·{" "}
+            {state.proposal.status.replaceAll("_", " ")}
+          </span>
+        </div>
+        <div>
+          <button
+            className="secondary-action"
+            disabled={!selected || saving || submitting || locked}
+            onClick={() => void save()}
+          >
+            <FloppyDisk size={17} />
+            {saving ? "Saving…" : "Save draft"}
+          </button>
+          <button
+            className="primary-action"
+            disabled={!canSubmit || submitting || saving}
+            onClick={() => void submit()}
+          >
+            {submitting
+              ? "Submitting…"
+              : state.proposal.status === "changes_requested"
+                ? "Resubmit for review"
+                : "Submit for review"}
+            <ArrowRight size={17} />
+          </button>
+        </div>
+      </div>
       <PageFooter dark={dark} />
+      {importing && <PairImport onClose={() => setImporting(false)} />}
     </main>
   );
 }
