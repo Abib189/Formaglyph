@@ -21,7 +21,9 @@ When implementing from a selected generated mock, treat that image as the source
 
 - The owner likes the current identity but finds the UI/UX too generic. Improve hierarchy, task focus and interaction craft; do not substitute another generic visual template.
 - Use the explicitly requested Refero design skill/MCP as the research authority, then design in Figcraft before implementing substantial visual changes.
-- Research and proposed reference locks are in [the research/Figcraft handoff](../../docs/design/2026-10-19-refero-research.md). Its three directions and new token/type suggestions are proposals, not approved replacements for the visual baseline above.
+- Research and reference locks are in [the research/Figcraft handoff](../../docs/design/2026-10-19-refero-research.md). The owner subsequently approved **A — Glyph Workbench** for Figcraft design. The editable file and design QA are documented in [the Figcraft delivery](../../docs/design/2026-10-19-figcraft-handoff.md). This is the redesign target; the existing app has not yet been visually migrated.
+- Glyph Workbench uses grid-first Explore, compact task hierarchy, a contextual inspector with actual-size proof specimens, readable sans UI with mono identifiers, and exact Regular/Solid revision comparisons. Keep approval distinct from publication and label current comments as proposal-level discussion.
+- Figcraft uses Inter and an explicitly documented Menlo fallback because JetBrains Mono is unavailable in that app. Preserve the intended JetBrains Mono role during implementation; do not silently treat the fallback as a brand-font replacement.
 - Preserve white/black, rare `#A10232`, light/dark themes, responsive iPad/mobile use, truthful capability states and the paired Regular/Solid workflow. Model generation remains paused.
 
 ## Production foundation rules

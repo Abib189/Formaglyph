@@ -2,9 +2,11 @@
 
 Date: 19 October 2026
 
-Status: research complete; direction proposed, not approved for implementation
+Status: research complete; A approved for Figcraft design; editable design delivered, application implementation pending
 
 Recommended direction: **A — Glyph Workbench**
+
+Update: the owner accepted A with “yes”. The subsequent [Figcraft delivery](2026-10-19-figcraft-handoff.md) includes all five product areas, foundations/components, dark Explore, responsive layouts and recovery states. The original research-pass evidence and limitations below remain unchanged. Approval to explore the direction is not evidence of production implementation or usability validation.
 
 ## 1. Brief and evidence boundary
 
@@ -262,7 +264,7 @@ Do not shrink the desktop three-panel layout onto every screen.
 
 These are responsive proposals, not claims that the current live app was audited on these devices.
 
-## 10. Figcraft production brief — next, after direction approval
+## 10. Figcraft production brief — approved and used for the design pass
 
 No Figcraft document was modified in this research pass. Before drawing, read the chosen reference lock aloud in the board notes; label any reference/style-data gaps. Confirm Figcraft's current components, layout and style capabilities instead of assuming native theme-variable support.
 
@@ -294,8 +296,10 @@ Targets below require testing; they are not claimed results.
 
 Reject a design that passes the screenshot test but fails these tasks. Do not approve implementation with unresolved identity, wrong-revision, inaccessible-focus or lost-draft problems.
 
-## 11. Recommendation and gate
+## 11. Original recommendation and gate
 
 Choose **A — Glyph Workbench** unless preserving the current mono/serif specimen personality outweighs repeated-work efficiency; in that case choose B. Choose C only if internal review is the main product entry point.
 
 The Refero skill shaped this pass through reference-first research, screenshot verification, explicit token roles and a decision ledger. Its style-search limitation is recorded rather than concealed. No UI code, production data, Docker services or Figcraft canvas changed. The next step is a user-selected direction, then editable Figcraft design and comparison-based QA—not immediate coding.
+
+That paragraph records the end of the research-only pass. A was subsequently selected and designed in Figcraft; see the linked delivery for the current artifact and its QA boundaries. No application code or production services changed during the design pass either.
