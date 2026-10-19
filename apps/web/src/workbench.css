@@ -485,8 +485,24 @@ summary {
 }
 /* Explore: controls, source rail, comparable specimens, one contextual inspector. */
 .workbench-explore {
+  --catalog-chrome-height: 189px;
+  --catalog-page-gutter: 24px;
+  --catalog-top-space: 32px;
   max-width: none;
   padding-top: 32px;
+}
+.catalog-sticky-header {
+  position: sticky;
+  top: 64px;
+  z-index: 19;
+  background: var(--bg);
+  margin: calc(-1 * var(--catalog-top-space))
+    calc(-1 * var(--catalog-page-gutter)) 0;
+  padding: var(--catalog-top-space) var(--catalog-page-gutter) 0;
+}
+.catalog-tile-grid button,
+.catalog-pagination button {
+  scroll-margin-top: calc(64px + var(--catalog-chrome-height) + 16px);
 }
 .catalog-page-heading {
   display: flex;
@@ -567,10 +583,10 @@ summary {
 .catalog-sidebar {
   /* Long upstream taxonomies must not set the results column's page height. */
   position: sticky;
-  top: 88px;
+  top: calc(64px + var(--catalog-chrome-height));
   align-self: stretch;
   contain: size;
-  max-height: calc(100dvh - 112px);
+  max-height: calc(100dvh - 64px - var(--catalog-chrome-height) - 48px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -741,9 +757,9 @@ summary {
   border-left: 1px solid var(--soft-line);
   min-width: 0;
   position: sticky;
-  top: 64px;
+  top: calc(64px + var(--catalog-chrome-height));
   align-self: start;
-  max-height: calc(100dvh - 64px);
+  max-height: calc(100dvh - 64px - var(--catalog-chrome-height) - 48px);
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -884,6 +900,10 @@ summary {
   overflow-wrap: anywhere;
 }
 .inspector-primary-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  border-top: 1px solid var(--soft-line);
   margin-top: 24px;
   padding: 16px 0;
   display: grid;
@@ -2286,6 +2306,11 @@ summary {
   }
   .page-shell {
     padding: 24px 16px 100px;
+  }
+  .workbench-explore {
+    --catalog-chrome-height: 195px;
+    --catalog-page-gutter: 16px;
+    --catalog-top-space: 24px;
   }
   .page-intro {
     flex-direction: column;

@@ -30,6 +30,7 @@ When implementing from a selected generated mock, treat that image as the source
 - Generation is paused in Create and Settings. Import Regular and Solid into one candidate; never infer the missing sibling. Keep exact proposal routes, immutable submission history, explicit comment resolution, historical read-only decisions and separate publication confirmation.
 - Keep local demo snapshots and hosted repositories separate. Local publication creates no hosted Storage asset. Do not expose hosted lifecycle actions that lack a persisted repository operation.
 - Keep Explore's desktop filter sidebar viewport-bounded and independently scrollable. Long upstream category lists must not stretch the paginated icon grid or create a large blank tail below it. Preserve keyboard access and the mobile filter dialog.
+- Pin the Explore title/search/filter area directly beneath the main navigation while browsing. Sidebar and desktop inspector offsets must follow its rendered height so they never sit beneath the pinned controls; retain responsive mobile dialogs.
 
 ## Production foundation rules
 

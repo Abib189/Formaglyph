@@ -426,8 +426,24 @@ export function ExplorePage() {
   const [retry, setRetry] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const pageRef = useRef<HTMLElement>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const lastTile = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const chrome = chromeRef.current;
+    if (!chrome) return;
+    // Share the measured chrome height with sticky panels, including after font/viewport changes.
+    const measure = () =>
+      pageRef.current?.style.setProperty(
+        "--catalog-chrome-height",
+        `${Math.ceil(chrome.getBoundingClientRect().height)}px`,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(chrome);
+    return () => observer.disconnect();
+  }, []);
   const set = (updates: Record<string, string | null>, replace = false) =>
     setParams(
       (current) => {
@@ -649,66 +665,69 @@ export function ExplorePage() {
   );
   return (
     <main
+      ref={pageRef}
       className={`page-shell explore-page workbench-explore${selected ? " has-inspector" : ""}`}
     >
-      <section className="catalog-page-heading">
-        <div>
-          <h1>Explore</h1>
-          <p>Find the right glyph. Check the details. Make it yours.</p>
-        </div>
-        <button className="text-action" onClick={() => setGuideOpen(true)}>
-          Library guide <ArrowUpRight size={14} />
-        </button>
-      </section>
-      <div className="catalog-toolbar">
-        <label className="catalog-search">
-          <MagnifyingGlass size={19} />
-          <input
-            ref={searchRef}
-            type="search"
-            value={query}
-            onChange={(event) =>
-              set(
-                { q: event.target.value || null, page: null, icon: null },
-                true,
-              )
-            }
-            aria-label="Search icons"
-            placeholder="Search icons, aliases or intent…"
-          />
-          {query ? (
-            <button
-              onClick={() => set({ q: null, page: null, icon: null })}
-              aria-label="Clear search"
+      <div className="catalog-sticky-header" ref={chromeRef}>
+        <section className="catalog-page-heading">
+          <div>
+            <h1>Explore</h1>
+            <p>Find the right glyph. Check the details. Make it yours.</p>
+          </div>
+          <button className="text-action" onClick={() => setGuideOpen(true)}>
+            Library guide <ArrowUpRight size={14} />
+          </button>
+        </section>
+        <div className="catalog-toolbar">
+          <label className="catalog-search">
+            <MagnifyingGlass size={19} />
+            <input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(event) =>
+                set(
+                  { q: event.target.value || null, page: null, icon: null },
+                  true,
+                )
+              }
+              aria-label="Search icons"
+              placeholder="Search icons, aliases or intent…"
+            />
+            {query ? (
+              <button
+                onClick={() => set({ q: null, page: null, icon: null })}
+                aria-label="Clear search"
+              >
+                <X size={16} />
+              </button>
+            ) : (
+              <kbd>/</kbd>
+            )}
+          </label>
+          <label className="catalog-library-select">
+            <span className="sr-only">Library</span>
+            <select
+              aria-label="Library"
+              value={library}
+              onChange={(event) => changeLibrary(event.target.value)}
             >
-              <X size={16} />
-            </button>
-          ) : (
-            <kbd>/</kbd>
-          )}
-        </label>
-        <label className="catalog-library-select">
-          <span className="sr-only">Library</span>
-          <select
-            aria-label="Library"
-            value={library}
-            onChange={(event) => changeLibrary(event.target.value)}
+              {sourceOptions.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="catalog-desktop-filters">{controls}</div>
+          <button
+            className="catalog-mobile-filters secondary-action"
+            onClick={() => setFiltersOpen(true)}
           >
-            {sourceOptions.map((source) => (
-              <option key={source.id} value={source.id}>
-                {source.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="catalog-desktop-filters">{controls}</div>
-        <button
-          className="catalog-mobile-filters secondary-action"
-          onClick={() => setFiltersOpen(true)}
-        >
-          <SlidersHorizontal size={17} />
-          Filters
-        </button>
+            <SlidersHorizontal size={17} />
+            Filters
+          </button>
+        </div>
       </div>
       <div className="catalog-workbench">
         <aside
