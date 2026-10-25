@@ -15,6 +15,7 @@ import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { isSupabaseMode } from "./services/dataMode";
 import type { RouteName } from "./domain/types";
+import { WorkbenchMotion } from "./components/WorkbenchMotion";
 
 const ExplorePage = lazy(() =>
   import("./pages/ExplorePage").then((module) => ({
@@ -192,12 +193,12 @@ function FormaglyphApp() {
 
 export function App() {
   return (
-    <BrowserRouter>
+    <WorkbenchMotion><BrowserRouter>
       <AuthStateProvider>
         <AppStateProvider>
           <FormaglyphApp />
         </AppStateProvider>
       </AuthStateProvider>
-    </BrowserRouter>
+    </BrowserRouter></WorkbenchMotion>
   );
 }

@@ -5,6 +5,7 @@ import type { CatalogIcon } from "../domain/types";
 import { copyText } from "../services/svg";
 import { iconProofBackground } from "../services/iconColour";
 import { downloadReactFile, fetchReactArchive, fetchReactSource, findReactEntry, loadReactRelease, reactUsage, verifyReactSelection, type ReactRelease } from "../services/reactDelivery";
+import { ActionButton } from "./ActionButton";
 
 export function ReactHandoff({ icon, colour, size }: { icon: CatalogIcon; colour: string | null; size: number }) {
   const [open, setOpen] = useState(false), [release, setRelease] = useState<ReactRelease | null>(null);
@@ -34,7 +35,7 @@ export function ReactHandoff({ icon, colour, size }: { icon: CatalogIcon; colour
   const usage = entry ? reactUsage(entry, colour, size) : "";
   const install = release ? `npm install ${JSON.stringify(new URL(release.package.url, window.location.origin).href)}` : "";
   const act = async (action: "usage" | "install" | "source" | "package", trigger: HTMLButtonElement) => {
-    if (!entry || !release) return;
+    if (!entry || !release) return false;
     setBusy(true); setError(""); setFeedback("");
     try {
       await verifyReactSelection(entry, icon);
@@ -48,7 +49,8 @@ export function ReactHandoff({ icon, colour, size }: { icon: CatalogIcon; colour
         downloadReactFile(`formaglyph-react-${release.version}.tgz`, await fetchReactArchive(release), "application/gzip");
         setFeedback("Verified Core React package downloaded");
       }
-    } catch { setError("Could not verify or complete the React handoff. Try again; your selection is retained."); }
+      return true;
+    } catch { setError("Could not verify or complete the React handoff. Try again; your selection is retained."); return false; }
     finally {
       setBusy(false);
       requestAnimationFrame(() => { if (trigger.isConnected) trigger.focus({ preventScroll: true }); });
@@ -65,14 +67,14 @@ export function ReactHandoff({ icon, colour, size }: { icon: CatalogIcon; colour
           <div><code>{entry.component}</code><small>React 18/19 · package {release.version} · MIT</small></div>
         </div>
         <p>Install the archive, then import this icon. Not published to npm.</p>
-        <div className="react-code-label"><span>Install package</span><button className="text-action" disabled={busy || !Component} onClick={event => void act("install", event.currentTarget)}>Copy install command</button></div>
+        <div className="react-code-label"><span>Install package</span><ActionButton className="text-action" disabled={busy || !Component} onAction={trigger => act("install", trigger)} label="Copy install command" pendingLabel="Verifying…" successLabel="Copied" announce={false} resetKey={`${icon.id}:${colour}:${size}`} /></div>
         <pre tabIndex={0} aria-label="React package install command"><code>{install}</code></pre>
-        <div className="react-code-label"><span>Usage</span><button className="text-action" disabled={busy || !Component} onClick={event => void act("usage", event.currentTarget)}>Copy React usage</button></div>
+        <div className="react-code-label"><span>Usage</span><ActionButton className="text-action" disabled={busy || !Component} onAction={trigger => act("usage", trigger)} label="Copy React usage" pendingLabel="Verifying…" successLabel="Copied" announce={false} resetKey={`${icon.id}:${colour}:${size}`} /></div>
         <pre tabIndex={0} aria-label="React usage code"><code>{usage}</code></pre>
         <p>Decorative by default. Add a title or aria-label when the icon conveys meaning.</p>
         <div className="react-handoff-downloads">
-          <button className="secondary-action" disabled={busy || !Component} onClick={event => void act("source", event.currentTarget)}>Download component</button>
-          <button className="secondary-action" disabled={busy || !Component} onClick={event => void act("package", event.currentTarget)}>Download React package</button>
+          <ActionButton className="secondary-action" disabled={busy || !Component} onAction={trigger => act("source", trigger)} label="Download component" pendingLabel="Verifying…" successLabel="Downloaded" announce={false} resetKey={`${icon.id}:${colour}:${size}`} />
+          <ActionButton className="secondary-action" disabled={busy || !Component} onAction={trigger => act("package", trigger)} label="Download React package" pendingLabel="Verifying…" successLabel="Downloaded" announce={false} resetKey={icon.id} />
         </div>
         <p className="react-handoff-note">The standalone .tsx file uses your selected size and colour; import it from your own project. The full 48-icon package stays currentColor; the copied usage includes your colour. Original Core only.</p>
       </>}

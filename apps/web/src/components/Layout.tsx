@@ -12,6 +12,10 @@ import { useAppState } from "../state/AppState";
 import { useAuthState } from "../state/AuthState";
 import { isSupabaseMode } from "../services/dataMode";
 import { Dialog } from "./Dialog";
+import { AnimatePresence, useIsPresent } from "motion/react";
+import * as m from "motion/react-m";
+import { NavigationIndicator } from "./NavigationIndicator";
+import { motionTiming, useWorkbenchReducedMotion } from "./WorkbenchMotion";
 
 export function RouteLoading({ label = "Loading page" }: { label?: string }) {
   return (
@@ -66,6 +70,7 @@ export function AppHeader({
   const [signingOut, setSigningOut] = useState(false);
   const account = useRef<HTMLDetailsElement>(null);
   const projectMenu = useRef<HTMLDetailsElement>(null);
+  const navigation = useRef<HTMLElement>(null);
   useEffect(() => {
     if (account.current) account.current.open = false;
     if (projectMenu.current) projectMenu.current.open = false;
@@ -150,7 +155,7 @@ export function AppHeader({
     <>
       <header className="app-header">
         <Brand dark={dark} />
-        <nav className="main-nav" aria-label="Primary navigation">
+        <nav ref={navigation} className="main-nav" aria-label="Primary navigation">
           {links.map((link) => (
             <NavLink
               key={link.name}
@@ -161,6 +166,7 @@ export function AppHeader({
               {link.name}
             </NavLink>
           ))}
+          <NavigationIndicator container={navigation} active={route} />
         </nav>
         <div className="header-context">
           <details
@@ -315,16 +321,26 @@ export function PageFooter({ dark }: { dark: boolean }) {
 
 export function Toast() {
   const { notice, clearNotice } = useAppState();
-  if (!notice) return <div className="sr-only" aria-live="polite" />;
-  return (
-    <div
+  return <><span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{notice?.tone !== "error" ? notice?.message : ""}</span><AnimatePresence initial={false}>{notice && (
+    <ToastMessage key={`${notice.tone}:${notice.message}`} notice={notice} onDismiss={clearNotice} />
+  )}</AnimatePresence></>;
+}
+
+function ToastMessage({ notice, onDismiss }: { notice: { tone: string; message: string }; onDismiss: () => void }) {
+  const reduced = useWorkbenchReducedMotion();
+  const present = useIsPresent();
+  return <m.div
       className={`app-toast ${notice.tone}`}
-      role={notice.tone === "error" ? "alert" : "status"}
+      role={present && notice.tone === "error" ? "alert" : undefined}
+      inert={!present} aria-hidden={!present || undefined}
+      initial={{ opacity: 0, y: reduced ? 0 : -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: reduced ? 0 : -4 }}
+      transition={reduced ? motionTiming.instant : motionTiming.exit}
     >
       <span>{notice.message}</span>
-      <button onClick={clearNotice} aria-label="Dismiss notification">
+      <button onClick={() => { if (present) onDismiss(); }} aria-label="Dismiss notification">
         <X size={15} />
       </button>
-    </div>
-  );
+    </m.div>;
 }

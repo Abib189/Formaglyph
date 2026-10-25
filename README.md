@@ -17,6 +17,7 @@ AI-generated candidates are always drafts. Publishing, deprecating, syncing, and
 This is an early production foundation, not yet the complete hosted platform or the full 100-concept Formaglyph V1 family. It includes:
 
 - A strict TypeScript React application with responsive light and dark modes.
+- A Workbench interaction layer using Motion 14.6.0 and attributed Interior hooks: stable real async-action states, cancelled-press recovery, moving navigation indicators, result feedback, native-dialog entry and toast transitions. Reduced-motion preferences update without reloading; animation never changes SVG exports or release archives. See [the interaction reference lock](./docs/design/2026-10-25-interaction-motion.md).
 - Search, filtering, SVG copy/export, proposal validation, review comments, rejection, approval, publication, and deprecation flows.
 - Deterministic XML parsing, SVG allow-list rebuilding, active-content rejection, normalized output, and structured validation issues.
 - An original Formaglyph Core 0.2 release: 48 concepts, 96 validated Regular/Solid SVG assets, and a content-hashed build manifest. Explore supports the full library, intent/category/weight search, paired previews, copy, and version-labelled SVG downloads.

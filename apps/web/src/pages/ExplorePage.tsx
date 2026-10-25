@@ -2,7 +2,6 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "@phosphor-icons/react/ArrowLeft";
 import { ArrowUpRight } from "@phosphor-icons/react/ArrowUpRight";
-import { Check } from "@phosphor-icons/react/Check";
 import { Copy } from "@phosphor-icons/react/Copy";
 import { DownloadSimple } from "@phosphor-icons/react/DownloadSimple";
 import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
@@ -30,6 +29,9 @@ import { CatalogMotionPreview } from "../components/CatalogMotionPreview";
 import { IconColourControl } from "../components/IconColourControl";
 import { ReactHandoff } from "../components/ReactHandoff";
 import { supportsReactDelivery } from "../services/reactDelivery";
+import { ActionButton } from "../components/ActionButton";
+import { useResultFeedback } from "../components/WorkbenchMotion";
+import * as m from "motion/react-m";
 import {
   colourIconSvg,
   iconProofBackground,
@@ -296,10 +298,12 @@ function CatalogInspector({
         );
         setCopyState(`Copied for ${action === "figma" ? "Figma" : "Penpot"}`);
       }
+      return true;
     } catch {
       setError(
         "That action failed. Check your connection and try again; your selection is retained.",
       );
+      return false;
     } finally {
       setBusy(false);
     }
@@ -410,28 +414,20 @@ function CatalogInspector({
       </dl>
       {supportsReactDelivery(selected) && <ReactHandoff icon={selected} colour={colour} size={size} />}
       <div className="inspector-primary-actions">
-        <button
+        <ActionButton
           className="primary-action"
           disabled={busy}
-          onClick={() => void act("copy")}
-        >
-          {copyState.includes("copied") ? (
-            <Check size={16} />
-          ) : (
-            <Copy size={16} />
-          )}
-          Copy {weightLabel(selected.variant)} SVG
-        </button>
-        <button
+          onAction={() => act("copy")}
+          label={`Copy ${weightLabel(selected.variant)} SVG`} icon={<Copy size={16} />}
+          pendingLabel="Copying…" successLabel="Copied" resetKey={`${selected.id}:${colour}`} announce={false}
+        />
+        <ActionButton
           className="secondary-action"
           disabled={busy}
-          onClick={() => void act(hasPair ? "pair" : "download")}
-        >
-          <DownloadSimple size={16} />
-          {hasPair
-            ? "Download pair"
-            : `Download ${weightLabel(selected.variant)} SVG`}
-        </button>
+          onAction={() => act(hasPair ? "pair" : "download")}
+          icon={<DownloadSimple size={16} />} label={hasPair ? "Download pair" : `Download ${weightLabel(selected.variant)} SVG`}
+          pendingLabel="Preparing…" successLabel="Downloaded" resetKey={`${selected.id}:${colour}`} announce={false}
+        />
         <span role="status" className="action-feedback">
           {copyState}
         </span>
@@ -473,20 +469,18 @@ function CatalogInspector({
       <details className="inspector-details">
         <summary>Design handoff & motion</summary>
         <div className="design-handoff-actions">
-          <button
+          <ActionButton
             className="secondary-action"
             disabled={busy}
-            onClick={() => void act("figma")}
-          >
-            Copy for Figma
-          </button>
-          <button
+            onAction={() => act("figma")} label="Copy for Figma" pendingLabel="Copying…" successLabel="Copied"
+            resetKey={`${selected.id}:${colour}`}
+          />
+          <ActionButton
             className="secondary-action"
             disabled={busy}
-            onClick={() => void act("penpot")}
-          >
-            Copy for Penpot
-          </button>
+            onAction={() => act("penpot")} label="Copy for Penpot" pendingLabel="Copying…" successLabel="Copied"
+            resetKey={`${selected.id}:${colour}`}
+          />
         </div>
         <p>Clipboard handoff, not live design-tool synchronization.</p>
         <CatalogMotionPreview svg={displayIcon.svg} colour={colour} />
@@ -694,6 +688,7 @@ export function ExplorePage() {
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE,
   );
+  const resultFeedback = useResultFeedback(JSON.stringify([library, category, variant, deferredQuery, currentPage]));
   const selected = catalog.find((icon) => icon.id === params.get("icon"));
   const siblings = useMemo(
     () =>
@@ -926,7 +921,7 @@ export function ExplorePage() {
               </button>
             </div>
           )}
-          <div className="catalog-tile-grid">
+          <m.div className="catalog-tile-grid" initial={false} animate={resultFeedback} data-motion="catalog-results">
             {visible.map((icon) => (
               <button
                 key={icon.id}
@@ -945,7 +940,7 @@ export function ExplorePage() {
                 {library === "all" && <small>{libraryLabel(icon)}</small>}
               </button>
             ))}
-          </div>
+          </m.div>
           {!visible.length && (
             <div className="empty-state">
               <MagnifyingGlass size={28} />

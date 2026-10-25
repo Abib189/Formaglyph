@@ -138,6 +138,7 @@ summary {
   object-fit: contain;
 }
 .main-nav {
+  position: relative;
   gap: 52px;
   justify-content: flex-start;
 }
@@ -155,6 +156,8 @@ summary {
   height: 2px;
   background: var(--fg);
 }
+.main-nav:has(.navigation-indicator) .nav-link.active::after { display: none; }
+.navigation-indicator { position: absolute; pointer-events: none; bottom: 0; left: 0; height: 2px; background: var(--fg); }
 .header-context {
   display: flex;
   align-items: center;
@@ -1318,6 +1321,17 @@ summary {
 .react-handoff-downloads { display: grid; gap: 8px; margin-top: 12px; }
 .react-handoff-downloads button { width: 100%; min-height: 40px; font-size: 12px; }
 .react-handoff .react-handoff-note { font-size: 11px; }
+.motion-action { touch-action: manipulation; transform-origin: center; }
+.motion-action[aria-disabled="true"] { cursor: not-allowed; }
+.motion-action[data-action-state="pending"] { cursor: wait; }
+.action-faces { display: inline-grid; min-width: 0; vertical-align: middle; }
+.action-face { grid-area: 1 / 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; pointer-events: none; }
+.inspector-primary-actions .action-face { justify-content: flex-start; }
+.action-face svg { flex: 0 0 auto; }
+.action-progress-mark { display: inline-block; flex: 0 0 14px; width: 14px; height: 14px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: workbench-pending 800ms ease-in-out infinite; }
+.motion-action:not([data-action-state="pending"]) .action-progress-mark { animation: none; }
+@keyframes workbench-pending { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .action-progress-mark { animation: none !important; } }
 .inspector-primary-actions {
   position: sticky;
   bottom: 0;

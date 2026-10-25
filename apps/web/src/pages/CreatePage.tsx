@@ -20,6 +20,7 @@ import { downloadSvg } from "../services/svg";
 import { isSupabaseMode } from "../services/dataMode";
 import { iconNameError } from "../services/iconName";
 import { useAppState } from "../state/AppState";
+import { ActionButton } from "../components/ActionButton";
 
 function PairImport({ onClose }: { onClose: () => void }) {
   const { importPair } = useAppState();
@@ -178,10 +179,12 @@ export function CreatePage({
           `/projects/${encodeURIComponent(projectSlug)}/create?draft=${encodeURIComponent(id)}`,
           { replace: true },
         );
+      return true;
     } catch {
       setSaveError(
         "Could not save. Your brief and selected pair are retained. Check your connection and retry.",
       );
+      return false;
     } finally {
       setSaving(false);
     }
@@ -190,11 +193,13 @@ export function CreatePage({
     setSubmitting(true);
     setSaveError("");
     try {
-      if (await submitForReview()) setSavedFingerprint(fingerprint);
+      const submitted = await submitForReview();
+      if (submitted) setSavedFingerprint(fingerprint);
       else
         setSaveError(
           "Submission was not completed. Your current candidate is retained; check the notification and retry.",
         );
+      return submitted;
     } finally {
       setSubmitting(false);
     }
@@ -514,26 +519,18 @@ export function CreatePage({
           </span>
         </div>
         <div>
-          <button
+          <ActionButton
             className="secondary-action"
             disabled={!selected || saving || submitting || locked}
-            onClick={() => void save()}
-          >
-            <FloppyDisk size={17} />
-            {saving ? "Saving…" : "Save draft"}
-          </button>
-          <button
+            onAction={save} label="Save draft" icon={<FloppyDisk size={17} />}
+            pendingLabel="Saving…" successLabel="Draft saved" resetKey={fingerprint}
+          />
+          <ActionButton
             className="primary-action"
             disabled={!canSubmit || submitting || saving}
-            onClick={() => void submit()}
-          >
-            {submitting
-              ? "Submitting…"
-              : state.proposal.status === "changes_requested"
-                ? "Resubmit for review"
-                : "Submit for review"}
-            <ArrowRight size={17} />
-          </button>
+            onAction={submit} label={state.proposal.status === "changes_requested" ? "Resubmit for review" : "Submit for review"}
+            icon={<ArrowRight size={17} />} pendingLabel="Submitting…" successLabel="Submitted" resetKey={fingerprint}
+          />
         </div>
       </div>
       <PageFooter dark={dark} />

@@ -38,6 +38,8 @@ When implementing from a selected generated mock, treat that image as the source
 
 ## Production foundation rules
 
+- The owner requested Interior (`ddoemonn/interior`) and Motion.dev on 25 October 2026. Adapt their functional micro-interactions within Glyph Workbench: stable async feedback, small press response, navigation continuity and restrained panel/toast transitions. Preserve keyboard/native semantics, focus, reduced-motion preferences, sticky chrome and source/export hashes. Do not introduce decorative looping motion, 3D skins, scroll-jacking, fake progress or restart generation. Reference lock: [interaction motion](../../docs/design/2026-10-25-interaction-motion.md).
+
 - Keep application code strict TypeScript and preserve the current domain/component/page/service separation.
 - Treat browser persistence as a replaceable repository adapter; do not couple page components directly to a hosted database.
 - Proposal status changes must pass through the explicit workflow state machine. AI-generated candidates remain draft-only and may never auto-publish.
