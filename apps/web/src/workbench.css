@@ -528,13 +528,27 @@ summary {
   border: 1px solid var(--line);
   border-radius: 8px;
 }
+.catalog-search:focus-within {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 1px var(--fg);
+}
 .catalog-search input {
   border: 0;
   padding: 0;
   width: 100%;
   min-width: 0;
-  outline-offset: 6px;
+  outline: none;
   font-size: 14px;
+}
+.catalog-search input:focus-visible {
+  outline: none;
+}
+@media (forced-colors: active) {
+  .catalog-search:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
 }
 .catalog-search button {
   display: grid;
