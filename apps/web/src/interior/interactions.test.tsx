@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
-import { StrictMode, type ReactNode } from "react";
+import { StrictMode, useRef, type ReactNode } from "react";
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useAsyncAction } from "./useAsyncAction";
 import { usePressDepth } from "./usePressDepth";
 import { ActionButton } from "../components/ActionButton";
 import { WorkbenchMotion, useWorkbenchReducedMotion } from "../components/WorkbenchMotion";
+import { NavigationIndicator } from "../components/NavigationIndicator";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 const strict = ({ children }: { children: ReactNode }) => <StrictMode>{children}</StrictMode>;
@@ -81,6 +82,16 @@ describe("Interior press interruption adaptation", () => {
 });
 
 describe("Workbench motion contract", () => {
+  it("measures a parent-owned navigation ref on the first production-style mount", () => {
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(60);
+    function Navigation() {
+      const navigation = useRef<HTMLElement>(null);
+      return <nav ref={navigation}><a className="nav-link active" href="/explore">Explore</a><NavigationIndicator container={navigation} active="explore" /></nav>;
+    }
+    // No StrictMode replay: it previously masked the parent ref's attach timing.
+    const { container } = render(<Navigation />);
+    expect(container.querySelector(".navigation-indicator")).not.toBeNull();
+  });
   it("keeps a stable accessible name and announces failure rather than false success", async () => {
     // Business-state/ARIA test: motion timing is verified in real Chromium,
     // rather than relying on Happy DOM's incomplete native-animation lifecycle.
