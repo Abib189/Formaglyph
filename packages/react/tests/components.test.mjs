@@ -111,4 +111,13 @@ describe("original React delivery", () => {
       await expect(verifyCurrentRelease(scratch)).rejects.toThrow("hash mismatch");
     } finally { await rm(scratch, { recursive: true, force: true }); }
   });
+  it("includes original licensing and retained archives in the Docker build context", async () => {
+    const repository = resolve(release, "../../..");
+    const docker = await readFile(resolve(repository, "Dockerfile"), "utf8");
+    const ignored = await readFile(resolve(repository, ".dockerignore"), "utf8");
+    expect(docker).toContain("COPY LICENSE-ASSETS ./LICENSE-ASSETS");
+    expect(docker).toContain("COPY packages/react packages/react");
+    expect(ignored.split("\n")).toContain("packages/react/release");
+    expect(ignored.split("\n")).not.toContain("packages/react/releases");
+  });
 });
