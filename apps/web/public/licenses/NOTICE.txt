@@ -1,0 +1,22 @@
+Formaglyph interface dependencies
+
+Interior — MIT, copyright (c) 2026 ozzy.
+Source: https://github.com/ddoemonn/interior
+Reviewed revision: b6b272307464ba79db7183cee0515846d7eb1f9c
+Adaptations: async-action lifecycle, press cancellation, navigation indicator measurement.
+Skins/Next.js documentation/analytics are not included.
+Full terms: /licenses/interior.txt
+
+Motion — MIT, version 14.6.0.
+Source: https://github.com/motiondivision/motion
+Documentation: https://motion.dev/docs/react
+Full terms: /licenses/motion.txt
+
+Framer Motion (Motion's React engine) — MIT, copyright (c) 2018 Framer B.V.
+Full terms: /licenses/framer-motion.txt
+motion-dom and motion-utils share the copyright/terms in /licenses/motion.txt.
+tslib — copyright (c) Microsoft Corporation; Zero-Clause BSD.
+Full terms: /licenses/tslib.txt
+
+These notices concern interface software, not the individual icon collections.
+Icon-specific notices remain under /libraries/ and in exported SVGs.

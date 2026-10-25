@@ -20,4 +20,10 @@ describe("workspace icon workflow", () => {
     const draft = initialAppState.workspace.find((icon) => icon.status === "draft")!;
     expect(() => transitionWorkspaceIcon(draft, "approved")).toThrow(/cannot transition/);
   });
+
+  it("keeps deprecation irreversible in the workspace state machine", () => {
+    expect(canTransitionWorkspaceIcon("published", "deprecated")).toBe(true);
+    expect(canTransitionWorkspaceIcon("deprecated", "published")).toBe(false);
+    expect(canTransitionWorkspaceIcon("published", "archived")).toBe(false);
+  });
 });

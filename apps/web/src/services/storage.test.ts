@@ -10,7 +10,7 @@ function memoryStorage(initial: Record<string, string> = {}) {
 describe("versioned local persistence", () => {
   it("falls back safely when persisted state is malformed", () => {
     const storage = memoryStorage({ [STORAGE_KEY]: "not-json" });
-    expect(loadAppState(storage).schemaVersion).toBe(2);
+    expect(loadAppState(storage).schemaVersion).toBe(4);
   });
 
   it("round-trips application state", () => {
@@ -27,9 +27,26 @@ describe("versioned local persistence", () => {
     };
     const storage = memoryStorage({ [LEGACY_STORAGE_KEY]: JSON.stringify(legacy) });
     const migrated = loadAppState(storage);
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(4);
     expect(migrated.draft.name).toBe("legacy-icon");
     expect(migrated.proposal.id).toBe("PRP-LEGACY");
     expect(migrated.workspace.length).toBeGreaterThan(0);
+    expect(migrated.candidates.length).toBeGreaterThan(0);
+    expect(migrated.auditEvents.length).toBeGreaterThan(0);
+  });
+
+  it("migrates version three generation data into governance storage", () => {
+    const versionThree = {
+      ...initialAppState,
+      schemaVersion: 3,
+      auditEvents: undefined,
+      releaseEntries: undefined,
+    };
+    const storage = memoryStorage({ [LEGACY_STORAGE_KEY]: JSON.stringify(versionThree) });
+    const migrated = loadAppState(storage);
+    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.candidates).toHaveLength(initialAppState.candidates.length);
+    expect(migrated.auditEvents.length).toBeGreaterThan(0);
+    expect(migrated.releaseEntries.length).toBeGreaterThan(0);
   });
 });

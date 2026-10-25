@@ -1,0 +1,36 @@
+{
+  "name": "@formaglyph/react",
+  "version": "0.1.0",
+  "description": "Accessible React components for original Formaglyph Core icons.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": { "types": "./release/index.d.ts", "import": "./release/esm/index.js" },
+    "./loaders": { "types": "./release/loaders.d.ts", "import": "./release/esm/loaders.js" },
+    "./*": { "types": "./release/*.d.ts", "import": "./release/esm/*.js" }
+  },
+  "peerDependencies": { "react": "^18.0.0 || ^19.0.0" },
+  "scripts": {
+    "build": "node --import tsx scripts/build-package.mjs",
+    "release:freeze": "pnpm build && node scripts/freeze-release.mjs",
+    "typecheck": "pnpm build && tsc --noEmit",
+    "test": "pnpm build && vitest run",
+    "pack:check": "pnpm build && node scripts/pack-check.mjs"
+  },
+  "devDependencies": {
+    "@formaglyph/icons": "workspace:*",
+    "@formaglyph/validators": "workspace:*",
+    "@types/node": "^24.10.0",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@xmldom/xmldom": "0.9.10",
+    "esbuild": "0.28.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tar": "7.5.22",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}

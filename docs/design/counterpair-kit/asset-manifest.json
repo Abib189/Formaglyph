@@ -1,0 +1,253 @@
+{
+  "brand": "Formaglyph",
+  "mark": "C \u2014 Counterpair",
+  "version": "1.0.0",
+  "date": "2026-10-19",
+  "assets": [
+    {
+      "path": "svg/formaglyph-app-icon.svg",
+      "bytes": 449,
+      "sha256": "b60e7e9e3851fd3bb215c397f6246beb469b715a5120dc9c2c7e93f34e9a45b7"
+    },
+    {
+      "path": "svg/formaglyph-horizontal-black.svg",
+      "bytes": 7793,
+      "sha256": "874ff32dba85f34640ff958e1ff2df5e82037068e50adb0e0edf7deeca193e2e"
+    },
+    {
+      "path": "svg/formaglyph-horizontal-burgundy.svg",
+      "bytes": 7793,
+      "sha256": "e2ecf8678266c388fd9723f26e17dcb94df2f13cb968bf72812a0a7ac359ec4d"
+    },
+    {
+      "path": "svg/formaglyph-horizontal-white.svg",
+      "bytes": 7793,
+      "sha256": "1e81dd9f8eddae83fe4c161293be7422a5e4ab8dc70b38cccdfdd4223adcfece"
+    },
+    {
+      "path": "svg/formaglyph-social-card.svg",
+      "bytes": 7918,
+      "sha256": "5cded9e49a88b433291aa8b7f4f561038c9fe889d4a3ef065d818b63ced4bd3e"
+    },
+    {
+      "path": "svg/formaglyph-stacked-black.svg",
+      "bytes": 7822,
+      "sha256": "b59ad5399c57f659447a10f15f26d3dff63f545b1c8fe2f91c6592a292eb11bc"
+    },
+    {
+      "path": "svg/formaglyph-stacked-burgundy.svg",
+      "bytes": 7822,
+      "sha256": "34b1ab92e05085b4f4fdd56d91c2383fd2b91c37dbe202fa523f24036e54bf43"
+    },
+    {
+      "path": "svg/formaglyph-stacked-white.svg",
+      "bytes": 7822,
+      "sha256": "c5629147514e8aadd8ddeade2ab4f2268ca80df618ea94844410b132137b5ae6"
+    },
+    {
+      "path": "svg/formaglyph-symbol-black.svg",
+      "bytes": 358,
+      "sha256": "a5a2038fbab9e4a614ff62c9a28eff77ea14385420d377929b1ce2434c8c52bf"
+    },
+    {
+      "path": "svg/formaglyph-symbol-burgundy.svg",
+      "bytes": 358,
+      "sha256": "553a0ab5643b212d98e585d2655369903d5e1fd3d8660457ce2186d73a9a0d8d"
+    },
+    {
+      "path": "svg/formaglyph-symbol-small-black.svg",
+      "bytes": 341,
+      "sha256": "d27117c870560c85860a2df1b656804e018c2fb31ab69ade9250f7384825f8b6"
+    },
+    {
+      "path": "svg/formaglyph-symbol-small-burgundy.svg",
+      "bytes": 341,
+      "sha256": "029f124e6bcb1cbac4f5e3d98dfb92cb6653588fe4c5fa6a0a0732319ceaaf0c"
+    },
+    {
+      "path": "svg/formaglyph-symbol-small-white.svg",
+      "bytes": 341,
+      "sha256": "bccfd82d55cb1077faf5eecb7611b1d71aa21a6d1bb71135350bed397c2d77ae"
+    },
+    {
+      "path": "svg/formaglyph-symbol-white.svg",
+      "bytes": 358,
+      "sha256": "9d281723d6929577f25228bf746d249379627f57d78b92596423de32fb961200"
+    },
+    {
+      "path": "svg/formaglyph-wordmark-black.svg",
+      "bytes": 7614,
+      "sha256": "86e6caf2a95995fbe79aba5d05c8d29f24e7222de95d1de1a4e96895ae316d37"
+    },
+    {
+      "path": "svg/formaglyph-wordmark-burgundy.svg",
+      "bytes": 7614,
+      "sha256": "b3208c98af7c0e63b03fdecc4623f8dcb5441b14f8c874e58e70724a8f2aee30"
+    },
+    {
+      "path": "svg/formaglyph-wordmark-white.svg",
+      "bytes": 7614,
+      "sha256": "efea2d0219b7366a9bb9a7db9dd4f426c66d7a64af6fc40b85cf2f05701fad93"
+    },
+    {
+      "path": "png/formaglyph-app-icon.png",
+      "bytes": 7895,
+      "sha256": "a2b83061d44b96e08c198fe7a43e86dcd4d909fbbb582f66b9fabb01578d8654"
+    },
+    {
+      "path": "png/formaglyph-horizontal-black.png",
+      "bytes": 14830,
+      "sha256": "97ee6ee53b95a2325645d9c4eddf1cca0633026bc498831d305813eca73e22ad"
+    },
+    {
+      "path": "png/formaglyph-horizontal-burgundy.png",
+      "bytes": 21670,
+      "sha256": "633bd963e53adc329eb6cd77a32568fd18dffc079c2dc8041a0186e64404e59b"
+    },
+    {
+      "path": "png/formaglyph-horizontal-white.png",
+      "bytes": 16685,
+      "sha256": "15d68618a18aafb4ab8a0cd9b07d66035131b2c18935ca96073d7ccdb03821f2"
+    },
+    {
+      "path": "png/formaglyph-social-card.png",
+      "bytes": 16929,
+      "sha256": "3c1e9275a6147535bcf9a37bb9f429d9475a2567758483c657e40e446f293da2"
+    },
+    {
+      "path": "png/formaglyph-stacked-black.png",
+      "bytes": 18448,
+      "sha256": "9e16ea7ae66c2d6f63caf09fc647c28ea231b4d3ce24f351c6c4fd649e2982db"
+    },
+    {
+      "path": "png/formaglyph-stacked-burgundy.png",
+      "bytes": 25785,
+      "sha256": "5370ae949b60e2b3f305745ed3e2d179bd33d395b11e223230391a09a1eb5b89"
+    },
+    {
+      "path": "png/formaglyph-stacked-white.png",
+      "bytes": 20346,
+      "sha256": "4db0fa7b3eed2c85adea261d3db99fa3f2d63873b928d4a0e7a003163b44bf5a"
+    },
+    {
+      "path": "png/formaglyph-symbol-black.png",
+      "bytes": 3644,
+      "sha256": "a07fe665fff580bf425789e31ccaa034f04aa728d7512ec1a82de9d3b73f2149"
+    },
+    {
+      "path": "png/formaglyph-symbol-burgundy.png",
+      "bytes": 3925,
+      "sha256": "4fca007ade63024c46f1097443437e7bc6df83fe70f09afaaf15310f9fb1d545"
+    },
+    {
+      "path": "png/formaglyph-symbol-small-black.png",
+      "bytes": 405,
+      "sha256": "7b35a9a56f1901de4b8855385cd995bb18bf66d7992fca353294f17db454b1ab"
+    },
+    {
+      "path": "png/formaglyph-symbol-small-burgundy.png",
+      "bytes": 500,
+      "sha256": "4969c5a46923f1c1626d521797d45159187cb4ca8f02b018703cb0ab9018cfc5"
+    },
+    {
+      "path": "png/formaglyph-symbol-small-white.png",
+      "bytes": 435,
+      "sha256": "89d5943af922e5b7a6c36de4c68c3b83f1307e1b29f9346c30d4f6695961d65b"
+    },
+    {
+      "path": "png/formaglyph-symbol-white.png",
+      "bytes": 3773,
+      "sha256": "8a1cdf04ba4f66002f196a404b8f4cb9685fc4b8c9436224958bb2f7d24bf0ce"
+    },
+    {
+      "path": "png/formaglyph-wordmark-black.png",
+      "bytes": 17748,
+      "sha256": "0539f7bf29981869515e555da7ee7929af4d9dbc474b05f0a6906aada8b28ee2"
+    },
+    {
+      "path": "png/formaglyph-wordmark-burgundy.png",
+      "bytes": 25896,
+      "sha256": "c9aa3ac12364634d9dc534be237e1f56b9ac42da190d9cbf4678e11264cfdeff"
+    },
+    {
+      "path": "png/formaglyph-wordmark-white.png",
+      "bytes": 19800,
+      "sha256": "fdc30a48e4736e419b3906a6de60a053cbb49b34350249e284ea63c5290ced33"
+    },
+    {
+      "path": "web/apple-touch-icon.png",
+      "bytes": 1132,
+      "sha256": "fb9e281f21b77b3677f66571511326b51f881a17820d82058a4eebe474b1975a"
+    },
+    {
+      "path": "web/favicon-16.png",
+      "bytes": 264,
+      "sha256": "8715cc1edee85295cb54ada880033c6adac2c2e174d0d5d82ca3eb24e060f3b5"
+    },
+    {
+      "path": "web/favicon-32.png",
+      "bytes": 399,
+      "sha256": "8d8c82da72fa589c92b20c3bbfef45e44627a8de1373c26e548c9cf86cd9c5be"
+    },
+    {
+      "path": "web/favicon-48.png",
+      "bytes": 590,
+      "sha256": "76bc3b2c2c3fc702e0566470abc3d9b467f55ab78127b330cb0538d814d83be0"
+    },
+    {
+      "path": "web/favicon.ico",
+      "bytes": 1307,
+      "sha256": "954a840ad0607be0bf575e1e8b2b69c3d028802e8edb821a91a68c7d11003b4a"
+    },
+    {
+      "path": "web/favicon.svg",
+      "bytes": 371,
+      "sha256": "aeef58727519853e05f9e84e34e2c8f2d3c2014a78c198a11c645b52bf697b47"
+    },
+    {
+      "path": "web/formaglyph-app-icon.svg",
+      "bytes": 449,
+      "sha256": "b60e7e9e3851fd3bb215c397f6246beb469b715a5120dc9c2c7e93f34e9a45b7"
+    },
+    {
+      "path": "web/formaglyph-favicon.svg",
+      "bytes": 371,
+      "sha256": "aeef58727519853e05f9e84e34e2c8f2d3c2014a78c198a11c645b52bf697b47"
+    },
+    {
+      "path": "web/head-snippet.html",
+      "bytes": 261,
+      "sha256": "2911e979878379fa40b99cdfaa5ce6934fd254326d0aaf10ea3e9e61df5cf76b"
+    },
+    {
+      "path": "web/icon-192.png",
+      "bytes": 1233,
+      "sha256": "dc963391b74a691bf1a39dd57e3c6fa006f48fa47314a58dbf063bdb3cc35694"
+    },
+    {
+      "path": "web/icon-512.png",
+      "bytes": 3303,
+      "sha256": "9711911e6b4a03c222826d3549193dfcae05df2faee5e335d42eb9a9f114e56c"
+    },
+    {
+      "path": "web/maskable-512.png",
+      "bytes": 3007,
+      "sha256": "8503310374724c6dac1a1da1d912e4ba8550d7c2ee21ec798f678396b723c8bb"
+    },
+    {
+      "path": "web/maskable.svg",
+      "bytes": 455,
+      "sha256": "be2e6d5759a69366f2b9879a58a5705d17f3df54de2ae4b9ca56c47182e8263f"
+    },
+    {
+      "path": "web/platform-icon.svg",
+      "bytes": 446,
+      "sha256": "87a48d40ddaa2a65ae9cd8ae55d5f25337b1df0cfdeef1139c1975ac466dbe91"
+    },
+    {
+      "path": "web/site.webmanifest",
+      "bytes": 480,
+      "sha256": "fef0a645799cadb94e4f127855a13077559ff330c37e8794cf6ba75da7dbcd59"
+    }
+  ]
+}

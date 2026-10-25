@@ -1,0 +1,22 @@
+/* Formaglyph / Semantic · Light */
+:root {
+  --canvas: #FFFFFF;
+  --text: #000000;
+  --secondary: #666666;
+  --surface: #F7F7F7;
+  --separator: #E0E0E0;
+  --control: #808080;
+  --accent: #A10232;
+  --selection: #A10232;
+}
+/* Formaglyph / Semantic · Dark */
+[data-formaglyph-semantic="Dark"] {
+  --canvas: #000000;
+  --text: #FFFFFF;
+  --secondary: #999999;
+  --surface: #101010;
+  --separator: #292929;
+  --control: #808080;
+  --accent: #A10232;
+  --selection: #FFFFFF;
+}

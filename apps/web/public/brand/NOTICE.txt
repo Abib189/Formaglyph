@@ -1,0 +1,15 @@
+Formaglyph / Counterpair identity
+
+These SVGs and web icons are exact exports of the owner-approved Counterpair kit.
+Editable source and provenance: docs/design/counterpair-kit in the Formaglyph
+repository. The custom outlined wordmark was constructed from Inter SemiBold;
+the symbol is original two-part geometry. No third-party affiliation or
+trademark clearance is implied. Code and icon-library licences do not grant
+permission to impersonate Formaglyph or any third-party brand.
+
+The interface fonts are distributed separately under SIL OFL 1.1:
+- Inter: The Inter Project Authors. See INTER-OFL.txt in this directory.
+- JetBrains Mono: JetBrains. See JETBRAINS-MONO-OFL.txt in this directory.
+
+Upstream icon-library copyright and licence notices remain with each library
+under /libraries/ and within exported third-party SVGs.

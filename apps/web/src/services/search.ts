@@ -1,9 +1,9 @@
-import type { CatalogIcon } from "../domain/types";
-import type { IconVariant } from "@formaglyph/schema";
+import type { CatalogIcon, CatalogLibrary, CatalogVariant } from "../domain/types";
 
 export interface SearchOptions {
   category?: string;
-  variant?: "all" | IconVariant;
+  variant?: "all" | CatalogVariant;
+  library?: "all" | CatalogLibrary;
 }
 
 function normalize(value: string) {
@@ -52,8 +52,8 @@ export function scoreIcon(query: string, icon: CatalogIcon): number {
   if (!terms.length) return 1;
   const name = normalize(icon.name);
   const label = normalize(icon.label);
-  const aliases = icon.aliases.map((alias) => normalize(alias.value));
-  const tags = icon.tags.map(normalize);
+  const aliases = icon.aliases.map((alias) => normalize(alias.value)).filter(Boolean);
+  const tags = icon.tags.map(normalize).filter(Boolean);
   const category = normalize(icon.category);
   const description = normalize(icon.description);
   const searchableWords = new Set([name, label, category, ...aliases, ...tags, ...words(icon.name), ...words(icon.label), ...words(icon.description), ...icon.aliases.flatMap((alias) => words(alias.value)), ...icon.tags.flatMap(words)]);
@@ -85,11 +85,18 @@ export function scoreIcon(query: string, icon: CatalogIcon): number {
 }
 
 export function searchIcons(catalog: CatalogIcon[], query: string, options: SearchOptions = {}) {
+  // A concept has identical searchable metadata across weights. Score it once.
+  const scores = new Map<string, number>();
   return catalog
-    .filter((icon) => !options.category || options.category === "all" || icon.category === options.category)
+    .filter((icon) => !options.library || options.library === "all" || (icon.library ?? "core") === options.library)
+    .filter((icon) => !options.category || options.category === "all" || icon.category === options.category || icon.categories?.includes(options.category))
     .filter((icon) => !options.variant || options.variant === "all" || icon.variant === options.variant)
-    .map((icon) => ({ icon, score: scoreIcon(query, icon) }))
+    .map((icon) => {
+      let score = scores.get(icon.stableId);
+      if (score === undefined) { score = scoreIcon(query, icon); scores.set(icon.stableId, score); }
+      return { icon, score };
+    })
     .filter(({ score }) => score > 0)
-    .sort((a, b) => b.score - a.score || a.icon.name.localeCompare(b.icon.name))
+    .sort((a, b) => b.score - a.score || a.icon.name.localeCompare(b.icon.name) || (a.icon.library ?? "core").localeCompare(b.icon.library ?? "core") || a.icon.variant.localeCompare(b.icon.variant))
     .map(({ icon, score }) => ({ ...icon, matchScore: score }));
 }

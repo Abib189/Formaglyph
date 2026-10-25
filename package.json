@@ -4,14 +4,19 @@
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "pnpm --filter @formaglyph/web dev",
-    "typecheck": "pnpm -r --if-present typecheck",
-    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm iac:typecheck && pnpm -r --if-present typecheck",
+    "test": "pnpm iac:test && pnpm -r --if-present test",
+    "iac:typecheck": "tsc --project .railway/tsconfig.json && node --check .railway/verify-restart.cjs",
+    "iac:test": "tsx --test .railway/railway.test.ts",
+    "railway": "npx --yes --package @railway/cli@5.71.0 railway",
+    "iac:plan": "pnpm railway config plan --environment a1fe3272-826c-4288-83e5-11d080bcb2d2 --detailed-exit-code",
+    "iac:verify": "tsx .railway/verify-restart.cjs",
     "build": "pnpm -r --if-present build",
-    "check": "pnpm typecheck && pnpm test && pnpm build && pnpm --filter @formaglyph/icons pack:check",
+    "check": "pnpm typecheck && pnpm test && pnpm build && pnpm --filter @formaglyph/icons pack:check && pnpm --filter @formaglyph/cli pack:check && pnpm --filter @formaglyph/react pack:check && pnpm --filter @formaglyph/web smoke:downloads",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "db:reset": "supabase db reset --local",
@@ -19,6 +24,9 @@
     "types:db": "supabase gen types --local --lang typescript --schema public > apps/web/src/services/database.types.ts"
   },
   "devDependencies": {
-    "supabase": "2.109.1"
+    "railway": "3.16.0",
+    "supabase": "2.109.1",
+    "tsx": "4.21.0",
+    "typescript": "5.9.3"
   }
 }
