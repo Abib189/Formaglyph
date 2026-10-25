@@ -100,10 +100,29 @@ export function CatalogGlyph({
   colour?: string | null;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [exactAsset, setExactAsset] = useState<{ url: string; svg: string } | null>(null);
+  const needsExactPaint = !!(colour && icon.exactPaint && icon.assetUrl && !icon.svg);
+  const assetUrl = icon.assetUrl;
+  const contentHash = icon.contentHash;
+  useEffect(() => {
+    if (!needsExactPaint || !assetUrl) return;
+    const controller = new AbortController();
+    void fetchCatalogSvg(icon, controller.signal).then(svg => {
+      if (!controller.signal.aborted) setExactAsset({ url: assetUrl, svg });
+    }).catch(() => {
+      if (!controller.signal.aborted) setFailedUrl(assetUrl);
+    });
+    return () => controller.abort();
+    // Primitive immutable identity dependencies: changing only the selected hex
+    // recolours the verified SVG locally rather than issuing another request.
+  }, [needsExactPaint, assetUrl, contentHash]);
   const background = colour ? iconProofBackground(colour) : undefined;
+  const svg = icon.svg ?? (needsExactPaint && exactAsset?.url === assetUrl ? exactAsset?.svg : undefined);
   let content;
-  if (icon.svg)
-    content = <SvgIcon svg={colourIconSvg(icon.svg, colour)} size={size} />;
+  if (svg)
+    content = <SvgIcon svg={colourIconSvg(svg, colour)} size={size} />;
+  else if (needsExactPaint)
+    content = <span className="asset-unavailable">{failedUrl === assetUrl ? "Asset unavailable" : "Loading…"}</span>;
   else if (icon.assetUrl && failedUrl !== icon.assetUrl)
     content = colour ? (
       <>
@@ -419,6 +438,7 @@ function CatalogInspector({
       <details className="inspector-details">
         <summary>Details & provenance</summary>
         <p>{selected.description}</p>
+        {selected.fixedWhite && <p>This original includes fixed white artwork. Colour overrides change currentColor only; the white details remain unchanged.</p>}
         <dl>
           <dt>Stable ID</dt>
           <dd>
@@ -1014,6 +1034,11 @@ export function ExplorePage() {
           <p>
             Hugeicons contains the free Stroke Rounded collection, shown as
             Regular. Paid Pro styles are not included.
+          </p>
+          <p>
+            Bootstrap keeps its 16 px grid, Radix its 15 px grid, and Ionicons
+            its source-scale geometry and separate Sharp style. Only actual
+            variants are shown; some symbols have no Regular/Solid pair.
           </p>
           <a href="/libraries/NOTICE.txt" target="_blank" rel="noreferrer">
             Read third-party licence notices <ArrowUpRight size={14} />

@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { sanitizeAndValidateSvg } from "@formaglyph/validators";
+import { sanitizeAndValidateSvg, sanitizeAndValidateCatalogSvg } from "@formaglyph/validators";
 import { iconResults } from "../data/catalog";
 import { expandExternalManifest, fetchCatalogSvg, CATALOG_WEIGHTS } from "./externalCatalog";
 import { searchIcons } from "./search";
 import { prepareDesignSvg } from "./svg";
-import { LIBRARY_SOURCES, type ExternalLibraryId } from "../data/librarySources";
+import { LIBRARY_SOURCES, ICONIFY_PACKAGES, type ExternalLibraryId } from "../data/librarySources";
+import { colourIconSvg } from "./iconColour";
 
 const manifest = JSON.parse(readFileSync(new URL("../../public/libraries/phosphor/catalog.json", import.meta.url), "utf8"));
 const assets = expandExternalManifest(manifest, "phosphor");
@@ -90,6 +91,10 @@ const additions = [
   { id: "tabler", concepts: 5166, count: 6220 },
   { id: "heroicons", concepts: 324, count: 1288 },
   { id: "hugeicons", concepts: 6065, count: 6065 },
+  { id: "bootstrap", concepts: 1409, count: 2078 },
+  { id: "iconoir", concepts: 1383, count: 1671 },
+  { id: "radix", concepts: 332, count: 332 },
+  { id: "ionicons", concepts: 515, count: 1357 },
 ] as const;
 const newManifests = Object.fromEntries(additions.map(({ id }) => [id, JSON.parse(readFileSync(new URL(`../../public/libraries/${id}/catalog.json`, import.meta.url), "utf8"))]));
 const newAssets = additions.flatMap(({ id }) => expandExternalManifest(newManifests[id], id));
@@ -101,24 +106,26 @@ describe("additional open-source library snapshots", () => {
       expect(expanded).toHaveLength(library.count);
       expect(new Set(expanded.map((asset) => asset.stableId)).size).toBe(library.concepts);
       const notice = readFileSync(new URL(`../../scripts/notices/${library.id}.txt`, import.meta.url), "utf8");
-      const upstream = JSON.parse(readFileSync(new URL(`../../node_modules/@iconify-json/${library.id}/icons.json`, import.meta.url), "utf8"));
+      const packageName = ICONIFY_PACKAGES[library.id];
+      const upstream = JSON.parse(readFileSync(new URL(`../../node_modules/${packageName}/icons.json`, import.meta.url), "utf8"));
       expect(Object.values(upstream.icons).filter((icon) => !(icon as { hidden?: boolean }).hidden)).toHaveLength(library.count);
       for (const asset of expanded) {
         const svg = readAsset(asset.assetUrl!);
         expect(createHash("sha256").update(svg).digest("hex"), asset.id).toBe(asset.contentHash);
         expect(svg, asset.id).toContain(notice);
-        expect(svg, asset.id).toContain(`Iconify snapshot: @iconify-json/${library.id}@${asset.version}`);
+        expect(svg, asset.id).toContain(`Iconify snapshot: ${packageName}@${asset.version}`);
         const grid = asset.gridSize!;
-        expect(sanitizeAndValidateSvg(svg, { targetViewBox: [0, 0, grid, asset.gridHeight ?? grid] }).status, asset.id).toBe("passed");
+        const validate = library.id === "radix" || library.id === "iconoir" ? sanitizeAndValidateCatalogSvg : sanitizeAndValidateSvg;
+        expect(validate(svg, { targetViewBox: [0, 0, grid, asset.gridHeight ?? grid] }).status, asset.id).toBe("passed");
       }
     }, 30000);
   }
 
-  it("does not collide across five camera concepts or invent unavailable weights", () => {
+  it("does not collide across camera concepts or invent unavailable weights", () => {
     const catalog = [...iconResults, ...assets, ...newAssets];
     const cameras = searchIcons(catalog, "", { variant: "regular" }).filter((asset) => asset.name === "camera");
-    expect(cameras).toHaveLength(5);
-    expect(new Set(cameras.map((asset) => asset.stableId)).size).toBe(5);
+    expect(cameras).toHaveLength(9);
+    expect(new Set(cameras.map((asset) => asset.stableId)).size).toBe(cameras.length);
     expect(searchIcons(catalog, "", { library: "lucide", variant: "solid" })).toHaveLength(0);
     expect(searchIcons(catalog, "", { library: "tabler", variant: "solid" })).toHaveLength(1054);
     expect(searchIcons(catalog, "", { library: "heroicons", variant: "micro" })).toHaveLength(316);
@@ -172,6 +179,43 @@ describe("additional open-source library snapshots", () => {
     const design = prepareDesignSvg(readAsset(lucide.assetUrl!), { ...lucide, library: "Lucide", licence: lucide.licenceLabel! }, "penpot");
     expect(design).toContain('data-formaglyph-licence="ISC + MIT (Feather)"');
     expect(design).toContain("Copyright (c) 2013-present Cole Bemis");
+  });
+
+  it("preserves native grids, real pairs and Ionicons Sharp without inventing styles", () => {
+    const camera = (library: string) => newAssets.filter(asset => asset.library === library && asset.name === "camera");
+    expect(camera("bootstrap").map(asset => [asset.variant, asset.gridSize])).toEqual([["regular", 16], ["solid", 16]]);
+    expect(camera("iconoir").map(asset => [asset.variant, asset.gridSize])).toEqual([["regular", 24], ["solid", 24]]);
+    expect(camera("radix").map(asset => [asset.variant, asset.gridSize])).toEqual([["regular", 15]]);
+    expect(camera("ionicons").map(asset => [asset.variant, asset.gridSize])).toEqual([["regular", 512], ["solid", 512], ["sharp", 512]]);
+    expect(newAssets.find(asset => asset.library === "ionicons" && asset.name === "logo-x")).toMatchObject({ variant: "solid", gridSize: 16 });
+    expect(searchIcons(newAssets, "", { library: "radix", variant: "solid" })).toHaveLength(0);
+    expect(searchIcons(newAssets, "", { library: "bootstrap", variant: "sharp" })).toHaveLength(0);
+    expect(searchIcons(newAssets, "", { library: "ionicons", variant: "sharp" })).toHaveLength(421);
+    expect(searchIcons(newAssets, "arrow-up-down", { library: "bootstrap", variant: "regular" })[0]?.name).toBe("arrow-down-up");
+    expect(searchIcons(newAssets, "dot-solid", { library: "radix", variant: "regular" })[0]?.name).toBe("dot-filled");
+    const forged = structuredClone(newManifests.radix);
+    forged.concepts[0].assets[0].grid = 24;
+    expect(() => expandExternalManifest(forged, "radix")).toThrow();
+  });
+
+  it("hash-verifies exact upstream masks and white details while upload rules stay strict", async () => {
+    const panels = newAssets.filter(asset => asset.library === "radix" && asset.exactPaint);
+    expect(panels).toHaveLength(6);
+    const white = newAssets.filter(asset => asset.library === "iconoir" && asset.fixedWhite);
+    expect(white.map(asset => asset.name).sort()).toEqual(["dots-grid-3x3", "snapchat"]);
+    for (const asset of [...panels, ...white]) {
+      const svg = readAsset(asset.assetUrl!);
+      expect(sanitizeAndValidateSvg(svg).status, asset.id).toBe("failed");
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(svg)));
+      await expect(fetchCatalogSvg(asset)).resolves.toBe(svg);
+      const colour = colourIconSvg(svg, "#2468AC");
+      expect(colour).toContain("#2468AC");
+      expect(colour.match(/\sd="[^"]*"/g)).toEqual(svg.match(/\sd="[^"]*"/g));
+      if (asset.fixedWhite) expect(colour.match(/(?:fill|stroke)="#fff"/g)).toEqual(svg.match(/(?:fill|stroke)="#fff"/g));
+    }
+    const panel = panels[0];
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(readAsset(panel.assetUrl!))));
+    await expect(fetchCatalogSvg({ ...panel, contentHash: undefined })).rejects.toThrow("Unsafe");
   });
 
   it("rejects a collection/source mismatch or invented Lucide solid variant", () => {

@@ -16,4 +16,11 @@ describe("pinned upstream local path expansion", () => {
     const raw = '<use href="https://example.com/shape.svg"/>';
     expect(sanitizeAndValidateSvg(`<svg viewBox="0 0 24 24" aria-hidden="true">${inlineLocalPathUses(raw)}</svg>`).safe).toBe(false);
   });
+  it("retains source path paint and use-site stroke attributes", () => {
+    const raw = '<defs><path id="Local" stroke="currentColor" d="M1 1h20"/></defs><use href="#Local" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>';
+    const expanded = inlineLocalPathUses(raw);
+    expect(expanded).toBe('<path stroke="currentColor" d="M1 1h20" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>');
+    expect(sanitizeAndValidateSvg(`<svg viewBox="0 0 24 24" aria-hidden="true">${expanded}</svg>`).status).toBe("passed");
+    expect(() => inlineLocalPathUses(raw.replace('stroke-linecap="round"', 'onclick="alert(1)"'))).toThrow();
+  });
 });

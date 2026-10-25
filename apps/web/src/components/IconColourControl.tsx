@@ -250,7 +250,7 @@ function ColourEditor({
           {fixed
             ? "Applied to previews & SVG exports."
             : "Follows your theme or text colour."}
-          <span>Transparent SVG · originals unchanged.</span>
+          <span>SVG export · originals unchanged.</span>
         </p>
         <button
           type="button"

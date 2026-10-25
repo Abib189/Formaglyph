@@ -5,7 +5,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { icons } from "@phosphor-icons/core";
 import { sanitizeAndValidateSvg } from "../../../packages/validators/src/svg.ts";
-import { LIBRARY_SOURCES } from "../src/data/librarySources.ts";
+import { sanitizeAndValidateCatalogSvg } from "../../../packages/validators/src/catalogSvg.ts";
+import { LIBRARY_SOURCES, ICONIFY_PACKAGES } from "../src/data/librarySources.ts";
 import { inlineLocalPathUses } from "./inline-local-paths.mjs";
 import { stripCanvasClip } from "./strip-canvas-clip.mjs";
 
@@ -64,6 +65,14 @@ console.log(`Built ${source.conceptCount} Phosphor concepts / ${source.assetCoun
 const sources = [source];
 const escapeText = (text) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 function canonicalAsset(library, name) {
+  if (library === "bootstrap" && name.endsWith("-fill")) return { name: name.slice(0, -5), variant: "solid", grid: 16 };
+  if (library === "iconoir" && name.endsWith("-solid")) return { name: name.slice(0, -6), variant: "solid", grid: 24 };
+  if (library === "ionicons") {
+    if (name === "logo-x") return { name, variant: "solid", grid: 16 };
+    if (name.endsWith("-outline")) return { name: name.slice(0, -8), variant: "regular", grid: 512 };
+    if (name.endsWith("-sharp")) return { name: name.slice(0, -6), variant: "sharp", grid: 512 };
+    return { name, variant: "solid", grid: 512 };
+  }
   // This upstream icon intentionally has a non-square viewport. Do not crop or scale its geometry.
   if (library === "hugeicons" && name === "image-flip-horizontal") return { name, variant: "regular", grid: 24, gridHeight: 25 };
   if (library === "tabler" && name.endsWith("-filled")) return { name: name.slice(0, -7), variant: "solid", grid: 24 };
@@ -72,17 +81,16 @@ function canonicalAsset(library, name) {
     if (name.endsWith("-20-solid")) return { name: name.slice(0, -9), variant: "mini", grid: 20 };
     if (name.endsWith("-solid")) return { name: name.slice(0, -6), variant: "solid", grid: 24 };
   }
-  return { name, variant: "regular", grid: 24 };
+  return { name, variant: "regular", grid: LIBRARY_SOURCES[library].grid };
 }
 
-for (const library of ["lucide", "tabler", "heroicons", "hugeicons"]) {
+for (const [library, packageName] of Object.entries(ICONIFY_PACKAGES)) {
   const config = LIBRARY_SOURCES[library];
-  const packageName = `@iconify-json/${library}`;
   const data = require(`${packageName}/icons.json`);
   const info = require(`${packageName}/info.json`);
   const dist = require(`${packageName}/package.json`);
   const notice = await readFile(resolve(webRoot, `scripts/notices/${library}.txt`), "utf8");
-  if (info.license.spdx !== config.licence || data.prefix !== library) throw new Error(`Unexpected licence/source for ${library}`);
+  if (info.license.spdx !== config.licence || data.prefix !== packageName.slice("@iconify-json/".length)) throw new Error(`Unexpected licence/source for ${library}`);
   const visible = Object.entries(data.icons).filter(([, icon]) => !icon.hidden);
   if (visible.length !== info.total) throw new Error(`Incomplete snapshot: ${library}`);
   const librarySource = {
@@ -102,12 +110,13 @@ for (const library of ["lucide", "tabler", "heroicons", "hugeicons"]) {
   for (const [upstreamName, icon] of visible) {
     const identity = canonicalAsset(library, upstreamName);
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(identity.name) || !config.weights.includes(identity.variant)) throw new Error(`Unsafe identity: ${library}/${upstreamName}`);
-    const width = icon.width ?? data.width;
-    const height = icon.height ?? data.height;
+    const width = icon.width ?? data.width ?? data.height ?? 16;
+    const height = icon.height ?? data.height ?? 16;
     if (width !== identity.grid || height !== (identity.gridHeight ?? identity.grid) || icon.rotate || icon.hFlip || icon.vFlip || icon.left || icon.top) throw new Error(`Unsupported source transform/grid: ${library}/${upstreamName}`);
     const body = library === "hugeicons" && upstreamName === "dump-truck" ? stripCanvasClip(icon.body) : icon.body;
     const raw = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true" focusable="false">${inlineLocalPathUses(body)}</svg>`;
-    const validated = sanitizeAndValidateSvg(raw, { targetViewBox: [0, 0, width, height] });
+    const validate = library === "radix" || library === "iconoir" ? sanitizeAndValidateCatalogSvg : sanitizeAndValidateSvg;
+    const validated = validate(raw, { targetViewBox: [0, 0, width, height] });
     if (!validated.safe || validated.status !== "passed" || !validated.normalizedSvg) throw new Error(`${library}/${upstreamName}: ${JSON.stringify(validated.issues)}`);
     // <desc> preserves the exact notice, including '--' separators invalid in XML comments.
     const svg = validated.normalizedSvg.replace(/(<svg\b[^>]*>)/, `$1<desc>${escapeText(`${config.label}: ${config.sourceUrl}\nIconify snapshot: ${packageName}@${dist.version}\n${notice}`)}</desc>`);
@@ -120,7 +129,9 @@ for (const library of ["lucide", "tabler", "heroicons", "hugeicons"]) {
       grouped.set(identity.name, concept);
     }
     if (concept.assets.some((asset) => asset.variant === identity.variant)) throw new Error(`Duplicate variant: ${library}/${upstreamName}`);
-    concept.assets.push({ variant: identity.variant, grid: identity.grid, ...(identity.gridHeight ? { gridHeight: identity.gridHeight } : {}), upstreamName, url, sha256: createHash("sha256").update(svg).digest("hex") });
+    const fixedWhite = /(?:fill|stroke)="#(?:fff|FFFFFF)"/.test(svg);
+    const exactPaint = fixedWhite || /<mask\b/.test(svg);
+    concept.assets.push({ variant: identity.variant, grid: identity.grid, ...(identity.gridHeight ? { gridHeight: identity.gridHeight } : {}), ...(exactPaint ? { exactPaint: true } : {}), ...(fixedWhite ? { fixedWhite: true } : {}), upstreamName, url, sha256: createHash("sha256").update(svg).digest("hex") });
   }
   for (const [alias, entry] of Object.entries(data.aliases ?? {})) {
     if (entry.rotate || entry.hFlip || entry.vFlip) continue;

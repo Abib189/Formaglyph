@@ -30,9 +30,13 @@
     "vite": "6.4.2"
   },
   "devDependencies": {
+    "@iconify-json/bi": "1.2.7",
     "@iconify-json/heroicons": "1.2.3",
     "@iconify-json/hugeicons": "1.2.35",
+    "@iconify-json/iconoir": "1.2.12",
+    "@iconify-json/ion": "1.2.7",
     "@iconify-json/lucide": "1.2.137",
+    "@iconify-json/radix-icons": "1.2.6",
     "@iconify-json/tabler": "1.2.41",
     "@phosphor-icons/core": "2.1.1",
     "@types/react": "^19.2.2",

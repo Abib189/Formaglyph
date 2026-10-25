@@ -77,7 +77,7 @@ describe("icon colour", () => {
   });
 
   it("retains each upstream licence, duotone opacity and native grid in coloured exports", () => {
-    for (const library of ["phosphor", "lucide", "tabler", "heroicons", "hugeicons"]) {
+    for (const library of ["phosphor", "lucide", "tabler", "heroicons", "hugeicons", "bootstrap", "iconoir", "radix", "ionicons"]) {
       const manifest = JSON.parse(
         readFileSync(
           new URL(
