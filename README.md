@@ -106,6 +106,8 @@ The Dockerfile declares all three as build arguments because Vite embeds publish
 
 The production app is [formaglyph.com](https://formaglyph.com/explore). The Railway-provided hostname remains available as a rollback path. Hosted Supabase Auth uses `https://formaglyph.com` as its site URL and allows exact callbacks for the canonical domain, `www`, local development, and the Railway fallback.
 
+Service configuration lives in `.railway/railway.ts`, with service-scoped ownership and unmanaged Railway variables. Configuration changes require an explicit reviewed `railway config plan` / `apply`; `railway up` only deploys application source. See the [IaC migration and deployment runbook](./docs/railway-iac.md).
+
 ## Use the public catalog API
 
 The versioned API is available at [`/api/v1`](https://formaglyph.com/api/v1). Public catalog routes combine the source-controlled, MIT-licensed Formaglyph Core release with complete, reviewed Regular/Solid releases from public Supabase projects. Private and incomplete project releases are excluded. `/agent/drafts` accepts a scoped project token and creates only a text brief with a human handoff URL.

@@ -15,6 +15,12 @@ apps/web/public/libraries/
 supabase/.temp/
 supabase/.branches/
 
+# Railway local state, migration snapshots, and plan artifacts are not source.
+.railway/*
+!.railway/railway.ts
+!.railway/railway.test.ts
+!.railway/tsconfig.json
+
 # Keep the final production QA record, not intermediate design captures.
 apps/web/qa/*
 !apps/web/qa/production-*.png
