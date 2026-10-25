@@ -6,7 +6,7 @@ import { iconResults } from "../data/catalog";
 import { expandExternalManifest, fetchCatalogSvg, CATALOG_WEIGHTS } from "./externalCatalog";
 import { searchIcons } from "./search";
 import { prepareDesignSvg } from "./svg";
-import { LIBRARY_SOURCES, ICONIFY_PACKAGES, type ExternalLibraryId } from "../data/librarySources";
+import { LIBRARY_SOURCES, ICONIFY_PACKAGES, requestedLibraries, type ExternalLibraryId } from "../data/librarySources";
 import { colourIconSvg } from "./iconColour";
 
 const manifest = JSON.parse(readFileSync(new URL("../../public/libraries/phosphor/catalog.json", import.meta.url), "utf8"));
@@ -95,11 +95,77 @@ const additions = [
   { id: "iconoir", concepts: 1383, count: 1671 },
   { id: "radix", concepts: 332, count: 332 },
   { id: "ionicons", concepts: 515, count: 1357 },
+  { id: "octicons", concepts: 780, count: 780 },
+  { id: "fluent", concepts: 9957, count: 19900 },
+  { id: "material-symbols", concepts: 3931, count: 15744 },
+  { id: "healthicons", concepts: 1031, count: 2062 },
+  { id: "feather", concepts: 286, count: 286 },
+  { id: "simple-icons", concepts: 12, count: 12 },
 ] as const;
 const newManifests = Object.fromEntries(additions.map(({ id }) => [id, JSON.parse(readFileSync(new URL(`../../public/libraries/${id}/catalog.json`, import.meta.url), "utf8"))]));
 const newAssets = additions.flatMap(({ id }) => expandExternalManifest(newManifests[id], id));
 
 describe("additional open-source library snapshots", () => {
+  it("loads only the selected collection unless All libraries is requested", () => {
+    expect(requestedLibraries("core")).toEqual([]);
+    expect(requestedLibraries("projects")).toEqual([]);
+    expect(requestedLibraries("fluent")).toEqual(["fluent"]);
+    expect(requestedLibraries("__proto__")).toEqual([]);
+    expect(requestedLibraries("all")).toEqual(Object.keys(LIBRARY_SOURCES));
+  });
+  it("keeps size-specific drawings, non-square viewports and Fluent directional variants", () => {
+    const octicons = newAssets.filter(asset => asset.library === "octicons");
+    expect(octicons.find(asset => asset.name === "accessibility-16")?.gridSize).toBe(16);
+    expect(octicons.find(asset => asset.name === "accessibility-24")?.gridSize).toBe(24);
+    expect(octicons.find(asset => asset.name === "lockup-github-24")).toMatchObject({ gridSize: 103, gridHeight: 24 });
+    const fluent = newAssets.filter(asset => asset.library === "fluent");
+    expect(fluent.filter(asset => asset.variant === "light")).toHaveLength(213);
+    expect(fluent.find(asset => asset.name === "comment-edit-16")).toMatchObject({ gridSize: 17, gridHeight: 16 });
+    expect(fluent.find(asset => asset.name === "arrow-export-rtl-32")?.directionality).toBe("rtl-specific");
+    expect(fluent.find(asset => asset.name === "arrow-export-ltr-32")?.directionality).toBe("ltr-specific");
+    expect(fluent.find(asset => asset.name === "animal-turtle-16")?.directionality).toBe("neutral");
+    const health = newAssets.filter(asset => asset.library === "healthicons");
+    expect(health.find(asset => asset.name === "stethoscope")?.gridSize).toBe(48);
+    expect(health.find(asset => asset.name === "stethoscope-24px")?.gridSize).toBe(24);
+    for (const id of ["fluent", "octicons", "healthicons"] as const) {
+      const copy = structuredClone(newManifests[id]);
+      copy.concepts[0].assets[0].grid = 123;
+      expect(() => expandExternalManifest(copy, id)).toThrow();
+    }
+  });
+  it("retains every available Material style and Apache terms without inventing font axes", () => {
+    const material = newAssets.filter(asset => asset.library === "material-symbols");
+    expect(new Set(material.map(asset => asset.variant))).toEqual(new Set(LIBRARY_SOURCES["material-symbols"].weights));
+    expect(material.every(asset => asset.gridSize === 24 && asset.licence === "Apache-2.0")).toBe(true);
+    const svg = colourIconSvg(readAsset(material[0].assetUrl!), "#2367C2");
+    expect(svg).toContain("Apache License");
+    expect(svg).toContain("Formaglyph modified this SVG: colour override #2367C2");
+    expect(svg).toContain("Version 2.0, January 2004");
+    expect(svg).toContain("#2367C2");
+    expect(svg).toContain("modified files");
+  });
+  it("includes only explicit CC0 brands with complete source, guidelines and disclaimer", () => {
+    const simple = newAssets.filter(asset => asset.library === "simple-icons");
+    const metadata = JSON.parse(readFileSync(new URL("../../node_modules/simple-icons/data/simple-icons.json", import.meta.url), "utf8"));
+    expect(simple.map(asset => asset.name).sort()).toEqual(metadata.filter((brand: { license?: { type: string } }) => brand.license?.type === "CC0-1.0").map((brand: { slug: string }) => brand.slug).sort());
+    const disclaimer = readFileSync(new URL("../../scripts/notices/simple-icons-disclaimer.txt", import.meta.url), "utf8");
+    for (const asset of simple) {
+      const svg = readAsset(asset.assetUrl!);
+      expect(svg).toContain(disclaimer.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"));
+      expect(svg).toContain("Brand licence: CC0-1.0");
+      expect(svg).toContain(asset.brandSourceUrl!);
+      expect(asset.licence).toBe("CC0-1.0");
+    }
+    const copy = structuredClone(newManifests["simple-icons"]);
+    delete copy.concepts[0].brand;
+    expect(() => expandExternalManifest(copy, "simple-icons")).toThrow(/brand/);
+    const unsafe = structuredClone(newManifests["simple-icons"]);
+    unsafe.concepts[0].brand.guidelinesUrl = "javascript:alert(1)";
+    expect(() => expandExternalManifest(unsafe, "simple-icons")).toThrow(/brand/);
+    const report = JSON.parse(readFileSync(new URL("../../public/libraries/simple-icons/IMPORT-REPORT.json", import.meta.url), "utf8"));
+    expect(report.included).toBe(12);
+    expect(report.excluded).toHaveLength(3454);
+  });
   for (const library of additions) {
     it(`includes every non-hidden ${library.id} asset with exact attribution, geometry and integrity`, () => {
       const expanded = expandExternalManifest(newManifests[library.id], library.id);
@@ -108,14 +174,18 @@ describe("additional open-source library snapshots", () => {
       const notice = readFileSync(new URL(`../../scripts/notices/${library.id}.txt`, import.meta.url), "utf8");
       const packageName = ICONIFY_PACKAGES[library.id];
       const upstream = JSON.parse(readFileSync(new URL(`../../node_modules/${packageName}/icons.json`, import.meta.url), "utf8"));
-      expect(Object.values(upstream.icons).filter((icon) => !(icon as { hidden?: boolean }).hidden)).toHaveLength(library.count);
+      const visibleCount = Object.values(upstream.icons).filter((icon) => !(icon as { hidden?: boolean }).hidden).length;
+      expect(visibleCount).toBe(library.id === "simple-icons" ? 3466 : library.count);
+      const upstreamAssets = new Map<string, { upstreamName: string }>(newManifests[library.id].concepts.flatMap((concept: { stableId: string; assets: Array<{ variant: string; upstreamName: string }> }) => concept.assets.map(asset => [`${concept.stableId}:${asset.variant}`, asset])));
       for (const asset of expanded) {
         const svg = readAsset(asset.assetUrl!);
         expect(createHash("sha256").update(svg).digest("hex"), asset.id).toBe(asset.contentHash);
-        expect(svg, asset.id).toContain(notice);
+        expect(svg, asset.id).toContain(notice.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"));
         expect(svg, asset.id).toContain(`Iconify snapshot: ${packageName}@${asset.version}`);
         const grid = asset.gridSize!;
-        const validate = library.id === "radix" || library.id === "iconoir" ? sanitizeAndValidateCatalogSvg : sanitizeAndValidateSvg;
+        const original = upstream.icons[upstreamAssets.get(asset.id)!.upstreamName];
+        expect([grid, asset.gridHeight ?? grid]).toEqual([original.width ?? upstream.width ?? upstream.height ?? 16, original.height ?? upstream.height ?? 16]);
+        const validate = ["radix", "iconoir", "healthicons"].includes(library.id) ? sanitizeAndValidateCatalogSvg : sanitizeAndValidateSvg;
         expect(validate(svg, { targetViewBox: [0, 0, grid, asset.gridHeight ?? grid] }).status, asset.id).toBe("passed");
       }
     }, 30000);
@@ -124,7 +194,7 @@ describe("additional open-source library snapshots", () => {
   it("does not collide across camera concepts or invent unavailable weights", () => {
     const catalog = [...iconResults, ...assets, ...newAssets];
     const cameras = searchIcons(catalog, "", { variant: "regular" }).filter((asset) => asset.name === "camera");
-    expect(cameras).toHaveLength(9);
+    expect(cameras).toHaveLength(11);
     expect(new Set(cameras.map((asset) => asset.stableId)).size).toBe(cameras.length);
     expect(searchIcons(catalog, "", { library: "lucide", variant: "solid" })).toHaveLength(0);
     expect(searchIcons(catalog, "", { library: "tabler", variant: "solid" })).toHaveLength(1054);

@@ -11,7 +11,7 @@ export function colourIconSvg(svg: string, colour: string | null): string {
   const safeColour = normalizeIconColour(colour);
   if (!safeColour) throw new Error("Use a three- or six-digit hex colour.");
   // Work on tags only: copyright comments and other source text stay byte-for-byte intact.
-  return svg.replace(/<!--[\s\S]*?-->|<[^>]+>/g, (tag) => {
+  const derivative = svg.replace(/<!--[\s\S]*?-->|<[^>]+>/g, (tag) => {
     if (tag.startsWith("<!--")) return tag;
     let result = tag.replace(
       /(\s(?:fill|stroke|color)\s*=\s*)(["'])currentColor\2/gi,
@@ -26,6 +26,8 @@ export function colourIconSvg(svg: string, colour: string | null): string {
     }
     return result;
   });
+  // Apache-2.0 requires modified files to carry a prominent change notice.
+  return `<!-- Formaglyph modified this SVG: colour override ${safeColour}; source geometry unchanged. -->\n${derivative}`;
 }
 
 /** Pick the higher-contrast neutral proof surface; it is never embedded in exports. */

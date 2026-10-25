@@ -3,6 +3,12 @@ import { inlineLocalPathUses } from "./inline-local-paths.mjs";
 import { sanitizeAndValidateSvg } from "@formaglyph/validators";
 
 describe("pinned upstream local path expansion", () => {
+  it("resolves a bounded set of independent paths without losing fill rules", () => {
+    const body = '<defs><path id="One" d="M1 1h2"/><path id="Two" d="M3 3h2"/></defs><g fill="currentColor"><use href="#One"/><use href="#Two" fill-rule="evenodd" clip-rule="evenodd"/></g>';
+    expect(inlineLocalPathUses(body)).toBe('<g fill="currentColor"><path d="M1 1h2"/><path d="M3 3h2" fill-rule="evenodd" clip-rule="evenodd"/></g>');
+    expect(() => inlineLocalPathUses(body.replace('id="Two"', 'id="One"'))).toThrow();
+    expect(() => inlineLocalPathUses(body.replace('href="#Two"', 'href="#Missing"'))).toThrow();
+  });
   it("preserves repeated geometry and inherited paint without enabling references", () => {
     const body = '<defs><path id="LocalShape" d="M2 2h20"/></defs><g fill="none" stroke="currentColor"><use href="#LocalShape"/><use href="#LocalShape"/></g>';
     const expanded = inlineLocalPathUses(body);

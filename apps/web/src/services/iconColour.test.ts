@@ -58,7 +58,7 @@ describe("icon colour", () => {
         "#fff",
       ),
     ).toContain('fill="#FFFFFF" color="#FFFFFF"');
-    expect(colourIconSvg('<svg viewBox="0 0 24 24"/>', "#000")).toBe(
+    expect(colourIconSvg('<svg viewBox="0 0 24 24"/>', "#000")).toContain(
       '<svg viewBox="0 0 24 24" fill="#000000" color="#000000"/>',
     );
   });
@@ -77,7 +77,7 @@ describe("icon colour", () => {
   });
 
   it("retains each upstream licence, duotone opacity and native grid in coloured exports", () => {
-    for (const library of ["phosphor", "lucide", "tabler", "heroicons", "hugeicons", "bootstrap", "iconoir", "radix", "ionicons"]) {
+    for (const library of ["phosphor", "lucide", "tabler", "heroicons", "hugeicons", "bootstrap", "iconoir", "radix", "ionicons", "octicons", "fluent", "material-symbols", "healthicons", "feather", "simple-icons"]) {
       const manifest = JSON.parse(
         readFileSync(
           new URL(
@@ -94,8 +94,8 @@ describe("icon colour", () => {
         );
         const result = colourIconSvg(source, "#123ABC");
         expect(result.match(/<desc>[\s\S]*?<\/desc>/g)).toEqual(source.match(/<desc>[\s\S]*?<\/desc>/g));
-        expect(result.match(/<!--[\s\S]*?-->/g)).toEqual(
-          source.match(/<!--[\s\S]*?-->/g),
+        expect(result.match(/<!--[\s\S]*?-->/g)?.slice(1) ?? []).toEqual(
+          source.match(/<!--[\s\S]*?-->/g) ?? [],
         );
         expect(
           result.match(

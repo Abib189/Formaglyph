@@ -38,6 +38,7 @@ import {
   EXTERNAL_LIBRARY_IDS,
   LIBRARY_SOURCES,
   weightsForLibrary,
+  requestedLibraries,
   type ExternalLibraryId,
 } from "../data/librarySources";
 
@@ -435,6 +436,7 @@ function CatalogInspector({
           </p>
         )}
       </div>
+      {selected.brandSourceUrl && <p className="catalog-notice">Brand artwork: <a href={selected.brandSourceUrl} target="_blank" rel="noreferrer">original source</a>{selected.brandGuidelinesUrl && <> · <a href={selected.brandGuidelinesUrl} target="_blank" rel="noreferrer">brand guidelines</a></>}. CC0 does not grant trademark rights; colour changes must respect the brand’s rules.</p>}
       <details className="inspector-details">
         <summary>Details & provenance</summary>
         <p>{selected.description}</p>
@@ -514,7 +516,7 @@ export function ExplorePage() {
   const variant =
     weightParam === "all" || weights.includes(weightParam as CatalogVariant)
       ? (weightParam as "all" | CatalogVariant)
-      : "regular";
+      : weights[0] ?? "regular";
   const size = [24, 32, 40, 48].includes(Number(params.get("size")))
     ? Number(params.get("size"))
     : 32;
@@ -588,9 +590,10 @@ export function ExplorePage() {
   }, []);
   useEffect(() => {
     let active = true;
-    setPending([...EXTERNAL_LIBRARY_IDS, "projects"]);
-    setFailed([]);
-    for (const id of EXTERNAL_LIBRARY_IDS)
+    const wanted = requestedLibraries(library);
+    setPending(current => [...current.filter(id => id === "projects"), ...wanted]);
+    setFailed(current => current.filter(id => id === "projects"));
+    for (const id of wanted)
       void loadExternalCatalog(id)
         .then((icons) => {
           if (active) setLibraries((current) => ({ ...current, [id]: icons }));
@@ -602,6 +605,12 @@ export function ExplorePage() {
           if (active)
             setPending((current) => current.filter((item) => item !== id));
         });
+    return () => { active = false; };
+  }, [library, retry]);
+  useEffect(() => {
+    let active = true;
+    setPending(current => [...current.filter(id => id !== "projects"), "projects"]);
+    setFailed(current => current.filter(id => id !== "projects"));
     void repository
       .listPublishedIcons()
       .then((icons) => {
@@ -903,6 +912,7 @@ export function ExplorePage() {
               {weightLabel(variant === "all" ? "regular" : variant)} / {size} px
             </span>
           </header>
+          {library === "simple-icons" && <p className="catalog-notice">Explicit CC0 subset only: 12 brands from the pinned 3,466-icon snapshot. Other licences are not assumed. <a href="/libraries/simple-icons/IMPORT-REPORT.json" target="_blank" rel="noreferrer">Import report</a> · <a href="/libraries/simple-icons/LICENSE.txt" target="_blank" rel="noreferrer">Licence & disclaimer</a></p>}
           {relevantFailures.length > 0 && (
             <div className="catalog-notice" role="status">
               Some libraries could not load. Your filters are retained.{" "}
@@ -1039,6 +1049,21 @@ export function ExplorePage() {
             Bootstrap keeps its 16 px grid, Radix its 15 px grid, and Ionicons
             its source-scale geometry and separate Sharp style. Only actual
             variants are shown; some symbols have no Regular/Solid pair.
+          </p>
+          <p>
+            Octicons and Fluent retain size-specific names and native viewports;
+            Fluent includes its supplied Light and directional artwork. Material
+            Symbols keeps the available Outlined, Rounded and Sharp SVG styles,
+            not a variable font or invented weight/optical-size controls. Health
+            Icons retains both 48 px and supplied 24 px drawings. Feather remains
+            a separate upstream family, not relabelled Lucide.
+          </p>
+          <p>
+            Simple Icons is a limited explicit-CC0 brand subset, with per-brand
+            source and guideline links. Unknown, custom and other licence types
+            are excluded pending separate review. CC0 grants no trademark rights.
+            Remix Icon is excluded because its current licence prohibits competing
+            icon libraries.
           </p>
           <a href="/libraries/NOTICE.txt" target="_blank" rel="noreferrer">
             Read third-party licence notices <ArrowUpRight size={14} />

@@ -60,6 +60,15 @@ importers:
       '@iconify-json/bi':
         specifier: 1.2.7
         version: 1.2.7
+      '@iconify-json/feather':
+        specifier: 1.2.1
+        version: 1.2.1
+      '@iconify-json/fluent':
+        specifier: 1.2.60
+        version: 1.2.60
+      '@iconify-json/healthicons':
+        specifier: 1.2.14
+        version: 1.2.14
       '@iconify-json/heroicons':
         specifier: 1.2.3
         version: 1.2.3
@@ -75,9 +84,18 @@ importers:
       '@iconify-json/lucide':
         specifier: 1.2.137
         version: 1.2.137
+      '@iconify-json/material-symbols':
+        specifier: 1.2.96
+        version: 1.2.96
+      '@iconify-json/octicon':
+        specifier: 1.2.40
+        version: 1.2.40
       '@iconify-json/radix-icons':
         specifier: 1.2.6
         version: 1.2.6
+      '@iconify-json/simple-icons':
+        specifier: 1.2.100
+        version: 1.2.100
       '@iconify-json/tabler':
         specifier: 1.2.41
         version: 1.2.41
@@ -90,6 +108,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.2
         version: 19.2.3(@types/react@19.2.17)
+      simple-icons:
+        specifier: 16.35.0
+        version: 16.35.0
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -737,6 +758,15 @@ packages:
   '@iconify-json/bi@1.2.7':
     resolution: {integrity: sha512-IPz8WNxmLkH1I9msl+0Q4OnmjjvP4uU0Z61a4i4sqonB6vKSbMGUWuGn8/YuuszlReVj8rf+3gNv5JU8Xoljyg==}
 
+  '@iconify-json/feather@1.2.1':
+    resolution: {integrity: sha512-gURNg2TJYuO1U7DoOGCylm9TwkMfzjOH2BHdWsE0IXLXj/MNkFIJu56Wu1xRws27M8hzDzUDt/biGUa/LfAjdg==}
+
+  '@iconify-json/fluent@1.2.60':
+    resolution: {integrity: sha512-+Tc4TcygQpzm2QNQ3v1/p5V+3OWczkJzKMqUw01pzGiIYLD85uhWPY4GaERkU0+J9J9ZqGQEWKSOk/qPL2ofsw==}
+
+  '@iconify-json/healthicons@1.2.14':
+    resolution: {integrity: sha512-tCQeknyNnwP9FL2oUCL2saeJ6klxAA/Ial08KJUOMZaTZ/Z0zMz/MqbKK2kp9Tm3UiHhqhcE0iAc8eGtLR0JuQ==}
+
   '@iconify-json/heroicons@1.2.3':
     resolution: {integrity: sha512-n+vmCEgTesRsOpp5AB5ILB6srsgsYK+bieoQBNlafvoEhjVXLq8nIGN4B0v/s4DUfa0dOrjwE/cKJgIKdJXOEg==}
 
@@ -752,8 +782,17 @@ packages:
   '@iconify-json/lucide@1.2.137':
     resolution: {integrity: sha512-uKz1+tFbv1RFX/mJQNksdnyKJijNfRGSNnxfiyKtr+dLNfA3ERph+IgpXClKGOlV/5GsZwLv2jgJXQ/bjF/JAg==}
 
+  '@iconify-json/material-symbols@1.2.96':
+    resolution: {integrity: sha512-o+qGm+yczwBRKeYJlsv49o8PV1otMmVd90opcokpWw7wsIpR1JfTjUMEBXIlgdRZLosepXX2xWcVe7ydJmcWXg==}
+
+  '@iconify-json/octicon@1.2.40':
+    resolution: {integrity: sha512-b5wuweTFl0cdWyaZtyYnw5VEHiOU978pnirvbYmolWbtx5k9ckPirFZ/lcMS5Gxx2x134bjwfjaiR+3fMQYVpg==}
+
   '@iconify-json/radix-icons@1.2.6':
     resolution: {integrity: sha512-izgVBJwk37dSvsma1QsRMfCWQ4FIImbBmJId1WUURzRZA5fFyKlCcG/nZC8se0KhOBWszo2mYgLmhKJv/DFPoA==}
+
+  '@iconify-json/simple-icons@1.2.100':
+    resolution: {integrity: sha512-536pN2RCEQyy5bYwzayrs4e9egr8cmtVcbdSHLaQl/ULUsihzn1eZ0+Hhn50zgz9cbEotiynKsKQSEjFJ7qKmw==}
 
   '@iconify-json/tabler@1.2.41':
     resolution: {integrity: sha512-GHg+H/cnr0anaCoV383JONiOMxZQOdojWYNLgL3x0fRE07YW7c+AHiYmIhXet//oq26T830qitdP7l43ojiCXw==}
@@ -1638,6 +1677,10 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
+  simple-icons@16.35.0:
+    resolution: {integrity: sha512-TCfl/2+GTrx0nCo4pEWGvxhOb8c6NsqOU1OpwjtF4lwJAthB8IYVD0fuIMjLMg6JFuG1YBO0t1iETQqJLqkoJA==}
+    engines: {node: '>=0.12.18'}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -2182,6 +2225,18 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
+  '@iconify-json/feather@1.2.1':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/fluent@1.2.60':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/healthicons@1.2.14':
+    dependencies:
+      '@iconify/types': 2.0.0
+
   '@iconify-json/heroicons@1.2.3':
     dependencies:
       '@iconify/types': 2.0.0
@@ -2202,7 +2257,19 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
+  '@iconify-json/material-symbols@1.2.96':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/octicon@1.2.40':
+    dependencies:
+      '@iconify/types': 2.0.0
+
   '@iconify-json/radix-icons@1.2.6':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/simple-icons@1.2.100':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -3102,6 +3169,8 @@ snapshots:
       side-channel-weakmap: 1.0.2
 
   siginfo@2.0.0: {}
+
+  simple-icons@16.35.0: {}
 
   source-map-js@1.2.1: {}
 

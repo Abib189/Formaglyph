@@ -6,6 +6,19 @@ const mask = '<mask id="LocalMask" fill="currentColor"><path d="M1 1h13v13H1z"/>
 const svg = (body: string) => `<svg viewBox="0 0 15 15" aria-hidden="true">${body}</svg>`;
 const path = '<path fill="currentColor" d="M1 1h13v13H1z" mask="url(#LocalMask)"/>';
 describe("hash-verified catalogue local masks", () => {
+  it("retains Health Icons' root-level empty-paint masks with multiple rule-bearing paths", () => {
+    const definition = '<mask id="HealthMask" fill="none"><path d="M1 1h13v13H1z"/><path d="M2 2h10v10H2z" fill-rule="evenodd" clip-rule="evenodd"/></mask>';
+    const source = svg(definition + path.replace("LocalMask", "HealthMask"));
+    const result = sanitizeAndValidateCatalogSvg(source, { targetViewBox: [0, 0, 15, 15] });
+    expect(result.status).toBe("passed");
+    expect(result.normalizedSvg).toContain('<mask id="HealthMask" fill="none">');
+    expect(result.normalizedSvg).toContain('clip-rule="evenodd"');
+    expect(result.normalizedSvg).toContain('fill-rule="evenodd"');
+    expect(result.measurements.paths).toBe(3);
+    expect(sanitizeAndValidateCatalogSvg(result.normalizedSvg!, { targetViewBox: [0, 0, 15, 15] }).normalizedSvg).toBe(result.normalizedSvg);
+    expect(sanitizeAndValidateSvg(source).safe).toBe(false);
+    expect(sanitizeAndValidateCatalogSvg(source.replace('fill-rule="evenodd"', 'onclick="alert(1)"')).safe).toBe(false);
+  });
   it("preserves path masks deterministically while normal uploads reject them", () => {
     const source = svg(mask + path);
     expect(sanitizeAndValidateSvg(source).safe).toBe(false);

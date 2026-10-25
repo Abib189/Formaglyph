@@ -7,6 +7,7 @@ import { icons } from "@phosphor-icons/core";
 import { sanitizeAndValidateSvg } from "../../../packages/validators/src/svg.ts";
 import { sanitizeAndValidateCatalogSvg } from "../../../packages/validators/src/catalogSvg.ts";
 import { LIBRARY_SOURCES, ICONIFY_PACKAGES } from "../src/data/librarySources.ts";
+import { additionalIdentity } from "../src/data/additionalLibraryIdentity.ts";
 import { inlineLocalPathUses } from "./inline-local-paths.mjs";
 import { stripCanvasClip } from "./strip-canvas-clip.mjs";
 
@@ -65,6 +66,8 @@ console.log(`Built ${source.conceptCount} Phosphor concepts / ${source.assetCoun
 const sources = [source];
 const escapeText = (text) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 function canonicalAsset(library, name) {
+  const additional = additionalIdentity(library, name);
+  if (additional) return additional;
   if (library === "bootstrap" && name.endsWith("-fill")) return { name: name.slice(0, -5), variant: "solid", grid: 16 };
   if (library === "iconoir" && name.endsWith("-solid")) return { name: name.slice(0, -6), variant: "solid", grid: 24 };
   if (library === "ionicons") {
@@ -89,13 +92,18 @@ for (const [library, packageName] of Object.entries(ICONIFY_PACKAGES)) {
   const data = require(`${packageName}/icons.json`);
   const info = require(`${packageName}/info.json`);
   const dist = require(`${packageName}/package.json`);
-  const notice = await readFile(resolve(webRoot, `scripts/notices/${library}.txt`), "utf8");
+  const notice = await readFile(resolve(webRoot, `scripts/notices/${library}.txt`), "utf8") + (library === "simple-icons" ? "\n" + await readFile(resolve(webRoot, "scripts/notices/simple-icons-disclaimer.txt"), "utf8") : "");
   if (info.license.spdx !== config.licence || data.prefix !== packageName.slice("@iconify-json/".length)) throw new Error(`Unexpected licence/source for ${library}`);
-  const visible = Object.entries(data.icons).filter(([, icon]) => !icon.hidden);
-  if (visible.length !== info.total) throw new Error(`Incomplete snapshot: ${library}`);
+  const allVisible = Object.entries(data.icons).filter(([, icon]) => !icon.hidden);
+  if (allVisible.length !== info.total) throw new Error(`Incomplete snapshot: ${library}`);
+  // Project-level CC0 is not a licence grant for every brand. Fail closed.
+  const brandRoot = library === "simple-icons" ? dirname(require.resolve("simple-icons")) : null;
+  const brandData = brandRoot ? new Map(JSON.parse(await readFile(resolve(brandRoot, "data/simple-icons.json"), "utf8")).map(brand => [brand.slug, brand])) : null;
+  if (brandData && JSON.parse(await readFile(resolve(brandRoot, "package.json"), "utf8")).version !== info.version) throw new Error("Simple Icons metadata/geometry version mismatch.");
+  const visible = brandData ? allVisible.filter(([name]) => brandData.get(name)?.license?.type === "CC0-1.0") : allVisible;
   const librarySource = {
     ...config, version: dist.version, licenseUrl: `/libraries/${library}/LICENSE.txt`,
-    licenceLabel: library === "lucide" ? "ISC + MIT (Feather)" : "MIT",
+    licenceLabel: library === "lucide" ? "ISC + MIT (Feather)" : library === "simple-icons" ? "CC0-1.0 · explicit per-brand subset" : config.licence,
     upstreamVersion: info.version,
     distribution: `${packageName}@${dist.version}`,
     distributionUrl: "https://github.com/iconify/icon-sets",
@@ -106,6 +114,7 @@ for (const [library, packageName] of Object.entries(ICONIFY_PACKAGES)) {
   const grouped = new Map();
   await mkdir(resolve(outputRoot, library), { recursive: true });
   await writeFile(resolve(outputRoot, `${library}/LICENSE.txt`), notice);
+  if (brandData) await writeFile(resolve(outputRoot, `${library}/IMPORT-REPORT.json`), JSON.stringify({ metadata: `simple-icons@${info.version}`, policy: "Only explicitly CC0-1.0 brands; no inferred licences. Trademark/guideline restrictions still apply.", included: visible.length, excluded: allVisible.filter(([name]) => brandData.get(name)?.license?.type !== "CC0-1.0").map(([name]) => ({ name, licence: brandData.get(name)?.license?.type ?? "unspecified" })) }) + "\n");
   for (const variant of config.weights) await mkdir(resolve(webRoot, `public${base}/${variant === "solid" ? "fill" : variant}`), { recursive: true });
   for (const [upstreamName, icon] of visible) {
     const identity = canonicalAsset(library, upstreamName);
@@ -115,17 +124,20 @@ for (const [library, packageName] of Object.entries(ICONIFY_PACKAGES)) {
     if (width !== identity.grid || height !== (identity.gridHeight ?? identity.grid) || icon.rotate || icon.hFlip || icon.vFlip || icon.left || icon.top) throw new Error(`Unsupported source transform/grid: ${library}/${upstreamName}`);
     const body = library === "hugeicons" && upstreamName === "dump-truck" ? stripCanvasClip(icon.body) : icon.body;
     const raw = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true" focusable="false">${inlineLocalPathUses(body)}</svg>`;
-    const validate = library === "radix" || library === "iconoir" ? sanitizeAndValidateCatalogSvg : sanitizeAndValidateSvg;
+    const validate = ["radix", "iconoir", "healthicons"].includes(library) ? sanitizeAndValidateCatalogSvg : sanitizeAndValidateSvg;
     const validated = validate(raw, { targetViewBox: [0, 0, width, height] });
     if (!validated.safe || validated.status !== "passed" || !validated.normalizedSvg) throw new Error(`${library}/${upstreamName}: ${JSON.stringify(validated.issues)}`);
     // <desc> preserves the exact notice, including '--' separators invalid in XML comments.
-    const svg = validated.normalizedSvg.replace(/(<svg\b[^>]*>)/, `$1<desc>${escapeText(`${config.label}: ${config.sourceUrl}\nIconify snapshot: ${packageName}@${dist.version}\n${notice}`)}</desc>`);
+    const brand = brandData?.get(upstreamName);
+    const brandNotice = brand ? `\nBrand: ${brand.title}\nBrand source: ${brand.source}\nBrand licence: ${brand.license.type}\nBrand guidelines: ${brand.guidelines ?? "Not supplied; consult the source owner."}\nMetadata: simple-icons@${info.version}\nNo trademark rights or endorsement are granted.\n` : "";
+    const modification = library === "material-symbols" ? "\nFormaglyph modified this SVG: normalized the SVG wrapper and safe attributes; geometry retained from the pinned Iconify snapshot.\n" : "";
+    const svg = validated.normalizedSvg.replace(/(<svg\b[^>]*>)/, `$1<desc>${escapeText(`${config.label}: ${config.sourceUrl}\nIconify snapshot: ${packageName}@${dist.version}\n${notice}${brandNotice}${modification}`)}</desc>`);
     const pathWeight = identity.variant === "solid" ? "fill" : identity.variant;
     const url = `${base}/${pathWeight}/${identity.name}.svg`;
     await writeFile(resolve(webRoot, `public${url}`), svg);
     let concept = grouped.get(identity.name);
     if (!concept) {
-      concept = { stableId: `ico_${library}_${identity.name.replaceAll("-", "_")}`, name: identity.name, label: identity.name.replaceAll("-", " ").replace(/\b[a-z]/g, (letter) => letter.toUpperCase()), categories: [identity.name.startsWith("brand-") ? "Brand marks" : "General"], tags: identity.name.split("-"), aliases: [identity.name.replaceAll("-", " ")], assets: [] };
+      concept = { stableId: `ico_${library}_${identity.name.replaceAll("-", "_")}`, name: identity.name, label: brand?.title ?? identity.name.replaceAll("-", " ").replace(/\b[a-z]/g, (letter) => letter.toUpperCase()), categories: [brand || /^(?:brand|logo|mark-github|lockup-github)-/.test(identity.name) ? "Brand marks" : library === "healthicons" ? "Healthcare" : "General"], tags: identity.name.split("-"), aliases: [identity.name.replaceAll("-", " ")], ...(brand ? { brand: { sourceUrl: brand.source, guidelinesUrl: brand.guidelines, licence: brand.license.type, metadata: `simple-icons@${info.version}` } } : {}), assets: [] };
       grouped.set(identity.name, concept);
     }
     if (concept.assets.some((asset) => asset.variant === identity.variant)) throw new Error(`Duplicate variant: ${library}/${upstreamName}`);

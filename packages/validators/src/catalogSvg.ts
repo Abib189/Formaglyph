@@ -2,7 +2,7 @@ import { DOMParser } from "@xmldom/xmldom";
 import { sanitizeAndValidateSvg, type SvgValidationOptions, type SvgValidationResult } from "./svg";
 
 /** Only for hash-verified upstream catalogues, never candidate uploads.
- * Radix's six panel assets use local path-only masks. Keep those exact semantics
+ * Radix and Health Icons use local path-only masks. Keep those exact semantics
  * without enabling defs/use, arbitrary URLs, filters or mask support in user SVGs.
  */
 export function sanitizeAndValidateCatalogSvg(source: string, options: SvgValidationOptions = {}): SvgValidationResult {
@@ -36,11 +36,11 @@ export function sanitizeAndValidateCatalogSvg(source: string, options: SvgValida
     issues: [{ ruleId: "svg.catalog.invalid-mask", severity: "blocker", message: "Only root-level path masks and resolved local references are allowed in upstream catalogues." }],
   });
   if (new TextEncoder().encode(source).length > (options.maxBytes ?? 1_048_576) || /<!DOCTYPE|<!ENTITY|<\?/i.test(source)) return fail();
-  const definitions = new Map<string, string>();
+  const definitions = new Map<string, { fill: string; geometry: string }>();
   let invalid = false;
-  let body = source.replace(/<mask id="([a-zA-Z][a-zA-Z0-9_-]{0,79})" fill="currentColor">(<path d="[^"]+"\/><\/mask>)/g, (_all, id: string, contents: string) => {
+  let body = source.replace(/<mask id="([a-zA-Z][a-zA-Z0-9_-]{0,79})" fill="(currentColor|none)">((?:<path\b[^>]*\/>){1,8})<\/mask>/g, (_all, id: string, fill: string, geometry: string) => {
     if (definitions.has(id)) invalid = true;
-    definitions.set(id, contents.slice(0, -"</mask>".length));
+    definitions.set(id, { fill, geometry });
     return "";
   });
   if (invalid || !definitions.size || definitions.size > 8 || /<\/?mask\b/i.test(body)) return fail();
@@ -67,14 +67,14 @@ export function sanitizeAndValidateCatalogSvg(source: string, options: SvgValida
   const viewBox = (options.targetViewBox ?? [0, 0, 24, 24]).join(" ");
   let extraPaths = 0;
   const masks: string[] = [];
-  for (const [id, geometry] of definitions) {
+  for (const [id, { fill, geometry }] of definitions) {
     if (![...references.values()].includes(id)) return fail();
     const checked = sanitizeAndValidateSvg(`<svg viewBox="${viewBox}" aria-hidden="true">${geometry}</svg>`, options);
     if (!checked.safe || checked.status !== "passed" || !checked.normalizedSvg) return fail();
     extraPaths += checked.measurements.paths;
-    const path = checked.normalizedSvg.match(/<path\b[^>]*\/>/)?.[0];
-    if (!path) return fail();
-    masks.push(`<mask id="${id}" fill="currentColor">${path}</mask>`);
+    const paths = [...checked.normalizedSvg.matchAll(/<path\b[^>]*\/>/g)].map(match => match[0]).join("");
+    if (!paths) return fail();
+    masks.push(`<mask id="${id}" fill="${fill}">${paths}</mask>`);
   }
   const elements = result.measurements.elements + definitions.size + extraPaths;
   if (elements > (options.maxElements ?? 512) || Math.max(result.measurements.maximumDepth, 3) > (options.maxDepth ?? 32)) return fail();

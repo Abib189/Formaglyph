@@ -105,7 +105,7 @@ export function prepareDesignSvg(
     .join(" ");
   const enrichedOpening = `${cleanOpening.slice(0, -1)} ${attributes}>`;
   const withoutTitle = svg.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i, "");
-  return withoutTitle.replace(
+  return `<!-- Formaglyph modified this SVG: added design-handoff metadata and presentation dimensions; source geometry unchanged. -->\n` + withoutTitle.replace(
     opening,
     `${enrichedOpening}<title>${escapeXml(metadata.label)}</title>`,
   );

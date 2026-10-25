@@ -13,13 +13,13 @@ export type GenerationJobStatus = "queued" | "running" | "completed" | "failed" 
 export type ApiScope = "read" | "read_write";
 export type IntegrationName = "github" | "figma" | "penpot";
 
-export type CatalogVariant = "regular" | "solid" | "thin" | "light" | "bold" | "duotone" | "mini" | "micro" | "sharp";
-export type CatalogLibrary = "core" | "projects" | "phosphor" | "lucide" | "tabler" | "heroicons" | "hugeicons" | "bootstrap" | "iconoir" | "radix" | "ionicons";
+export type CatalogVariant = "regular" | "solid" | "thin" | "light" | "bold" | "duotone" | "mini" | "micro" | "sharp" | "rounded" | "rounded-solid" | "sharp-outline" | "sharp-solid";
+export type CatalogLibrary = "core" | "projects" | "phosphor" | "lucide" | "tabler" | "heroicons" | "hugeicons" | "bootstrap" | "iconoir" | "radix" | "ionicons" | "octicons" | "fluent" | "material-symbols" | "healthicons" | "feather" | "simple-icons";
 
 // External catalogue weights never widen the Regular/Solid submission schema.
 export interface CatalogIcon extends Omit<IconRecord, "variant" | "licence"> {
   variant: CatalogVariant;
-  licence: "MIT" | "ISC";
+  licence: "MIT" | "ISC" | "Apache-2.0" | "CC0-1.0";
   library?: CatalogLibrary;
   libraryLabel?: string;
   sourceUrl?: string;
@@ -31,6 +31,8 @@ export interface CatalogIcon extends Omit<IconRecord, "variant" | "licence"> {
   gridHeight?: number;
   exactPaint?: boolean;
   fixedWhite?: boolean;
+  brandSourceUrl?: string;
+  brandGuidelinesUrl?: string;
   categories?: string[];
   Icon?: Icon;
   previewWeight: PreviewWeight;
