@@ -52,7 +52,7 @@ supabase/               Local config, migration, seed data, and database tests
 
 ## Run the web app
 
-Requirements: Node.js 20+ and pnpm.
+Requirements: Node.js 22+ and pnpm 11.9.0 (the Railway IaC SDK requires Node 22 or newer).
 
 ```bash
 pnpm install
