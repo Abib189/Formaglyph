@@ -77,7 +77,7 @@ describe("icon colour", () => {
   });
 
   it("retains each upstream licence, duotone opacity and native grid in coloured exports", () => {
-    for (const library of ["phosphor", "lucide", "tabler", "heroicons"]) {
+    for (const library of ["phosphor", "lucide", "tabler", "heroicons", "hugeicons"]) {
       const manifest = JSON.parse(
         readFileSync(
           new URL(
@@ -93,6 +93,7 @@ describe("icon colour", () => {
           "utf8",
         );
         const result = colourIconSvg(source, "#123ABC");
+        expect(result.match(/<desc>[\s\S]*?<\/desc>/g)).toEqual(source.match(/<desc>[\s\S]*?<\/desc>/g));
         expect(result.match(/<!--[\s\S]*?-->/g)).toEqual(
           source.match(/<!--[\s\S]*?-->/g),
         );

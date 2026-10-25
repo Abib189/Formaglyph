@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@iconify-json/heroicons": "1.2.3",
+    "@iconify-json/hugeicons": "1.2.35",
     "@iconify-json/lucide": "1.2.137",
     "@iconify-json/tabler": "1.2.41",
     "@phosphor-icons/core": "2.1.1",

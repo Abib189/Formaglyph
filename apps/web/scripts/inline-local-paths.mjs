@@ -1,4 +1,4 @@
-// Build-time only. Three pinned Tabler SVGs reuse a single local path definition.
+// Build-time only. Three pinned Tabler SVGs and Hugeicons pokeball reuse a local path.
 // Accept exactly that narrow shape, inline the geometry, then run the unchanged validator.
 // This is not a general <use> resolver and never enables references in user SVGs.
 export function inlineLocalPathUses(body) {

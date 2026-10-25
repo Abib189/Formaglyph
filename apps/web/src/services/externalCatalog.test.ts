@@ -89,6 +89,7 @@ const additions = [
   { id: "lucide", concepts: 1856, count: 1856 },
   { id: "tabler", concepts: 5166, count: 6220 },
   { id: "heroicons", concepts: 324, count: 1288 },
+  { id: "hugeicons", concepts: 6065, count: 6065 },
 ] as const;
 const newManifests = Object.fromEntries(additions.map(({ id }) => [id, JSON.parse(readFileSync(new URL(`../../public/libraries/${id}/catalog.json`, import.meta.url), "utf8"))]));
 const newAssets = additions.flatMap(({ id }) => expandExternalManifest(newManifests[id], id));
@@ -108,7 +109,7 @@ describe("additional open-source library snapshots", () => {
         expect(svg, asset.id).toContain(notice);
         expect(svg, asset.id).toContain(`Iconify snapshot: @iconify-json/${library.id}@${asset.version}`);
         const grid = asset.gridSize!;
-        expect(sanitizeAndValidateSvg(svg, { targetViewBox: [0, 0, grid, grid] }).status, asset.id).toBe("passed");
+        expect(sanitizeAndValidateSvg(svg, { targetViewBox: [0, 0, grid, asset.gridHeight ?? grid] }).status, asset.id).toBe("passed");
       }
     }, 30000);
   }
@@ -135,6 +136,31 @@ describe("additional open-source library snapshots", () => {
     copy.concepts[0].assets.find((asset: { variant: string }) => asset.variant === "mini").grid = 24;
     expect(() => expandExternalManifest(copy, "heroicons")).toThrow();
     expect(CATALOG_WEIGHTS).toContain("micro");
+  });
+
+  it("keeps Hugeicons free Stroke Rounded separate, searchable and without invented Pro weights", () => {
+    const hugeicons = newAssets.filter((asset) => asset.library === "hugeicons");
+    expect(hugeicons.every((asset) => asset.variant === "regular" && asset.gridSize === 24 && asset.provenance.kind === "third-party")).toBe(true);
+    expect(searchIcons(hugeicons, "", { variant: "solid" })).toHaveLength(0);
+    expect(searchIcons(hugeicons, "activity 01", { variant: "regular" })[0]?.name).toBe("activity-01");
+    expect(searchIcons(hugeicons, "first bracket", { variant: "regular" })[0]?.name).toBe("1st-bracket");
+    expect(hugeicons[0]).toMatchObject({ version: "1.2.35", licence: "MIT", distribution: "@iconify-json/hugeicons@1.2.35", sourceUrl: "https://github.com/hugeicons/hugeicons" });
+    const copy = structuredClone(newManifests.hugeicons);
+    copy.concepts[0].assets[0].variant = "solid";
+    copy.concepts[0].assets[0].url = copy.concepts[0].assets[0].url.replace("/regular/", "/fill/");
+    expect(() => expandExternalManifest(copy, "hugeicons")).toThrow();
+  });
+
+  it("retains the one native 24×25 Hugeicons viewport and rejects a forged height", async () => {
+    const asset = newAssets.find((asset) => asset.library === "hugeicons" && asset.name === "image-flip-horizontal")!;
+    expect(asset).toMatchObject({ gridSize: 24, gridHeight: 25 });
+    const svg = readAsset(asset.assetUrl!);
+    expect(svg).toContain('viewBox="0 0 24 25"');
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(svg)));
+    await expect(fetchCatalogSvg(asset)).resolves.toBe(svg);
+    const copy = structuredClone(newManifests.hugeicons);
+    copy.concepts.find((concept: { name: string }) => concept.name === "image-flip-horizontal").assets[0].gridHeight = 24;
+    expect(() => expandExternalManifest(copy, "hugeicons")).toThrow();
   });
 
   it("records snapshot versions separately from upstream release and combined licences", () => {

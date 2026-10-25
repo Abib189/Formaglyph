@@ -9,7 +9,7 @@ export const weightLabel = (weight: CatalogVariant) => weight === "solid" ? "Sol
 interface ExternalManifest {
   schemaVersion: number;
   source: { id: ExternalLibraryId; label: string; version: string; licence: "MIT" | "ISC"; licenceLabel?: string; sourceUrl: string; licenseUrl: string; conceptCount: number; assetCount: number; grid: number; distribution?: string; upstreamVersion?: string };
-  concepts: Array<{ stableId: string; name: string; label: string; categories: string[]; tags: string[]; aliases: string[]; assets: Array<{ variant: CatalogVariant; grid?: number; url: string; sha256: string }> }>;
+  concepts: Array<{ stableId: string; name: string; label: string; categories: string[]; tags: string[]; aliases: string[]; assets: Array<{ variant: CatalogVariant; grid?: number; gridHeight?: number; url: string; sha256: string }> }>;
 }
 
 export function expandExternalManifest(manifest: ExternalManifest, library: ExternalLibraryId): CatalogIcon[] {
@@ -27,7 +27,8 @@ export function expandExternalManifest(manifest: ExternalManifest, library: Exte
       const pathWeight = asset.variant === "solid" ? "fill" : asset.variant;
       const grid = asset.grid ?? source.grid;
       const expectedGrid = library === "heroicons" && asset.variant === "mini" ? 20 : library === "heroicons" && asset.variant === "micro" ? 16 : config.grid;
-      if (identities.has(id) || !(config.weights as readonly CatalogVariant[]).includes(asset.variant) || grid !== expectedGrid || !/^[a-f0-9]{64}$/.test(asset.sha256) || asset.url !== `/libraries/${library}/${source.version}-fg.1/${pathWeight}/${concept.name}.svg`) {
+      const expectedHeight = library === "hugeicons" && concept.name === "image-flip-horizontal" ? 25 : expectedGrid;
+      if (identities.has(id) || !(config.weights as readonly CatalogVariant[]).includes(asset.variant) || grid !== expectedGrid || (asset.gridHeight ?? grid) !== expectedHeight || !/^[a-f0-9]{64}$/.test(asset.sha256) || asset.url !== `/libraries/${library}/${source.version}-fg.1/${pathWeight}/${concept.name}.svg`) {
         throw new Error("Invalid external icon asset.");
       }
       identities.add(id);
@@ -42,7 +43,7 @@ export function expandExternalManifest(manifest: ExternalManifest, library: Exte
         provenance: { kind: "third-party", source: source.label, sourceRevision: `${source.version}-fg.1`, disclosed: true },
         library, libraryLabel: source.label, sourceUrl: source.sourceUrl, licenseUrl: source.licenseUrl,
         licenceLabel: source.licenceLabel, distribution: source.distribution, upstreamVersion: source.upstreamVersion,
-        gridSize: grid, assetUrl: asset.url, contentHash: asset.sha256,
+        gridSize: grid, ...(asset.gridHeight ? { gridHeight: asset.gridHeight } : {}), assetUrl: asset.url, contentHash: asset.sha256,
       });
     }
   }
@@ -70,7 +71,7 @@ export async function fetchCatalogSvg(icon: CatalogIcon, signal?: AbortSignal) {
   const svg = await response.text();
   if (icon.contentHash && await sha256Text(svg) !== icon.contentHash) throw new Error("Asset integrity check failed.");
   const grid = icon.gridSize ?? 24;
-  const validation = sanitizeAndValidateSvg(svg, { targetViewBox: [0, 0, grid, grid] });
+  const validation = sanitizeAndValidateSvg(svg, { targetViewBox: [0, 0, grid, icon.gridHeight ?? grid] });
   if (!validation.safe || validation.status !== "passed") throw new Error("Unsafe SVG asset.");
   // Return the verified source, retaining its complete embedded licence notice.
   return svg;

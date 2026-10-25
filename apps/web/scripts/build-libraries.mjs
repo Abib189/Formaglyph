@@ -7,6 +7,7 @@ import { icons } from "@phosphor-icons/core";
 import { sanitizeAndValidateSvg } from "../../../packages/validators/src/svg.ts";
 import { LIBRARY_SOURCES } from "../src/data/librarySources.ts";
 import { inlineLocalPathUses } from "./inline-local-paths.mjs";
+import { stripCanvasClip } from "./strip-canvas-clip.mjs";
 
 const require = createRequire(import.meta.url);
 const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -63,6 +64,8 @@ console.log(`Built ${source.conceptCount} Phosphor concepts / ${source.assetCoun
 const sources = [source];
 const escapeText = (text) => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 function canonicalAsset(library, name) {
+  // This upstream icon intentionally has a non-square viewport. Do not crop or scale its geometry.
+  if (library === "hugeicons" && name === "image-flip-horizontal") return { name, variant: "regular", grid: 24, gridHeight: 25 };
   if (library === "tabler" && name.endsWith("-filled")) return { name: name.slice(0, -7), variant: "solid", grid: 24 };
   if (library === "heroicons") {
     if (name.endsWith("-16-solid")) return { name: name.slice(0, -9), variant: "micro", grid: 16 };
@@ -72,7 +75,7 @@ function canonicalAsset(library, name) {
   return { name, variant: "regular", grid: 24 };
 }
 
-for (const library of ["lucide", "tabler", "heroicons"]) {
+for (const library of ["lucide", "tabler", "heroicons", "hugeicons"]) {
   const config = LIBRARY_SOURCES[library];
   const packageName = `@iconify-json/${library}`;
   const data = require(`${packageName}/icons.json`);
@@ -101,8 +104,9 @@ for (const library of ["lucide", "tabler", "heroicons"]) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(identity.name) || !config.weights.includes(identity.variant)) throw new Error(`Unsafe identity: ${library}/${upstreamName}`);
     const width = icon.width ?? data.width;
     const height = icon.height ?? data.height;
-    if (width !== identity.grid || height !== identity.grid || icon.rotate || icon.hFlip || icon.vFlip || icon.left || icon.top) throw new Error(`Unsupported source transform/grid: ${library}/${upstreamName}`);
-    const raw = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true" focusable="false">${inlineLocalPathUses(icon.body)}</svg>`;
+    if (width !== identity.grid || height !== (identity.gridHeight ?? identity.grid) || icon.rotate || icon.hFlip || icon.vFlip || icon.left || icon.top) throw new Error(`Unsupported source transform/grid: ${library}/${upstreamName}`);
+    const body = library === "hugeicons" && upstreamName === "dump-truck" ? stripCanvasClip(icon.body) : icon.body;
+    const raw = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true" focusable="false">${inlineLocalPathUses(body)}</svg>`;
     const validated = sanitizeAndValidateSvg(raw, { targetViewBox: [0, 0, width, height] });
     if (!validated.safe || validated.status !== "passed" || !validated.normalizedSvg) throw new Error(`${library}/${upstreamName}: ${JSON.stringify(validated.issues)}`);
     // <desc> preserves the exact notice, including '--' separators invalid in XML comments.
@@ -116,7 +120,7 @@ for (const library of ["lucide", "tabler", "heroicons"]) {
       grouped.set(identity.name, concept);
     }
     if (concept.assets.some((asset) => asset.variant === identity.variant)) throw new Error(`Duplicate variant: ${library}/${upstreamName}`);
-    concept.assets.push({ variant: identity.variant, grid: identity.grid, upstreamName, url, sha256: createHash("sha256").update(svg).digest("hex") });
+    concept.assets.push({ variant: identity.variant, grid: identity.grid, ...(identity.gridHeight ? { gridHeight: identity.gridHeight } : {}), upstreamName, url, sha256: createHash("sha256").update(svg).digest("hex") });
   }
   for (const [alias, entry] of Object.entries(data.aliases ?? {})) {
     if (entry.rotate || entry.hFlip || entry.vFlip) continue;

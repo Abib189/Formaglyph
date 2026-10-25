@@ -6,6 +6,7 @@ export const LIBRARY_SOURCES = {
   lucide: { id: "lucide", label: "Lucide", sourceUrl: "https://github.com/lucide-icons/lucide", licence: "ISC", grid: 24, weights: ["regular"] },
   tabler: { id: "tabler", label: "Tabler Icons", sourceUrl: "https://github.com/tabler/tabler-icons", licence: "MIT", grid: 24, weights: ["regular", "solid"] },
   heroicons: { id: "heroicons", label: "Heroicons", sourceUrl: "https://github.com/tailwindlabs/heroicons", licence: "MIT", grid: 24, weights: ["regular", "solid", "mini", "micro"] },
+  hugeicons: { id: "hugeicons", label: "Hugeicons", sourceUrl: "https://github.com/hugeicons/hugeicons", licence: "MIT", grid: 24, weights: ["regular"] },
 } as const satisfies Record<string, { id: string; label: string; sourceUrl: string; licence: "MIT" | "ISC"; grid: number; weights: readonly CatalogVariant[] }>;
 
 export type ExternalLibraryId = keyof typeof LIBRARY_SOURCES;

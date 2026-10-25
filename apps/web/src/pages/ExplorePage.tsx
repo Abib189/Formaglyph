@@ -365,7 +365,7 @@ function CatalogInspector({
         <div>
           <dt>Native grid</dt>
           <dd>
-            {selected.gridSize ?? 24} × {selected.gridSize ?? 24}
+            {selected.gridSize ?? 24} × {selected.gridHeight ?? selected.gridSize ?? 24}
           </dd>
         </div>
         <div>
@@ -1010,6 +1010,10 @@ export function ExplorePage() {
             Select an icon to compare available weights and inspect actual-size
             Family Proof specimens. Copy and download preserve source metadata;
             design handoff is clipboard-based, not live synchronization.
+          </p>
+          <p>
+            Hugeicons contains the free Stroke Rounded collection, shown as
+            Regular. Paid Pro styles are not included.
           </p>
           <a href="/libraries/NOTICE.txt" target="_blank" rel="noreferrer">
             Read third-party licence notices <ArrowUpRight size={14} />
