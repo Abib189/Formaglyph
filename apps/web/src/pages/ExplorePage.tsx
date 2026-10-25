@@ -342,6 +342,10 @@ function CatalogInspector({
           colour={colour}
           onChange={onColourChange}
           label="Change icon colour"
+          previewLabel={selected.name}
+          renderPreview={(value) => (
+            <CatalogGlyph icon={displayIcon} size={32} colour={value} />
+          )}
         />
       </div>
       <dl className="inspector-facts">
@@ -687,6 +691,7 @@ export function ExplorePage() {
   );
   const onColourChange = (next: string | null) =>
     set({ color: next?.slice(1) ?? null }, true);
+  const previewIcon = selected ?? iconResults[0];
   const controls = (
     <>
       <label>
@@ -720,7 +725,14 @@ export function ExplorePage() {
           ))}
         </select>
       </label>
-      <IconColourControl colour={colour} onChange={onColourChange} />
+      <IconColourControl
+        colour={colour}
+        onChange={onColourChange}
+        previewLabel={`${previewIcon.name}${selected ? "" : " · example"}`}
+        renderPreview={(value) => (
+          <CatalogGlyph icon={previewIcon} size={32} colour={value} />
+        )}
+      />
       <label className="mobile-category-select">
         <span>Category</span>
         <select
