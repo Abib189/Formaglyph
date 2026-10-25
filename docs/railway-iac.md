@@ -27,9 +27,21 @@ railway config apply --environment a1fe3272-826c-4288-83e5-11d080bcb2d2 --plan /
 railway config plan --environment a1fe3272-826c-4288-83e5-11d080bcb2d2
 ```
 
-Keep plan artifacts outside the repository. A saved plan pins its source tree and configuration ETag; if either changes, discard it and review a fresh plan. Expected migration changes are build/watch/health/restart/rollout settings and the partial ownership claim, **not** new services or resource/domain/variable deletions. Subsequent plans should have no changes. Do not use variable export/decrypt/show-values flags.
+Keep plan artifacts outside the repository. A saved plan pins its source tree and configuration ETag; if either changes, discard it and review a fresh plan. Expected migration changes are build/watch/health/restart/rollout settings and the partial ownership claim, **not** new services or resource/domain/variable deletions. Subsequent plans should have no effective changes; see the planner caveat below. Do not use variable export/decrypt/show-values flags.
 
 After green CI, upload a clean checkout of that exact commit with the established `railway up` workflow. Verify the resulting deployment, `/health`, Explore, and public catalog assets. No GitHub source integration or additional infrastructure is introduced by this migration.
+
+### CLI 5.64.1 default-value caveat
+
+After a successful apply, this CLI can still report only `deploy.restartPolicyType (null → "ON_FAILURE")`. Its current graph omits the default while its desired graph retains the explicitly authored value. During this migration, the read-only service settings API and the new deployment's effective manifest independently returned `ON_FAILURE` with three retries, including after the legacy file was removed. Keep the policy explicit in source; do not repeatedly apply this isolated false positive just to clear the plan, and do not suppress any other changes.
+
+Verify the actual value with this narrowly scoped read-only query and the deployment's `meta.serviceManifest.deploy`:
+
+```sh
+railway api 'query { serviceInstance(environmentId: "a1fe3272-826c-4288-83e5-11d080bcb2d2", serviceId: "d1cfce73-9e74-4ac5-a479-eb8d30c5fac1") { restartPolicyType restartPolicyMaxRetries } }' --compact
+```
+
+If that value differs, treat the plan as real drift and investigate. The [documented platform default](https://docs.railway.com/deployments/restart-policy) is On Failure; the authored retry limit remains three, not the platform's default ten.
 
 ## One-time migration and rollback
 
