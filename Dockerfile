@@ -7,6 +7,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/cli/package.json packages/cli/package.json
 COPY packages/icons/package.json packages/icons/package.json
+COPY packages/react/package.json packages/react/package.json
 COPY packages/schema/package.json packages/schema/package.json
 COPY packages/validators/package.json packages/validators/package.json
 RUN pnpm install --frozen-lockfile
@@ -14,6 +15,7 @@ RUN pnpm install --frozen-lockfile
 COPY apps/web apps/web
 COPY packages/cli packages/cli
 COPY packages/icons packages/icons
+COPY packages/react packages/react
 COPY packages/schema packages/schema
 COPY packages/validators packages/validators
 

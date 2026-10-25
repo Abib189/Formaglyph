@@ -34,7 +34,7 @@ test("preserves legacy build and non-default rollout settings in active SDK outp
     builder: "DOCKERFILE",
     dockerfilePath: "Dockerfile",
     watchPatterns: [
-      "/apps/web/**", "/packages/cli/**", "/packages/icons/**", "/packages/schema/**",
+      "/apps/web/**", "/packages/cli/**", "/packages/icons/**", "/packages/react/**", "/packages/schema/**",
       "/packages/validators/**", "/package.json", "/pnpm-lock.yaml",
       "/pnpm-workspace.yaml", "/Dockerfile", "/.railway/**",
     ],

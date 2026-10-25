@@ -23,6 +23,7 @@ This is an early production foundation, not yet the complete hosted platform or 
 - Ranked core-catalog search with reviewed aliases, intent phrases, typo tolerance, category and weight filters, and true sibling-variant comparison.
 - A versioned public REST API for catalog reads plus one scoped, text-only project draft endpoint.
 - A self-contained npm-ready `@formaglyph/icons` release artifact with typed catalog and per-asset exports.
+- A directly installable `@formaglyph/react` 0.1.0 archive: 48 original Core concepts / 96 accessible Regular/Solid components, React 18/19, ESM/CommonJS and per-icon imports. Explore's **Use in React** panel offers verified package and standalone component downloads with selection-aware usage. It is not published to npm; see [developer delivery](./docs/developer-delivery.md).
 - An npm-ready `@formaglyph/cli` with human and JSON output, guarded SVG export, local stdio MCP, and a hosted Streamable HTTP MCP server.
 - Four read-only MCP tools, one non-destructive draft handoff tool, catalog resources, and an icon-selection prompt for AI agents.
 - Admin-issued, SHA-256-hashed project tokens with a 30-day default lifetime, immediate revocation, `drafts:write` scope, and transactional audit records.
@@ -36,7 +37,7 @@ This is an early production foundation, not yet the complete hosted platform or 
 - Unit tests for search, storage, and workflow policy.
 - The approved V1 product requirements and architecture direction.
 
-GPU-backed OmniSVG and StarVector workers, hosted generation, vector semantic search, full private read APIs, OAuth-based MCP authorization, framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). The local creation adapter, public CLI, public MCP reads, and scoped project draft handoff are live.
+GPU-backed OmniSVG and StarVector workers, hosted generation, vector semantic search, full private read APIs, OAuth-based MCP authorization, additional framework wrappers, and the remaining reviewed icon library remain planned milestones in the [V1 PRD](./docs/ai-native-icon-platform-v1-prd.md). Generation is paused in Create and Settings; the local geometry adapter remains in the repository but is not offered as an active generation workflow. Public CLI/MCP reads and scoped project draft handoff remain available.
 
 ## Repository layout
 
@@ -46,6 +47,7 @@ docs/                   Product requirements and architecture direction
 packages/schema/        Canonical contracts shared across every product surface
 packages/validators/    Reusable SVG sanitizer and deterministic validation rules
 packages/icons/         Original geometry, generated SVG assets, hashes, and metadata
+packages/react/         Original Core React components and retained release archives
 packages/cli/           Public CLI, catalog client, and stdio/HTTP MCP server
 supabase/               Local config, migration, seed data, and database tests
 ```
@@ -186,7 +188,7 @@ SVG safety and structural checks live in `@formaglyph/validators`. The package p
 
 Original geometry and release metadata live in `@formaglyph/icons`. `pnpm --filter @formaglyph/icons assets` deterministically rebuilds the committed SVG tree and SHA-256 manifest; tests require every stable concept to have both Regular and Solid variants and pass the publication validator.
 
-The `pack:check` scripts build and inspect both npm-ready packages without publishing them. Actual registry publication requires a separately approved release action and registry credentials.
+The `pack:check` scripts build and inspect the icon, CLI and React packages without publishing them. React checks install the retained archive into isolated React 18/19 consumers. Actual registry publication requires a separately approved release action and registry credentials.
 
 ## Licensing and trademark
 

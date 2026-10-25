@@ -28,6 +28,8 @@ import {
 } from "../services/externalCatalog";
 import { CatalogMotionPreview } from "../components/CatalogMotionPreview";
 import { IconColourControl } from "../components/IconColourControl";
+import { ReactHandoff } from "../components/ReactHandoff";
+import { supportsReactDelivery } from "../services/reactDelivery";
 import {
   colourIconSvg,
   iconProofBackground,
@@ -186,6 +188,7 @@ function CatalogInspector({
   onClose,
   colour,
   onColourChange,
+  size,
 }: {
   selected: CatalogIcon;
   siblings: CatalogIcon[];
@@ -193,6 +196,7 @@ function CatalogInspector({
   onClose: () => void;
   colour: string | null;
   onColourChange: (colour: string | null) => void;
+  size: number;
 }) {
   const [loaded, setLoaded] = useState<{ id: string; svg: string } | null>(
     null,
@@ -404,6 +408,7 @@ function CatalogInspector({
           </dd>
         </div>
       </dl>
+      {supportsReactDelivery(selected) && <ReactHandoff icon={selected} colour={colour} size={size} />}
       <div className="inspector-primary-actions">
         <button
           className="primary-action"
@@ -1015,6 +1020,7 @@ export function ExplorePage() {
             onClose={closeInspector}
             colour={colour}
             onColourChange={onColourChange}
+            size={size}
           />
         )}
       </div>

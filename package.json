@@ -16,7 +16,7 @@
     "iac:plan": "pnpm railway config plan --environment a1fe3272-826c-4288-83e5-11d080bcb2d2 --detailed-exit-code",
     "iac:verify": "tsx .railway/verify-restart.cjs",
     "build": "pnpm -r --if-present build",
-    "check": "pnpm typecheck && pnpm test && pnpm build && pnpm --filter @formaglyph/icons pack:check && pnpm --filter @formaglyph/cli pack:check",
+    "check": "pnpm typecheck && pnpm test && pnpm build && pnpm --filter @formaglyph/icons pack:check && pnpm --filter @formaglyph/cli pack:check && pnpm --filter @formaglyph/react pack:check && pnpm --filter @formaglyph/web smoke:downloads",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
     "db:reset": "supabase db reset --local",

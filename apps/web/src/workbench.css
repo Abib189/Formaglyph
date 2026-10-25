@@ -1307,6 +1307,17 @@ summary {
   margin: 4px 0 12px;
   overflow-wrap: anywhere;
 }
+.react-handoff-content { padding-top: 12px; min-width: 0; }
+.react-handoff-proof { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.react-handoff-glyph { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 6px; }
+.react-handoff-proof code { font: 500 12px/1.5 var(--mono); overflow-wrap: anywhere; }
+.react-handoff-proof small { display: block; color: var(--muted); margin-top: 3px; font: 400 10px/1.5 var(--sans); }
+.react-code-label { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; margin: 16px 0 6px; font-size: 11px; }
+.react-code-label .text-action { font-size: 11px; min-height: 32px; padding: 4px 0; }
+.react-handoff pre { max-width: 100%; overflow: auto; overscroll-behavior: contain; background: var(--surface); color: var(--fg); border: 1px solid var(--soft-line); border-radius: 8px; padding: 12px; margin: 0; font: 400 11px/1.8 var(--mono); white-space: pre; }
+.react-handoff-downloads { display: grid; gap: 8px; margin-top: 12px; }
+.react-handoff-downloads button { width: 100%; min-height: 40px; font-size: 12px; }
+.react-handoff .react-handoff-note { font-size: 11px; }
 .inspector-primary-actions {
   position: sticky;
   bottom: 0;

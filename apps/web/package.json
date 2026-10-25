@@ -5,19 +5,22 @@
   "type": "module",
   "scripts": {
     "libraries": "node --import tsx scripts/build-libraries.mjs",
-    "dev": "pnpm libraries && vite",
-    "build": "pnpm libraries && tsc --noEmit && vite build",
+    "downloads:react": "pnpm --filter @formaglyph/react build && node scripts/build-react-downloads.mjs",
+    "dev": "pnpm downloads:react && pnpm libraries && vite",
+    "build": "pnpm downloads:react && pnpm libraries && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm libraries && vitest run",
+    "test": "pnpm downloads:react && pnpm libraries && vitest run",
     "test:watch": "vitest",
     "check": "pnpm typecheck && pnpm test && pnpm build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "smoke:downloads": "node scripts/smoke-react-downloads.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@fontsource/newsreader": "^5.3.0",
     "@formaglyph/icons": "workspace:*",
+    "@formaglyph/react": "workspace:*",
     "@formaglyph/schema": "workspace:*",
     "@formaglyph/validators": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",

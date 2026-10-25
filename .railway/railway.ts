@@ -21,6 +21,7 @@ export default defineRailway((ctx) => {
         "/apps/web/**",
         "/packages/cli/**",
         "/packages/icons/**",
+        "/packages/react/**",
         "/packages/schema/**",
         "/packages/validators/**",
         "/package.json",
