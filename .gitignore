@@ -20,6 +20,8 @@ supabase/.branches/
 !.railway/railway.ts
 !.railway/railway.test.ts
 !.railway/tsconfig.json
+!.railway/restart-policy.ts
+!.railway/verify-restart.cjs
 
 # Keep the final production QA record, not intermediate design captures.
 apps/web/qa/*

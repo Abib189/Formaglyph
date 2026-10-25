@@ -1,4 +1,5 @@
 import { defineRailway, project, service } from "railway/iac";
+import { expectedRestartPolicy } from "./restart-policy.ts";
 
 // This repository owns only this service, not the entire environment.
 export const partial = "formaglyph-web";
@@ -32,8 +33,10 @@ export default defineRailway((ctx) => {
     deploy: {
       healthcheckPath: "/health",
       healthcheckTimeout: 120,
-      restartPolicyType: "ON_FAILURE",
-      restartPolicyMaxRetries: 3,
+      // ON_FAILURE is Railway's omitted default. Explicitly spelling it here
+      // causes perpetual null -> ON_FAILURE drift in CLI 5.64.1 and 5.71.0.
+      // pnpm iac:verify checks the actual policy independently of the planner.
+      restartPolicyMaxRetries: expectedRestartPolicy.restartPolicyMaxRetries,
       overlapSeconds: 20,
       drainingSeconds: 10,
     },

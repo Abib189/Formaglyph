@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createRailwayContext, project } from "railway/iac";
 import railway, { partial } from "./railway";
+import { expectedRestartPolicy, verifyRestartPolicy } from "./restart-policy";
 
 const target = {
   projectId: "7d28f580-dff3-4779-b51d-322a484adb96",
@@ -27,7 +28,7 @@ test("owns only the existing web service and leaves variables and source unmanag
   }
 });
 
-test("carries every effective legacy build and rollout setting into active SDK output", async () => {
+test("preserves legacy build and non-default rollout settings in active SDK output", async () => {
   const web = (await definition()).resources[0];
   assert.deepEqual(web.build, {
     builder: "DOCKERFILE",
@@ -41,7 +42,6 @@ test("carries every effective legacy build and rollout setting into active SDK o
   assert.deepEqual(web.deploy, {
     healthcheckPath: "/health",
     healthcheckTimeout: 120,
-    restartPolicyType: "ON_FAILURE",
     restartPolicyMaxRetries: 3,
     overlapSeconds: 20,
     drainingSeconds: 10,
@@ -50,6 +50,28 @@ test("carries every effective legacy build and rollout setting into active SDK o
   assert.deepEqual(web.networking.customDomains, {
     "formaglyph.com": { port: 8080 }, "www.formaglyph.com": { port: 8080 },
   });
+});
+
+test("uses the canonical platform default while explicitly limiting retries", async () => {
+  const web = (await definition()).resources[0];
+  assert.equal(Object.hasOwn(web.deploy, "restartPolicyType"), false);
+  assert.equal(web.deploy.restartPolicyMaxRetries, 3);
+  assert.equal(expectedRestartPolicy.restartPolicyType, "ON_FAILURE");
+  assert.equal(verifyRestartPolicy({ restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 3 }), expectedRestartPolicy);
+});
+
+test("live policy verification rejects real drift and incomplete API responses", () => {
+  for (const value of [
+    { restartPolicyType: "ALWAYS", restartPolicyMaxRetries: 3 },
+    { restartPolicyType: "NEVER", restartPolicyMaxRetries: 3 },
+    { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 10 },
+    { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: "3" },
+    { restartPolicyType: "ON_FAILURE" },
+    { restartPolicyMaxRetries: 3 },
+    {}, null, undefined,
+  ]) {
+    assert.throws(() => verifyRestartPolicy(value), /restart policy mismatch/);
+  }
 });
 
 test("fails closed for a different or missing project/environment", async () => {

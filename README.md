@@ -106,7 +106,7 @@ The Dockerfile declares all three as build arguments because Vite embeds publish
 
 The production app is [formaglyph.com](https://formaglyph.com/explore). The Railway-provided hostname remains available as a rollback path. Hosted Supabase Auth uses `https://formaglyph.com` as its site URL and allows exact callbacks for the canonical domain, `www`, local development, and the Railway fallback.
 
-Service configuration lives in `.railway/railway.ts`, with service-scoped ownership and unmanaged Railway variables. Configuration changes require an explicit reviewed `railway config plan` / `apply`; `railway up` only deploys application source. See the [IaC migration and deployment runbook](./docs/railway-iac.md).
+Service configuration lives in `.railway/railway.ts`, with service-scoped ownership and unmanaged Railway variables. Use `pnpm iac:verify` to check the live restart policy and `pnpm iac:plan` for a read-only plan, through the pinned `pnpm railway` CLI. Configuration changes require an explicit reviewed plan / apply; `railway up` only deploys application source. See the [IaC migration and deployment runbook](./docs/railway-iac.md).
 
 ## Use the public catalog API
 
